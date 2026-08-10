@@ -101,6 +101,11 @@ Per `.env.local`:
    | `ALLOWED_EMAIL`                 | il tuo indirizzo                                        |
    | `CRON_SECRET`                   | `openssl rand -hex 32`, valore diverso da quello locale |
 
+   Il build **non** richiede queste variabili e non fallisce se mancano: la
+   validazione avviene alla prima richiesta. Se le dimentichi, il deploy riesce
+   ma ogni pagina risponde `500` con il nome della variabile mancante nei
+   Runtime Logs di Vercel.
+
 4. **Settings → Deployment Protection → Vercel Authentication**: attiva su
    **Preview Deployments only**. Le URL di preview cambiano a ogni commit e non
    sono nella Redirect URL di Supabase: il magic link deve funzionare solo in

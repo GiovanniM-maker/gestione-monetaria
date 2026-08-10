@@ -20,17 +20,32 @@ function required(name: string, value: string | undefined): string {
 }
 
 /**
- * Variabili pubbliche. Devono essere referenziate con il nome letterale
- * completo: Next sostituisce `process.env.NEXT_PUBLIC_X` staticamente al
- * build, un accesso dinamico non verrebbe inlined nel bundle client.
+ * Variabili pubbliche.
+ *
+ * Sono getter, non costanti, e la differenza conta: la validazione scatta al
+ * primo accesso e non al momento in cui il modulo viene importato. Con le
+ * costanti, `next build` falliva in fase di "collect page data" ogni volta che
+ * la configurazione non era presente — cioe' il build risultava dipendente
+ * dalla configurazione di runtime. Un build deve compilare codice, non
+ * pretendere le credenziali dell'ambiente in cui girera'.
+ *
+ * Una configurazione mancante viene comunque segnalata, ma alla prima
+ * richiesta e con un messaggio esplicito, invece che come build rotto.
+ *
+ * Il nome della variabile resta scritto per esteso dentro il getter: Next
+ * sostituisce `process.env.NEXT_PUBLIC_X` staticamente al build, e un accesso
+ * costruito dinamicamente non verrebbe inlined nel bundle client.
  */
 export const publicEnv = {
-  supabaseUrl: required('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL),
-  supabaseAnonKey: required(
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  ),
-  siteUrl: required('NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL).replace(/\/+$/, ''),
+  get supabaseUrl(): string {
+    return required('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  },
+  get supabaseAnonKey(): string {
+    return required('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  },
+  get siteUrl(): string {
+    return required('NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL).replace(/\/+$/, '');
+  },
 } as const;
 
 /** Fuso e locale applicativi. Fissati qui una volta, mai dedotti dal runtime. */
