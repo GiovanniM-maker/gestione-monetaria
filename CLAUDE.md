@@ -6,20 +6,20 @@
 
 ## Stato avanzamento
 
-| Fase | Titolo | Stato |
-|---|---|---|
-| 0 | Fondamenta e segreti | in corso |
-| 1 | Autenticazione Enable Banking, isolata | non iniziata |
-| 2 | Ingestion grezza + backfill riavviabile | non iniziata |
-| 2-bis | Import CSV | non iniziata |
-| 3 | Normalizzazione, idempotenza, multivaluta | non iniziata |
-| 4 | Tassonomia e categorizzazione a cascata | non iniziata |
-| 5 | Detector abbonamenti (SQL puro) | non iniziata |
-| 6 | Dashboard | non iniziata |
-| 7 | Automazione | non iniziata |
-| 8 | Motore alert (SQL) | non iniziata |
-| 9 | Report periodico AI | non iniziata |
-| 10 | Chat copilot | non iniziata |
+| Fase  | Titolo                                    | Stato          |
+| ----- | ----------------------------------------- | -------------- |
+| 0     | Fondamenta e segreti                      | **completata** |
+| 1     | Autenticazione Enable Banking, isolata    | non iniziata   |
+| 2     | Ingestion grezza + backfill riavviabile   | non iniziata   |
+| 2-bis | Import CSV                                | non iniziata   |
+| 3     | Normalizzazione, idempotenza, multivaluta | non iniziata   |
+| 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
+| 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
+| 6     | Dashboard                                 | non iniziata   |
+| 7     | Automazione                               | non iniziata   |
+| 8     | Motore alert (SQL)                        | non iniziata   |
+| 9     | Report periodico AI                       | non iniziata   |
+| 10    | Chat copilot                              | non iniziata   |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
 
@@ -56,10 +56,10 @@ Preferisci SQL esplicito e query tipizzate.
 
 ## Banche coperte
 
-| Banca | Entità / paese connettore | Note |
-|---|---|---|
-| Revolut personale | Revolut Bank UAB → connettore sotto **LT**, non IT | Conto principale, la maggior parte delle spese variabili |
-| Intesa Sanpaolo | IT | Domiciliazioni utenze = spese fisse. Attenzione: molte banche italiane ammettono **un solo consenso attivo per TPP**, attivarne uno nuovo invalida il precedente |
+| Banca             | Entità / paese connettore                          | Note                                                                                                                                                             |
+| ----------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Revolut personale | Revolut Bank UAB → connettore sotto **LT**, non IT | Conto principale, la maggior parte delle spese variabili                                                                                                         |
+| Intesa Sanpaolo   | IT                                                 | Domiciliazioni utenze = spese fisse. Attenzione: molte banche italiane ammettono **un solo consenso attivo per TPP**, attivarne uno nuovo invalida il precedente |
 
 ## Regole di sicurezza — NON NEGOZIABILI
 
@@ -68,9 +68,20 @@ Preferisci SQL esplicito e query tipizzate.
 2. Nessun segreto in variabili `NEXT_PUBLIC_*`. Nessun segreto nel bundle client.
 3. **Tutte** le chiamate a Enable Banking e all'Anthropic API girano server-side.
 4. `SUPABASE_SERVICE_ROLE_KEY` non compare mai in codice client.
-5. RLS abilitata su ogni tabella, con policy legata all'unico utente autorizzato.
-6. Ogni route (pagine e API) è protetta da middleware di autenticazione. Nessuna eccezione
-   "temporanea per test".
+5. RLS abilitata su ogni tabella, con policy legata all'unico utente autorizzato. L'allowlist è a
+   tre strati, e nessuno dei tre è ridondante: (1) signup pubblico disabilitato su Supabase più
+   `shouldCreateUser: false` nella chiamata a `signInWithOtp`; (2) confronto con `ALLOWED_EMAIL`
+   lato server; (3) RLS agganciata a `public.app_users` tramite il predicato `public.is_app_user()`.
+   Ogni tabella nuova nasce con `enable row level security`, almeno una policy esplicita e i `grant`
+   scritti a mano: i privilegi di default per `anon` e `authenticated` sono stati revocati.
+6. Ogni route (pagine e API) è protetta dal proxy di autenticazione (`src/proxy.ts`, che in Next 16
+   sostituisce la convenzione `middleware.ts`). Nessuna eccezione "temporanea per test": una route
+   pubblica va aggiunta esplicitamente a `PUBLIC_PATHS`.
+   Unica famiglia esclusa dal controllo di sessione: `/api/cron/*`, che non ha un browser dietro.
+   È protetta da `assertCronRequest()`, che verifica l'header `Authorization: Bearer ${CRON_SECRET}`
+   inviato in automatico da Vercel Cron quando la variabile è impostata sul progetto.
+   **Le route `/api/admin/*` restano invece dietro autenticazione di sessione**: toccano dati
+   bancari e le lancia un browser autenticato, quindi non devono dipendere da un segreto condiviso.
 7. Gli IBAN si mostrano mascherati in UI (`****1234`) e non si loggano mai per intero.
 8. **Sanitizzazione prima di qualsiasi chiamata a un LLM**: si inviano solo nome merchant
    normalizzato, importo, data, categoria, aggregati. Mai IBAN, mai descrizione raw completa, mai
@@ -79,9 +90,18 @@ Preferisci SQL esplicito e query tipizzate.
 
 ## Regole di correttezza
 
-- Ogni importo è `numeric(14,2)` in Postgres. In TypeScript **mai aritmetica su float**: usa interi in
-  centesimi o una libreria decimale. Un errore di arrotondamento in un'app di spese distrugge la
-  fiducia nell'intero prodotto.
+- Ogni importo è `numeric(14,2)` in Postgres. In TypeScript **mai aritmetica su float**: il tipo
+  interno è **intero in centesimi (`bigint`)**, ottenuto parsando la stringa decimale restituita da
+  Postgres — **mai `parseFloat`**. La formattazione avviene solo al bordo UI. Un errore di
+  arrotondamento in un'app di spese distrugge la fiducia nell'intero prodotto.
+- La **conversione FX si esegue una volta sola, in ingestion**, con arrotondamento **half away from
+  zero al centesimo**, e il risultato si salva. Non si ricalcola mai a runtime: due schermate che
+  arrotondano in momenti diversi producono due numeri diversi per lo stesso movimento.
+- Le **aggregazioni si fanno in SQL**, non in TypeScript.
+- `booking_date` e `value_date` sono **giorni civili**: colonne `date`, mai `timestamptz`, e **mai**
+  soggette a conversione di fuso. Una conversione UTC sposterebbe le transazioni di inizio e fine
+  mese nel mese sbagliato, falsando ogni aggregato mensile.
+- Fuso applicativo `Europe/Rome`, locale `it-IT`, valuta di riferimento `EUR`.
 - Uscite = importi **negativi**. Nessuna eccezione, nessun `Math.abs()` sparso nel codice: si
   normalizza una volta in ingestion.
 - L'LLM **non calcola mai un numero**. Tutte le cifre che appaiono in report e alert provengono da
@@ -284,6 +304,6 @@ reports
 ## Viste richieste
 
 - `v_expenses` — solo uscite reali: `amount < 0 AND NOT is_transfer AND NOT is_refund AND NOT
-  excluded_from_analysis` e conto con `include_in_totals`
+excluded_from_analysis` e conto con `include_in_totals`
 - `v_monthly_by_category` — aggregato mensile con roll-up sull'albero categorie
 - `v_recurring_monthly_cost_by_discretion` — **la metrica principale dell'app**

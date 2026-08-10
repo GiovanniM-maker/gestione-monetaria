@@ -1,0 +1,51 @@
+# --- SEGRETI: regola non negoziabile, non rimuovere mai queste righe ---
+# Chiave privata Enable Banking e qualsiasi materiale crittografico
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.der
+*.crt
+*.cer
+secrets/
+private/
+
+# Variabili d'ambiente (tutte le varianti, incluse .env.local, .env.production, ecc.)
+.env
+.env.*
+!.env.example
+
+# --- Toolchain ---
+node_modules/
+.pnpm-store/
+
+# --- Next.js ---
+.next/
+out/
+build/
+next-env.d.ts
+
+# --- Vercel ---
+.vercel
+
+# --- Supabase CLI ---
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# --- Test / coverage ---
+coverage/
+.vitest/
+
+# --- Sistema / editor ---
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.tsbuildinfo

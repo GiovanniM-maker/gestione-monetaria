@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verifica che nessun segreto sia tracciato
+        run: |
+          if git ls-files | grep -E '\.(pem|key|p12|pfx|jks)$'; then
+            echo "::error::File di chiavi tracciato nel repository"
+            exit 1
+          fi
+          if git ls-files | grep -E '^\.env($|\.)' | grep -v '^\.env\.example$'; then
+            echo "::error::File .env tracciato nel repository"
+            exit 1
+          fi
+          # Il pattern e' composto a pezzi di proposito: cosi' l'intestazione
+          # letterale di una chiave PEM non compare in nessun file tracciato,
+          # e un grep manuale sulla storia del repo alla ricerca di quella
+          # intestazione non produce falsi positivi.
+          MARKER='-----BEGIN .*PRIVATE'
+          MARKER="$MARKER KEY-----"
+          if git grep -lIE -- "$MARKER"; then
+            echo "::error::Chiave privata trovata nel codice"
+            exit 1
+          fi
+
+      - run: pnpm format:check
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - name: Build
+        # Valori fittizi: il build deve solo compilare, non parlare con Supabase.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          ALLOWED_EMAIL: ci@example.com
+          CRON_SECRET: ci-placeholder-secret
+        run: pnpm build
