@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { requestMagicLink, type LoginState } from './actions';
+import { signIn, type LoginState } from './actions';
 
 const initialState: LoginState = { status: 'idle' };
 
@@ -14,13 +14,13 @@ function SubmitButton() {
       disabled={pending}
       className="w-full rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
     >
-      {pending ? 'Invio in corso…' : 'Inviami il link'}
+      {pending ? 'Accesso in corso…' : 'Accedi'}
     </button>
   );
 }
 
 export function LoginForm() {
-  const [state, formAction] = useActionState(requestMagicLink, initialState);
+  const [state, formAction] = useActionState(signIn, initialState);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -32,7 +32,21 @@ export function LoginForm() {
           id="email"
           name="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
+          required
+          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="password" className="block text-sm font-medium">
+          Password
+        </label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
           required
           className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
@@ -40,12 +54,6 @@ export function LoginForm() {
 
       <SubmitButton />
 
-      {state.status === 'sent' && (
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Se l&apos;indirizzo e&apos; autorizzato, riceverai un link di accesso. Il link vale una
-          volta sola e scade dopo pochi minuti.
-        </p>
-      )}
       {state.status === 'error' && (
         <p className="text-sm text-red-600 dark:text-red-400">{state.message}</p>
       )}

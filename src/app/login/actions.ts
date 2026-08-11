@@ -1,54 +1,57 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { publicEnv } from '@/lib/env';
 import { isAllowedEmail, isPlausibleEmail, normalizeEmail } from '@/lib/auth/allowlist';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-export type LoginState =
-  { status: 'idle' } | { status: 'sent' } | { status: 'error'; message: string };
+export type LoginState = { status: 'idle' } | { status: 'error'; message: string };
 
-export async function requestMagicLink(
-  _prevState: LoginState,
-  formData: FormData,
-): Promise<LoginState> {
-  const raw = formData.get('email');
-  if (typeof raw !== 'string') {
+/**
+ * Un solo messaggio di errore per tutti i casi di fallimento: email fuori
+ * allowlist, utente inesistente, password sbagliata. Distinguerli direbbe a chi
+ * prova quale delle due meta' ha indovinato.
+ */
+const CREDENZIALI_NON_VALIDE = 'Email o password non corretti.';
+
+export async function signIn(_prevState: LoginState, formData: FormData): Promise<LoginState> {
+  const rawEmail = formData.get('email');
+  const rawPassword = formData.get('password');
+
+  if (typeof rawEmail !== 'string' || typeof rawPassword !== 'string') {
     return { status: 'error', message: 'Richiesta non valida.' };
   }
 
-  const email = normalizeEmail(raw);
-  if (!isPlausibleEmail(email)) {
-    return { status: 'error', message: 'Indirizzo email non valido.' };
+  const email = normalizeEmail(rawEmail);
+  if (!isPlausibleEmail(email) || rawPassword === '') {
+    return { status: 'error', message: CREDENZIALI_NON_VALIDE };
   }
 
-  // Se l'indirizzo non e' in allowlist ci si ferma qui: non si contatta nemmeno
-  // Supabase. La risposta e' comunque identica al caso di successo, per non
-  // trasformare la pagina di login in un oracolo che dice quale indirizzo esiste.
+  // Se l'indirizzo non e' in allowlist ci si ferma prima di contattare Supabase.
   if (!isAllowedEmail(email)) {
-    return { status: 'sent' };
+    return { status: 'error', message: CREDENZIALI_NON_VALIDE };
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    options: {
-      // Non negoziabile: senza questo, chiunque richieda un magic link si
-      // auto-crea un utente in `auth.users`.
-      shouldCreateUser: false,
-      emailRedirectTo: `${publicEnv.siteUrl}/auth/callback`,
-    },
+    password: rawPassword,
   });
 
   if (error !== null) {
-    // Il messaggio di Supabase non viene mostrato all'utente: puo' distinguere
-    // "utente inesistente" da "rate limit", ed e' esattamente l'informazione
-    // che non vogliamo esporre.
-    console.error('[auth] signInWithOtp fallita:', error.message);
-    return { status: 'sent' };
+    // Il messaggio di Supabase distingue "utente inesistente" da "password
+    // errata" da "rate limit": resta nei log, non arriva alla pagina.
+    console.error('[auth] signInWithPassword fallita:', error.message);
+    return { status: 'error', message: CREDENZIALI_NON_VALIDE };
   }
 
-  return { status: 'sent' };
+  // Secondo controllo dopo l'autenticazione: l'utente potrebbe essere stato
+  // creato a mano nel pannello Supabase con un indirizzo diverso.
+  if (!isAllowedEmail(data.user.email)) {
+    await supabase.auth.signOut();
+    return { status: 'error', message: CREDENZIALI_NON_VALIDE };
+  }
+
+  redirect('/');
 }
 
 export async function signOut(): Promise<void> {

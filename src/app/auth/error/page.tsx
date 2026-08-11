@@ -4,11 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Accesso non riuscito — Gestione monetaria' };
 
 const MESSAGES: Record<string, string> = {
-  not_allowed: 'Questo indirizzo non e’ autorizzato ad accedere all’applicazione.',
-  scambio_fallito:
-    'Il link non e’ stato accettato. Succede se lo apri da un browser diverso da quello da cui hai richiesto l’accesso.',
-  link_non_valido: 'Il link e’ scaduto o e’ gia’ stato usato.',
-  otp_expired: 'Il link e’ scaduto. Richiedine uno nuovo.',
+  not_allowed: 'Questo account non e’ autorizzato ad accedere all’applicazione.',
 };
 
 export default async function AuthErrorPage({

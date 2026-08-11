@@ -45,7 +45,7 @@ Se una feature non contribuisce a quel numero o alla fiducia in quel numero, non
 
 - **Frontend/backend**: Next.js (App Router) + TypeScript strict, deploy su Vercel (piano Pro)
 - **DB**: Supabase (Postgres), migrations versionate su git
-- **Auth**: Supabase Auth, magic link, allowlist di una sola email
+- **Auth**: Supabase Auth, **email + password**, allowlist di una sola email
 - **Scheduling**: Vercel Cron
 - **Dati bancari**: Enable Banking API (AISP licenziato, `https://api.enablebanking.com`)
 - **AI**: Anthropic API, server-side
@@ -53,6 +53,27 @@ Se una feature non contribuisce a quel numero o alla fiducia in quel numero, non
 
 Non introdurre ORM pesanti, state manager, o librerie UI oltre a quelle strettamente necessarie.
 Preferisci SQL esplicito e query tipizzate.
+
+### Perché password e non magic link
+
+Il piano iniziale prevedeva il magic link. È stato cambiato in Fase 0, dopo averlo visto fallire
+sul campo: il servizio SMTP integrato di Supabase è limitato a poche email all'ora, e il magic link
+è **l'unico modo di entrare** nell'applicazione. Un tetto così basso sul solo canale di accesso
+significa restare chiusi fuori proprio mentre si sta lavorando — e in Fase 1 e 2 c'è una finestra
+di circa un'ora dall'autorizzazione Enable Banking per scaricare tutto lo storico, che è il momento
+peggiore possibile per non riuscire ad autenticarsi.
+
+Con la password l'email sparisce completamente dall'applicazione: niente SMTP, niente rate limit,
+niente `NEXT_PUBLIC_SITE_URL`, niente callback PKCE. **Il recupero password non va implementato**:
+reintrodurrebbe la dipendenza dall'email dalla porta di servizio. Si reimposta dalla dashboard
+Supabase, di cui l'unico utente è amministratore.
+
+L'allowlist non è toccata da questa scelta: password e magic link rispondono a "come dimostri di
+essere quell'utente", non a "quale utente è ammesso". I tre strati restano identici.
+
+Decisione presa quando nel database non c'era ancora nessun dato bancario. **Da rivalutare quando
+ci saranno movimenti reali**: a quel punto ha senso valutare l'MFA TOTP di Supabase, che sarebbe
+più solido di entrambe le opzioni considerate qui.
 
 ## Banche coperte
 

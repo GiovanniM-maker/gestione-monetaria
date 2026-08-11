@@ -61,35 +61,20 @@ where schemaname = 'public';
 **Authentication → Sign In / Providers → Email**
 
 - `Enable Email provider`: **on**
-- `Confirm email`: **on**
 - `Allow new users to sign up` (signup pubblico): **off** ← strato 1 dell'allowlist
 
-**Authentication → URL Configuration**
-
-Il dominio di produzione e' `gestione-monetaria.vercel.app` — l'alias stabile,
-non quelli con il segmento `-git-<branch>-` o con la stringa casuale del
-singolo deployment, che cambia a ogni commit.
-
-- `Site URL`: `https://gestione-monetaria.vercel.app`
-- `Redirect URLs`: aggiungi
-  - `https://gestione-monetaria.vercel.app/auth/callback`
-  - `http://localhost:3000/auth/callback` (per lo sviluppo locale)
-
-Attenzione: sono due riquadri con due pulsanti di salvataggio distinti. Il
-messaggio di conferma che compare aggiungendo una Redirect URL non salva anche
-la Site URL.
-
-In `NEXT_PUBLIC_SITE_URL` su Vercel va la sola **origine**, senza percorso:
-`https://gestione-monetaria.vercel.app`. Il codice ci aggiunge `/auth/callback`
-da solo — se lo incolli anche nella variabile, il link punterebbe a
-`/auth/callback/auth/callback`. `publicEnv.siteUrl` scarta comunque il percorso,
-ma tenere il valore pulito evita di doverselo ricordare.
+L'accesso e' con **email + password**, non con magic link: l'app non invia nessuna
+email, quindi non serve configurare SMTP ne' URL di redirect. Il perche' della
+scelta e' in `CLAUDE.md`.
 
 **Authentication → Users → Add user → Create new user**
 
-- email: il tuo indirizzo (lo stesso che metterai in `ALLOWED_EMAIL`)
+- email: il tuo indirizzo, lo stesso che metterai in `ALLOWED_EMAIL`
+- password: generala col password manager, 20+ caratteri, mai riusata
 - `Auto Confirm User`: **on**
-- una password qualsiasi: non verra' mai usata, si entra solo con magic link
+
+Non esiste un flusso di recupero password, ed e' voluto: reintrodurrebbe la
+dipendenza dall'email. Se la perdi, la reimposti da questa stessa schermata.
 
 Appena l'utente viene creato, il trigger inserisce la riga in `app_users`. Controlla:
 
@@ -97,7 +82,9 @@ Appena l'utente viene creato, il trigger inserisce la riga in `app_users`. Contr
 select user_id, email from public.app_users;
 ```
 
-Se la tabella e' vuota, l'email non corrisponde a quella in `allowed_emails`.
+Se la tabella e' vuota, o l'email non corrisponde a quella in `allowed_emails`,
+oppure l'utente e' stato creato **prima** di applicare la migration: in quel caso
+il trigger non e' mai scattato per lui.
 
 ## 4. Sviluppo locale
 
@@ -106,11 +93,8 @@ cp .env.example .env.local   # poi riempi i valori
 pnpm dev                     # http://localhost:3000
 ```
 
-Per `.env.local`:
-
-- `NEXT_PUBLIC_SITE_URL=http://localhost:3000`
-- `ALLOWED_EMAIL=` il tuo indirizzo
-- `CRON_SECRET=` generalo con `openssl rand -hex 32`
+Per `.env.local` servono solo le due variabili Supabase e `ALLOWED_EMAIL`.
+`CRON_SECRET` serve dalla Fase 7.
 
 ## 5. Deploy su Vercel
 
@@ -122,7 +106,6 @@ Per `.env.local`:
    | ------------------------------- | ------------------------------------------------------- |
    | `NEXT_PUBLIC_SUPABASE_URL`      | Project URL di Supabase                                 |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | chiave anon / publishable                               |
-   | `NEXT_PUBLIC_SITE_URL`          | `https://gestione-monetaria.vercel.app`                 |
    | `ALLOWED_EMAIL`                 | il tuo indirizzo                                        |
    | `CRON_SECRET`                   | `openssl rand -hex 32`, valore diverso da quello locale |
 
@@ -132,9 +115,9 @@ Per `.env.local`:
    Runtime Logs di Vercel.
 
 4. **Settings → Deployment Protection → Vercel Authentication**: attiva su
-   **Preview Deployments only**. Le URL di preview cambiano a ogni commit e non
-   sono nella Redirect URL di Supabase: il magic link deve funzionare solo in
-   produzione.
+   **Preview Deployments only**. Ogni preview e' un'istanza completa dell'app
+   collegata al database di produzione: senza quel blocco, chiunque abbia l'URL
+   di un deployment avrebbe davanti la pagina di login dei tuoi dati bancari.
 5. Deploy.
 
 > La chiave privata Enable Banking (`.pem`) **non va aggiunta ora** e non andra' mai
@@ -171,8 +154,9 @@ In Fase 0 esiste solo l'helper, nessuna delle due famiglie di route e' ancora im
 
 **Allowlist a tre strati.** Nessuno dei tre e' ridondante:
 
-1. signup pubblico disabilitato su Supabase + `shouldCreateUser: false` in `signInWithOtp`;
-2. confronto con `ALLOWED_EMAIL` nel proxy, nella server action di login e nel callback;
+1. signup pubblico disabilitato su Supabase: l'utente si crea solo a mano;
+2. confronto con `ALLOWED_EMAIL` nel proxy e nella server action di login, prima e dopo
+   l'autenticazione;
 3. RLS in Postgres agganciata a `public.app_users` tramite `public.is_app_user()`.
 
 **Regole per ogni migration futura.** Ogni tabella nasce con

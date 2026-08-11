@@ -19,8 +19,6 @@ declare namespace NodeJS {
     readonly NEXT_PUBLIC_SUPABASE_URL?: string;
     /** Chiave anon/publishable di Supabase. Pubblica, inutile senza RLS. */
     readonly NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
-    /** Origine pubblica dell'app, base del link di accesso via email. */
-    readonly NEXT_PUBLIC_SITE_URL?: string;
     /** Unico indirizzo autorizzato. NON pubblica. */
     readonly ALLOWED_EMAIL?: string;
     /** Segreto inviato da Vercel Cron come Bearer token. NON pubblica. */
