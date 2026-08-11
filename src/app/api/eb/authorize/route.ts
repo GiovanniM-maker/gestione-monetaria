@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { startAuthorization } from '@/lib/enablebanking/client';
+import { scadenzaConsenso } from '@/lib/enablebanking/consenso';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,9 +15,6 @@ export const dynamic = 'force-dynamic';
  *
  * La route sta sotto `/api/`, quindi il proxy la protegge gia' con la sessione.
  */
-
-/** Durata del consenso richiesta. Le banche possono accorciarla. */
-const CONSENT_DAYS = 90;
 
 const STATE_COOKIE = 'eb_auth_state';
 
@@ -36,7 +34,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // risposta corrisponda alla richiesta partita da qui, e non a una indotta.
   const state = randomUUID();
 
-  const validUntil = new Date(Date.now() + CONSENT_DAYS * 24 * 60 * 60 * 1000);
+  // Si chiede il massimo che il connettore dichiara: ogni scadenza costa una
+  // SCA, e Revolut (LT) ne concede 180 di giorni, non 90.
+  const validUntil = scadenzaConsenso(form.get('max_consent_seconds'));
   const redirectUrl = new URL('/api/eb/callback', request.nextUrl.origin).toString();
 
   try {

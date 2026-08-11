@@ -1,5 +1,5 @@
 import 'server-only';
-import { getTransactionsPage } from '@/lib/enablebanking/client';
+import { EbApiError, getTransactionsPage } from '@/lib/enablebanking/client';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { payloadHash } from './hash';
@@ -36,8 +36,61 @@ export type EsitoFetta = {
   righeDuplicate: number;
   contiCompletati: number;
   contiRimanenti: number;
+  /** Cose andate diversamente dal richiesto, ma non abbastanza da fermare la corsa. */
+  avvisi: readonly string[];
   errore: string | null;
 };
+
+/**
+ * Una pagina di transazioni, con un ripiego se la banca rifiuta la finestra
+ * richiesta.
+ *
+ * Serve per lo storico lungo. Chiedere `date_from` a due anni fa e' l'unico
+ * modo di ottenere i due anni che Revolut dichiara — lasciando le date vuote la
+ * banca restituisce la sua finestra predefinita, che sul campo si e' vista di
+ * 90 giorni. Ma se quella data cade fuori da cio' che la banca concede, la
+ * richiesta torna 4xx: senza ripiego l'intera corsa fallisce e si perde anche
+ * lo storico che *era* disponibile.
+ *
+ * Il ripiego vale solo sulla **prima pagina di un conto**: un rifiuto su una
+ * pagina successiva riguarda il `continuation_key`, non l'intervallo, e
+ * riprovare senza date ricomincerebbe il conto da capo.
+ *
+ * Non e' silenzioso: chi chiama riceve un avviso e lo mostra. Un backfill che
+ * scarica meno di quanto chiesto senza dirlo e' peggio di uno che fallisce.
+ */
+async function leggiPagina(
+  uid: string,
+  cursore: BackfillCursor,
+  avvisi: string[],
+): Promise<unknown> {
+  const opzioni = {
+    dateFrom: cursore.dateFrom ?? undefined,
+    dateTo: cursore.dateTo ?? undefined,
+    continuationKey: cursore.continuationKey ?? undefined,
+  };
+
+  try {
+    return await getTransactionsPage(uid, opzioni);
+  } catch (errore) {
+    const ripiegabile =
+      errore instanceof EbApiError &&
+      errore.status >= 400 &&
+      errore.status < 500 &&
+      opzioni.continuationKey === undefined &&
+      opzioni.dateFrom !== undefined;
+
+    if (!ripiegabile) throw errore;
+
+    avvisi.push(
+      `Conto ${uid.slice(0, 8)}…: la banca ha rifiutato date_from=${opzioni.dateFrom} ` +
+        `(${(errore as EbApiError).status}). Riprovo con la finestra predefinita: ` +
+        `lo storico scaricato sara' piu' corto di quello richiesto.`,
+    );
+
+    return getTransactionsPage(uid, { ...opzioni, dateFrom: undefined });
+  }
+}
 
 /**
  * Avanza il cursore dopo una pagina. Funzione pura, isolata apposta: e' la
@@ -156,6 +209,7 @@ export async function eseguiFettaBackfill(
   );
 
   let cursore: BackfillCursor = run.cursor;
+  const avvisi: string[] = [];
   let pagineLette = 0;
   let righeLette = run.rows_fetched;
   let righeNuove = run.rows_new;
@@ -176,11 +230,7 @@ export async function eseguiFettaBackfill(
         );
       }
 
-      const risposta = await getTransactionsPage(uid, {
-        dateFrom: cursore.dateFrom ?? undefined,
-        dateTo: cursore.dateTo ?? undefined,
-        continuationKey: cursore.continuationKey ?? undefined,
-      });
+      const risposta = await leggiPagina(uid, cursore, avvisi);
 
       const transazioni = comeArray<unknown>((risposta as { transactions?: unknown }).transactions);
       pagineLette += 1;
@@ -252,6 +302,7 @@ export async function eseguiFettaBackfill(
       righeDuplicate,
       contiCompletati: cursore.completed.length,
       contiRimanenti: cursore.pending.length + (cursore.current === null ? 0 : 1),
+      avvisi,
       errore: messaggio,
     };
   }
@@ -292,6 +343,7 @@ export async function eseguiFettaBackfill(
     righeDuplicate,
     contiCompletati: cursore.completed.length,
     contiRimanenti: cursore.pending.length + (cursore.current === null ? 0 : 1),
+    avvisi,
     errore: null,
   };
 }

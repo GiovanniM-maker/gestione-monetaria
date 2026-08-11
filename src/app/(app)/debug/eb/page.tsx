@@ -144,6 +144,15 @@ async function Connettori() {
           <form action="/api/eb/authorize" method="post">
             <input type="hidden" name="aspsp_name" value={aspsp.name} />
             <input type="hidden" name="aspsp_country" value={aspsp.country} />
+            {/* Il massimo dichiarato dal connettore viaggia con la richiesta: e'
+                quello che si chiede, perche' ogni scadenza costa una SCA. */}
+            {typeof aspsp.maximum_consent_validity === 'number' && (
+              <input
+                type="hidden"
+                name="max_consent_seconds"
+                value={String(aspsp.maximum_consent_validity)}
+              />
+            )}
             <button
               type="submit"
               className="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-neutral-900"

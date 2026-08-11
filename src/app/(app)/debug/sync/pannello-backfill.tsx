@@ -13,6 +13,7 @@ type EsitoFetta = {
   righeDuplicate: number;
   contiCompletati: number;
   contiRimanenti: number;
+  avvisi?: readonly string[];
   errore: string | null;
 };
 
@@ -46,6 +47,19 @@ export function PannelloBackfill({
   const [fetteCorte, setFetteCorte] = useState(false);
 
   const aggiungi = (testo: string) => setMessaggi((precedenti) => [...precedenti, testo]);
+
+  /**
+   * `YYYY-MM-DD` di N mesi fa, nel fuso applicativo.
+   *
+   * Non `toISOString()`: quello formatta in UTC, e vicino a mezzanotte
+   * restituirebbe il giorno prima. E' la stessa regola dei giorni civili che
+   * vale per `booking_date`, e vale anche per un estremo di intervallo.
+   */
+  const mesiFa = (mesi: number): string => {
+    const data = new Date();
+    data.setMonth(data.getMonth() - mesi);
+    return data.toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+  };
 
   async function registraConti() {
     setInCorso(true);
@@ -91,6 +105,8 @@ export function PannelloBackfill({
         `${esito.pagineLette} pagine · ${esito.righeLette} righe lette · ${esito.righeNuove} nuove · ` +
           `${esito.righeDuplicate} duplicate · ${esito.contiRimanenti} conti da fare`,
       );
+
+      for (const avviso of esito.avvisi ?? []) aggiungi(`  ⚠ ${avviso}`);
 
       if (esito.errore !== null) {
         aggiungi(`Interrotto: ${esito.errore}. Il cursore e' salvato, puoi riprendere.`);
@@ -169,15 +185,29 @@ export function PannelloBackfill({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="text-xs text-neutral-500">
-          da
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="mt-1 block rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-          />
-        </label>
+        <div>
+          <label className="text-xs text-neutral-500">
+            da
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="mt-1 block rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </label>
+          {/* Lo storico lungo si ottiene solo chiedendolo: a date vuote la banca
+              risponde con la sua finestra predefinita. Il bottone esiste perche'
+              quella data si digita una volta sola, nell'ora dopo
+              l'autorizzazione, e sbagliarla non e' recuperabile. */}
+          <button
+            type="button"
+            onClick={() => setDateFrom(mesiFa(24))}
+            disabled={inCorso}
+            className="mt-1 text-[11px] text-neutral-500 underline underline-offset-2 disabled:opacity-40"
+          >
+            24 mesi fa
+          </button>
+        </div>
         <label className="text-xs text-neutral-500">
           a
           <input
@@ -242,8 +272,11 @@ export function PannelloBackfill({
       </label>
 
       <p className="text-xs text-neutral-500">
-        Lasciare le date vuote chiede tutto lo storico che la banca concede. Il backfill procede a
-        fette: se chiudi la pagina a meta&rsquo;, lo stato resta salvato e riparte da li&rsquo;.
+        A date vuote la banca risponde con la sua <strong>finestra predefinita</strong>, che su
+        Revolut si e&rsquo; vista di 90 giorni: per lo storico lungo la data va chiesta
+        esplicitamente. Se la banca la rifiuta, il backfill ripiega sulla finestra predefinita e lo
+        dice, invece di fallire. Procede a fette: se chiudi la pagina a meta&rsquo;, lo stato resta
+        salvato e riparte da li&rsquo;.
       </p>
 
       {messaggi.length > 0 && (
