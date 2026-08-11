@@ -7,6 +7,7 @@ import {
   getTransactionsPage,
   listAspsps,
 } from '@/lib/enablebanking/client';
+import { ebConfigStatus } from '@/lib/enablebanking/config';
 import type { EbAccount } from '@/lib/enablebanking/types';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,42 @@ function Errore({ children }: { children: React.ReactNode }) {
     <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
       {children}
     </p>
+  );
+}
+
+function Configurazione() {
+  const stato = ebConfigStatus();
+
+  const righe = [
+    {
+      nome: 'EB_APPLICATION_ID',
+      ok: stato.applicationId === 'ok',
+      dettaglio: stato.applicationId === 'ok' ? 'impostata' : 'non impostata su questo ambiente',
+    },
+    {
+      nome: 'EB_PRIVATE_KEY_BASE64',
+      ok: stato.privateKey === 'ok',
+      dettaglio:
+        stato.privateKey === 'ok'
+          ? `chiave PEM valida, ${stato.privateKeyLength} caratteri una volta decodificata`
+          : stato.privateKey === 'mancante'
+            ? 'non impostata su questo ambiente'
+            : 'impostata, ma decodificandola non risulta una chiave PEM: probabilmente e’ stato incollato un valore diverso, oppure il base64 e’ andato a capo e ne e’ finita solo la prima riga',
+    },
+  ];
+
+  return (
+    <ul className="space-y-1 text-sm">
+      {righe.map((riga) => (
+        <li key={riga.nome} className="flex gap-2">
+          <span aria-hidden>{riga.ok ? '✅' : '❌'}</span>
+          <span>
+            <span className="font-mono text-xs">{riga.nome}</span>{' '}
+            <span className="text-neutral-500">· {riga.dettaglio}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -227,6 +264,10 @@ export default async function DebugEbPage({
           Autorizzazione completata.
         </p>
       )}
+
+      <Riquadro titolo="Configurazione">
+        <Configurazione />
+      </Riquadro>
 
       <Riquadro titolo={`Connettori Revolut (${REVOLUT_COUNTRY})`}>
         <Connettori />

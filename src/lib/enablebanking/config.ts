@@ -40,3 +40,38 @@ export function ebConfig(): EbConfig {
 }
 
 export const EB_BASE_URL = 'https://api.enablebanking.com';
+
+export type EbConfigStatus = {
+  applicationId: 'ok' | 'mancante';
+  privateKey: 'ok' | 'mancante' | 'non decodificabile';
+  /** Lunghezza della chiave PEM decodificata. Utile a smascherare un valore troncato. */
+  privateKeyLength: number;
+};
+
+/**
+ * Diagnostica della configurazione, senza mai esporne i valori.
+ *
+ * Serve a distinguere a colpo d'occhio "variabile non impostata" da "chiave
+ * incollata male" da "tutto a posto ma l'API rifiuta": tre problemi diversi che
+ * senza questo pannello si presentano tutti come un errore HTTP opaco.
+ */
+export function ebConfigStatus(): EbConfigStatus {
+  const applicationId = process.env.EB_APPLICATION_ID?.trim();
+  const encoded = process.env.EB_PRIVATE_KEY_BASE64?.trim();
+
+  if (encoded === undefined || encoded === '') {
+    return {
+      applicationId: applicationId !== undefined && applicationId !== '' ? 'ok' : 'mancante',
+      privateKey: 'mancante',
+      privateKeyLength: 0,
+    };
+  }
+
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+
+  return {
+    applicationId: applicationId !== undefined && applicationId !== '' ? 'ok' : 'mancante',
+    privateKey: PEM_HEADER.test(decoded) ? 'ok' : 'non decodificabile',
+    privateKeyLength: decoded.length,
+  };
+}
