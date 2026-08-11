@@ -9,30 +9,35 @@ import {
   listAspsps,
 } from '@/lib/enablebanking/client';
 import { ebConfigStatus } from '@/lib/enablebanking/config';
+import { comeArray, jsonRedatto } from '@/lib/enablebanking/redact';
+import type { EbAspsp, EbBalance, EbTransaction } from '@/lib/enablebanking/types';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = { title: 'Debug Enable Banking' };
 
 /**
- * Pagina di verifica della Fase 1. Mostra dati grezzi, non e' una schermata di
- * prodotto: serve solo a rispondere alla domanda "il collegamento funziona?".
+ * Pagina di verifica della Fase 1: mostra le risposte grezze dell'API, non e'
+ * una schermata di prodotto.
  *
- * Sta dentro il route group `(app)`, quindi il layout chiama gia' `requireUser()`
- * e la pagina non e' raggiungibile da disconnessi. Senza quella protezione
- * esporrebbe i saldi.
+ * Due regole che questa pagina rispetta per costruzione:
+ *
+ * 1. Non deve poter restituire 500. Un campo assente o di forma inattesa deve
+ *    produrre una riga che lo dice, non una pagina bianca — altrimenti proprio
+ *    lo strumento che serve a diagnosticare diventa la cosa da diagnosticare.
+ *    Da qui `comeArray` su ogni collezione e nessun accesso diretto a `.length`
+ *    su valori che arrivano dalla rete.
+ * 2. Gli IBAN si mostrano mascherati anche nei dump grezzi (regola 7): ci pensa
+ *    `jsonRedatto`.
+ *
+ * Sta dentro il route group `(app)`, quindi `requireUser()` del layout la
+ * protegge gia': senza, esporrebbe i saldi.
  */
 
 const REVOLUT_COUNTRY = 'LT';
 
 type Esito<T> = { ok: true; valore: T } | { ok: false; errore: string };
 
-/**
- * Isola la chiamata di rete dal rendering. Serve anche a rispettare
- * `react-hooks/error-boundaries`: il JSX non va costruito dentro un try/catch,
- * perche' un errore sollevato a meta' albero lascerebbe l'interfaccia in uno
- * stato che React non sa recuperare.
- */
 async function prova<T>(chiamata: () => Promise<T>): Promise<Esito<T>> {
   try {
     return { ok: true, valore: await chiamata() };
@@ -52,9 +57,20 @@ function Riquadro({ titolo, children }: { titolo: string; children: React.ReactN
 
 function Errore({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+    <p className="rounded-md bg-red-50 px-3 py-2 text-sm break-words text-red-700 dark:bg-red-950 dark:text-red-300">
       {children}
     </p>
+  );
+}
+
+function Grezzo({ etichetta, valore }: { etichetta: string; valore: unknown }) {
+  return (
+    <details className="mt-1">
+      <summary className="cursor-pointer text-xs text-neutral-500">{etichetta}</summary>
+      <pre className="mt-1 max-h-72 overflow-auto rounded bg-neutral-100 p-2 text-[11px] leading-snug dark:bg-neutral-900">
+        {jsonRedatto(valore)}
+      </pre>
+    </details>
   );
 }
 
@@ -98,33 +114,32 @@ async function Connettori() {
   const esito = await prova(() => listAspsps(REVOLUT_COUNTRY));
   if (!esito.ok) return <Errore>Lettura connettori fallita: {esito.errore}</Errore>;
 
-  const revolut = esito.valore.filter((a) => a.name.toLowerCase().includes('revolut'));
+  const tutti = comeArray<EbAspsp>(esito.valore);
+  const revolut = tutti.filter((a) => typeof a.name === 'string' && /revolut/i.test(a.name));
 
   if (revolut.length === 0) {
     return (
       <Errore>
-        Nessun connettore Revolut sotto {REVOLUT_COUNTRY}. Connettori totali per quel paese:{' '}
-        {esito.valore.length}.
+        Nessun connettore Revolut sotto {REVOLUT_COUNTRY}. Connettori letti: {tutti.length}.
       </Errore>
     );
   }
 
   return (
     <ul className="space-y-2">
-      {revolut.map((aspsp) => (
+      {revolut.map((aspsp, indice) => (
         <li
-          key={`${aspsp.name}-${aspsp.country}`}
+          key={`${aspsp.name}-${aspsp.country}-${indice}`}
           className="flex items-center justify-between gap-4 text-sm"
         >
           <span>
             {aspsp.name} <span className="text-neutral-500">({aspsp.country})</span>
-            {aspsp.maximum_consent_validity !== undefined && (
+            {typeof aspsp.maximum_consent_validity === 'number' && (
               <span className="text-neutral-500">
                 {' '}
                 · consenso max {Math.round(aspsp.maximum_consent_validity / 86400)} giorni
               </span>
             )}
-            {aspsp.beta === true && <span className="text-amber-600"> · beta</span>}
           </span>
           <form action="/api/eb/authorize" method="post">
             <input type="hidden" name="aspsp_name" value={aspsp.name} />
@@ -142,24 +157,48 @@ async function Connettori() {
   );
 }
 
+async function IntestazioneConto({ accountUid }: { accountUid: string }) {
+  const esito = await prova(() => getAccountDetails(accountUid));
+  if (!esito.ok) {
+    return <Errore>Dettagli non disponibili: {esito.errore}</Errore>;
+  }
+  return (
+    <>
+      <p className="text-sm font-medium">{describeAccount(esito.valore)}</p>
+      <Grezzo etichetta="risposta grezza · details" valore={esito.valore} />
+    </>
+  );
+}
+
 async function Saldi({ accountUid }: { accountUid: string }) {
   const esito = await prova(() => getBalances(accountUid));
   if (!esito.ok) return <Errore>Saldi non disponibili: {esito.errore}</Errore>;
 
-  const { balances } = esito.valore;
-  if (balances.length === 0) return <p className="text-xs text-neutral-500">Nessun saldo.</p>;
+  const saldi = comeArray<EbBalance>(
+    (esito.valore as { balances?: unknown } | undefined)?.balances ?? esito.valore,
+  );
 
   return (
-    <ul className="text-sm">
-      {balances.map((saldo, indice) => (
-        <li key={`${saldo.balance_type ?? 'saldo'}-${indice}`}>
-          <span className="font-medium">
-            {saldo.balance_amount.amount} {saldo.balance_amount.currency}
-          </span>
-          <span className="text-neutral-500"> · {saldo.name ?? saldo.balance_type ?? 'saldo'}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      {saldi.length === 0 ? (
+        <p className="text-xs text-neutral-500">Nessun saldo nella risposta.</p>
+      ) : (
+        <ul className="text-sm">
+          {saldi.map((saldo, indice) => (
+            <li key={indice}>
+              <span className="font-medium">
+                {saldo.balance_amount?.amount ?? '—'} {saldo.balance_amount?.currency ?? ''}
+              </span>
+              <span className="text-neutral-500">
+                {' '}
+                · {saldo.name ?? saldo.balance_type ?? 'saldo'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Grezzo etichetta="risposta grezza · balances" valore={esito.valore} />
+    </>
   );
 }
 
@@ -167,46 +206,61 @@ async function UltimeTransazioni({ accountUid }: { accountUid: string }) {
   const esito = await prova(() => getTransactionsPage(accountUid));
   if (!esito.ok) return <Errore>Transazioni non disponibili: {esito.errore}</Errore>;
 
-  const { transactions, continuation_key } = esito.valore;
-  if (transactions.length === 0) {
-    return <p className="text-xs text-neutral-500">Nessuna transazione restituita.</p>;
-  }
+  const risposta = esito.valore as { transactions?: unknown; continuation_key?: unknown };
+  const movimenti = comeArray<EbTransaction>(risposta?.transactions);
 
   return (
-    <details className="text-xs">
-      <summary className="cursor-pointer text-neutral-500">
-        {transactions.length} transazioni nella prima pagina
-        {continuation_key !== undefined ? ' · altre pagine disponibili' : ''}
-      </summary>
-      <ul className="mt-2 space-y-1 font-mono">
-        {transactions.slice(0, 5).map((t, indice) => (
-          <li key={t.entry_reference ?? indice}>
-            {t.booking_date ?? '—'} · {t.credit_debit_indicator ?? '—'} ·{' '}
-            {t.transaction_amount.amount} {t.transaction_amount.currency}
-          </li>
-        ))}
-      </ul>
-    </details>
+    <>
+      <p className="text-xs text-neutral-500">
+        {movimenti.length} transazioni nella prima pagina
+        {typeof risposta?.continuation_key === 'string' ? ' · altre pagine disponibili' : ''}
+      </p>
+      {movimenti.length > 0 && (
+        <ul className="mt-1 space-y-0.5 font-mono text-xs">
+          {movimenti.slice(0, 5).map((t, indice) => (
+            <li key={indice}>
+              {t.booking_date ?? '—'} · {t.credit_debit_indicator ?? '—'} ·{' '}
+              {t.transaction_amount?.amount ?? '—'} {t.transaction_amount?.currency ?? ''}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Grezzo etichetta="risposta grezza · transactions (prima pagina)" valore={esito.valore} />
+    </>
   );
-}
-
-async function IntestazioneConto({ accountUid }: { accountUid: string }) {
-  const esito = await prova(() => getAccountDetails(accountUid));
-  if (!esito.ok) {
-    return <p className="text-sm font-medium text-neutral-500">Dettagli non disponibili</p>;
-  }
-  return <p className="text-sm font-medium">{describeAccount(esito.valore)}</p>;
 }
 
 function Conto({ accountUid }: { accountUid: string }) {
   return (
     <li className="space-y-1 border-t border-neutral-100 pt-3 first:border-0 first:pt-0 dark:border-neutral-900">
       <IntestazioneConto accountUid={accountUid} />
-      <p className="font-mono text-xs text-neutral-500">uid {accountUid}</p>
+      <p className="font-mono text-xs break-all text-neutral-500">uid {accountUid}</p>
       <Saldi accountUid={accountUid} />
       <UltimeTransazioni accountUid={accountUid} />
     </li>
   );
+}
+
+/**
+ * Estrae gli uid dalla sessione senza dare per scontata la forma.
+ * `GET /sessions/{id}` documenta `accounts` come elenco di stringhe e
+ * `accounts_data` come elenco di oggetti, ma l'unica versione affidabile e'
+ * quella che risponde davvero, quindi si accettano entrambe.
+ */
+function estraiUid(sessione: unknown): readonly string[] {
+  const s = sessione as { accounts?: unknown; accounts_data?: unknown };
+
+  const daAccounts = comeArray<unknown>(s?.accounts)
+    .map((voce) =>
+      typeof voce === 'string' ? voce : ((voce as { uid?: unknown })?.uid ?? undefined),
+    )
+    .filter((uid): uid is string => typeof uid === 'string' && uid !== '');
+
+  if (daAccounts.length > 0) return daAccounts;
+
+  return comeArray<{ uid?: unknown }>(s?.accounts_data)
+    .map((voce) => voce?.uid)
+    .filter((uid): uid is string => typeof uid === 'string' && uid !== '');
 }
 
 async function SessioneCorrente() {
@@ -224,13 +278,7 @@ async function SessioneCorrente() {
   if (!esito.ok) return <Errore>Sessione non leggibile: {esito.errore}</Errore>;
 
   const sessione = esito.valore;
-
-  // `GET /sessions/{id}` restituisce gli uid in `accounts` come stringhe; il
-  // fallback su `accounts_data` copre il caso in cui l'API cambi forma.
-  const uids =
-    sessione.accounts.length > 0
-      ? sessione.accounts
-      : (sessione.accounts_data ?? []).map((a) => a.uid);
+  const uids = estraiUid(sessione);
 
   return (
     <div className="space-y-3">
@@ -247,11 +295,20 @@ async function SessioneCorrente() {
         <dd>{uids.length}</dd>
       </dl>
 
-      <ul className="space-y-3">
-        {uids.map((uid) => (
-          <Conto key={uid} accountUid={uid} />
-        ))}
-      </ul>
+      <Grezzo etichetta="risposta grezza · sessione" valore={sessione} />
+
+      {uids.length === 0 ? (
+        <Errore>
+          La sessione non contiene nessun identificativo di conto riconoscibile. Guarda la risposta
+          grezza qui sopra per capire come si chiama il campo.
+        </Errore>
+      ) : (
+        <ul className="space-y-3">
+          {uids.map((uid) => (
+            <Conto key={uid} accountUid={uid} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -269,7 +326,8 @@ export default async function DebugEbPage({
         <h1 className="text-xl font-semibold tracking-tight">Debug Enable Banking</h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
           Verifica della Fase 1. Nessun dato viene salvato: quello che vedi arriva direttamente
-          dall&rsquo;API a ogni caricamento della pagina.
+          dall&rsquo;API a ogni caricamento della pagina. Gli IBAN sono mascherati anche nei dump
+          grezzi.
         </p>
       </div>
 

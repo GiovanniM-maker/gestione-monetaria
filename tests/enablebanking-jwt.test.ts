@@ -2,6 +2,7 @@ import { generateKeyPairSync, createVerify } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createEbJwt } from '@/lib/enablebanking/jwt';
 import { maskIban } from '@/lib/enablebanking/client';
+import { comeArray, jsonRedatto } from '@/lib/enablebanking/redact';
 
 /**
  * La chiave usata qui e' generata al volo dal test: non e' un segreto, non ha
@@ -86,5 +87,36 @@ describe('maskIban', () => {
 
   it('non espone niente su input troppo corti', () => {
     expect(maskIban('IT60')).toBe('****');
+  });
+});
+
+describe('redigi', () => {
+  it('maschera un IBAN sotto una chiave che si chiama iban', () => {
+    const dentro = { account_id: { iban: 'IT60X0542811101000000123456' } };
+    expect(jsonRedatto(dentro)).toContain('****3456');
+    expect(jsonRedatto(dentro)).not.toContain('0542811101');
+  });
+
+  it('maschera un IBAN annegato in una descrizione libera', () => {
+    const dentro = { remittance_information: ['Bonifico a IT60X0542811101000000123456 causale X'] };
+    expect(jsonRedatto(dentro)).not.toContain('0542811101');
+  });
+
+  it('non altera importi e date', () => {
+    const dentro = { transaction_amount: { amount: '-12.34', currency: 'EUR' }, d: '2026-08-11' };
+    expect(JSON.parse(jsonRedatto(dentro))).toEqual(dentro);
+  });
+});
+
+describe('comeArray', () => {
+  it('restituisce un array vuoto invece di far esplodere la pagina', () => {
+    expect(comeArray(undefined)).toEqual([]);
+    expect(comeArray(null)).toEqual([]);
+    expect(comeArray({ balances: [] })).toEqual([]);
+    expect(comeArray('testo')).toEqual([]);
+  });
+
+  it('lascia intatto un array vero', () => {
+    expect(comeArray([1, 2])).toEqual([1, 2]);
   });
 });
