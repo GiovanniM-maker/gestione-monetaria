@@ -37,6 +37,24 @@ export default async function DebugSyncPage() {
   const elencoConti = comeArray<AccountRow>(conti);
   const elencoCorse = comeArray<SyncRunRow>(corse);
 
+  // Una corsa e' riprendibile se non e' arrivata in fondo e ha ancora un
+  // cursore da cui ripartire. Senza questo elenco, una corsa interrotta da un
+  // ricarico di pagina resterebbe irraggiungibile: il suo identificativo viveva
+  // solo nello stato del componente.
+  const corseRiprendibili = elencoCorse
+    .filter(
+      (r) =>
+        (r.status === 'running' || r.status === 'failed') &&
+        r.cursor !== null &&
+        !(r.cursor.current === null && r.cursor.pending.length === 0),
+    )
+    .map((r) => ({
+      id: r.id,
+      started_at: r.started_at,
+      status: r.status,
+      rows_fetched: r.rows_fetched,
+    }));
+
   return (
     <div className="space-y-6">
       <div>
@@ -90,7 +108,7 @@ export default async function DebugSyncPage() {
       </Riquadro>
 
       <Riquadro titolo="Backfill">
-        <PannelloBackfill />
+        <PannelloBackfill corseRiprendibili={corseRiprendibili} />
       </Riquadro>
 
       <Riquadro titolo={`Righe grezze: ${righeGrezze ?? 0}`}>

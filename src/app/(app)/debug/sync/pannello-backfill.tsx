@@ -26,11 +26,21 @@ type EsitoFetta = {
  * cui chiudere questa scheda a meta' non rompe niente: lo stato e' nel cursore
  * salvato sul database, e basta ripremere Riprendi.
  */
-export function PannelloBackfill() {
+export type CorsaRiprendibile = {
+  id: string;
+  started_at: string;
+  status: string;
+  rows_fetched: number;
+};
+
+export function PannelloBackfill({
+  corseRiprendibili,
+}: {
+  corseRiprendibili: readonly CorsaRiprendibile[];
+}) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
   const [messaggi, setMessaggi] = useState<readonly string[]>([]);
-  const [runId, setRunId] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [fetteCorte, setFetteCorte] = useState(false);
@@ -77,7 +87,6 @@ export function PannelloBackfill() {
       }
 
       const esito = corpo as EsitoFetta;
-      setRunId(esito.runId);
       aggiungi(
         `${esito.pagineLette} pagine · ${esito.righeLette} righe lette · ${esito.righeNuove} nuove · ` +
           `${esito.righeDuplicate} duplicate · ${esito.contiRimanenti} conti da fare`,
@@ -101,7 +110,6 @@ export function PannelloBackfill() {
   async function avvia() {
     setInCorso(true);
     setMessaggi([]);
-    setRunId(null);
     const parametri = new URLSearchParams();
     if (dateFrom !== '') parametri.set('date_from', dateFrom);
     if (dateTo !== '') parametri.set('date_to', dateTo);
@@ -116,12 +124,11 @@ export function PannelloBackfill() {
     }
   }
 
-  async function riprendi() {
-    if (runId === null) return;
+  async function riprendi(id: string) {
     setInCorso(true);
-    aggiungi('Ripresa…');
+    aggiungi(`Ripresa della corsa ${id.slice(0, 8)}…`);
     try {
-      await eseguiCiclo(urlRipresa(runId));
+      await eseguiCiclo(urlRipresa(id));
     } catch (errore) {
       aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
     } finally {
@@ -160,15 +167,38 @@ export function PannelloBackfill() {
         <button type="button" onClick={avvia} disabled={inCorso} className={stileBottone}>
           2 · Avvia backfill
         </button>
-        <button
-          type="button"
-          onClick={riprendi}
-          disabled={inCorso || runId === null}
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-neutral-700"
-        >
-          Riprendi
-        </button>
       </div>
+
+      {corseRiprendibili.length > 0 && (
+        <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            {corseRiprendibili.length === 1
+              ? 'Una corsa non e\u2019 arrivata in fondo. Il suo cursore e\u2019 salvato: riprenderla continua da dove si era fermata, senza riscaricare nulla.'
+              : `${corseRiprendibili.length} corse non sono arrivate in fondo. I loro cursori sono salvati: riprenderle continua da dove si erano fermate.`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {corseRiprendibili.map((corsa) => (
+              <button
+                key={corsa.id}
+                type="button"
+                onClick={() => void riprendi(corsa.id)}
+                disabled={inCorso}
+                className="rounded-md border border-amber-400 px-3 py-1 text-xs disabled:opacity-40 dark:border-amber-800"
+              >
+                Riprendi{' '}
+                {new Date(corsa.started_at).toLocaleString('it-IT', {
+                  timeZone: 'Europe/Rome',
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                · {corsa.status} · {corsa.rows_fetched} righe
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <label className="flex items-center gap-2 text-xs text-neutral-500">
         <input
