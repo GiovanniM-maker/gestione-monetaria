@@ -100,6 +100,14 @@ qui, che è ciò che l'API fa davvero.
   leggono da `GET /accounts/{uid}/details`, che nella sessione non ci sono.
 - Il connettore **Revolut (LT)** dichiara **consenso massimo 180 giorni**, non 90. All'autorizzazione
   definitiva conviene chiedere il massimo: dimezza i rinnovi manuali via SCA.
+- **Data Insights dichiara 24 mesi di storico** per Revolut Bank UAB. Sono disponibili però solo
+  nella finestra di circa un'ora dall'autorizzazione: dopo, la stessa sessione risponde con gli
+  ultimi 90 giorni. Due conseguenze operative:
+  1. il backfill di quell'ora deve reggere un volume grosso, quindi va scritto a blocchi con
+     ripresa da cursore fin dal primo tentativo, non "ottimizzato dopo";
+  2. la Fase 2-bis (import CSV) perde la sua giustificazione originale — servivano almeno 12 mesi
+     per gli abbonamenti annuali, e l'API da sola ne dà 24. Resta utile come rete di sicurezza se
+     la finestra viene mancata, e per Intesa.
 - I tipi TypeScript delle risposte descrivono ciò che l'API _dovrebbe_ restituire. Il codice che le
   legge non deve mai fidarsene: niente accessi diretti a `.length` o `.map` su valori che arrivano
   dalla rete, o un campo assente diventa un 500 al posto della pagina.
