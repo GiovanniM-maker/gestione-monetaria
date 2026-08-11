@@ -25,3 +25,17 @@ export async function requireUser(): Promise<User> {
 
   return user;
 }
+
+/**
+ * Variante per le route `/api/admin/*`: restituisce l'utente oppure `null`,
+ * senza redirect.
+ *
+ * `requireUser()` chiama `redirect()`, che in un route handler produrrebbe un
+ * 307 verso una pagina HTML in risposta a una chiamata che si aspetta JSON.
+ * Il chiamante qui decide da se': tipicamente 401.
+ */
+export async function getAuthorizedUser(): Promise<User | null> {
+  const user = await getCurrentUser();
+  if (user === null || !isAllowedEmail(user.email)) return null;
+  return user;
+}

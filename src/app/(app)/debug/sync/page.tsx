@@ -1,0 +1,136 @@
+import type { Metadata } from 'next';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { comeArray } from '@/lib/enablebanking/redact';
+import { PannelloBackfill } from './pannello-backfill';
+import type { AccountRow, BankConnectionRow, SyncRunRow } from '@/lib/db/types';
+
+export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = { title: 'Ingestion' };
+
+function Riquadro({ titolo, children }: { titolo: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+      <h2 className="mb-3 text-sm font-semibold tracking-tight">{titolo}</h2>
+      {children}
+    </section>
+  );
+}
+
+function quando(valore: string | null): string {
+  if (valore === null) return '—';
+  return new Date(valore).toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+}
+
+export default async function DebugSyncPage() {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: connessioni }, { data: conti }, { data: corse }, { count: righeGrezze }] =
+    await Promise.all([
+      supabase.from('bank_connections').select('*').order('created_at'),
+      supabase.from('accounts').select('*').order('created_at'),
+      supabase.from('sync_runs').select('*').order('started_at', { ascending: false }).limit(10),
+      supabase.from('raw_transactions').select('*', { count: 'exact', head: true }),
+    ]);
+
+  const elencoConnessioni = comeArray<BankConnectionRow>(connessioni);
+  const elencoConti = comeArray<AccountRow>(conti);
+  const elencoCorse = comeArray<SyncRunRow>(corse);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Ingestion</h1>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+          Fase 2. I payload arrivano integrali in <code>raw_transactions</code>, che non viene mai
+          modificata ne&rsquo; cancellata. La normalizzazione e&rsquo; lavoro della Fase 3.
+        </p>
+      </div>
+
+      <Riquadro titolo="Connessioni">
+        {elencoConnessioni.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            Nessuna connessione. Registra i conti dal pannello qui sotto.
+          </p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {elencoConnessioni.map((c) => (
+              <li key={c.id}>
+                <span className="font-medium">
+                  {c.aspsp_name} ({c.aspsp_country})
+                </span>
+                <span className="text-neutral-500">
+                  {' '}
+                  · {c.status} · consenso fino al {quando(c.valid_until)} · ultimo sync{' '}
+                  {quando(c.last_sync_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Riquadro>
+
+      <Riquadro titolo={`Conti (${elencoConti.length})`}>
+        {elencoConti.length === 0 ? (
+          <p className="text-sm text-neutral-500">Nessun conto registrato.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {elencoConti.map((c) => (
+              <li key={c.id}>
+                <span className="font-medium">{c.name ?? 'Conto'}</span>
+                <span className="text-neutral-500">
+                  {' '}
+                  · {c.iban_masked ?? '—'} · {c.currency} · {c.account_type ?? 'tipo ignoto'} ·{' '}
+                  {c.include_in_totals ? 'nei totali' : 'escluso dai totali'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Riquadro>
+
+      <Riquadro titolo="Backfill">
+        <PannelloBackfill />
+      </Riquadro>
+
+      <Riquadro titolo={`Righe grezze: ${righeGrezze ?? 0}`}>
+        {elencoCorse.length === 0 ? (
+          <p className="text-sm text-neutral-500">Nessuna sincronizzazione eseguita.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-neutral-500">
+                <tr>
+                  <th className="py-1 pr-3">avvio</th>
+                  <th className="py-1 pr-3">tipo</th>
+                  <th className="py-1 pr-3">stato</th>
+                  <th className="py-1 pr-3">conti</th>
+                  <th className="py-1 pr-3">lette</th>
+                  <th className="py-1 pr-3">nuove</th>
+                  <th className="py-1 pr-3">duplicate</th>
+                  <th className="py-1">errore</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                {elencoCorse.map((r) => (
+                  <tr key={r.id} className="border-t border-neutral-100 dark:border-neutral-900">
+                    <td className="py-1 pr-3">{quando(r.started_at)}</td>
+                    <td className="py-1 pr-3">{r.trigger}</td>
+                    <td className="py-1 pr-3">{r.status}</td>
+                    <td className="py-1 pr-3">{r.accounts_synced}</td>
+                    <td className="py-1 pr-3">{r.rows_fetched}</td>
+                    <td className="py-1 pr-3">{r.rows_new}</td>
+                    <td className="py-1 pr-3">{r.rows_duplicate}</td>
+                    <td className="py-1 break-words text-red-600 dark:text-red-400">
+                      {r.error_message ?? ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Riquadro>
+    </div>
+  );
+}

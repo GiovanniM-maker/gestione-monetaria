@@ -1,0 +1,52 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { getAuthorizedUser } from '@/lib/auth/session';
+import { registerSessionAccounts } from '@/lib/sync/accounts';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+/**
+ * Registra connessione e conti a partire dalla sessione Enable Banking corrente.
+ *
+ * Sta sotto `/api/admin/*`, quindi dietro autenticazione di sessione e non
+ * dietro un segreto condiviso: tocca dati bancari e la lancia un browser
+ * autenticato. Il proxy la protegge gia', il controllo qui e' la seconda
+ * serratura (vedi `CLAUDE.md`, regola 6).
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  if ((await getAuthorizedUser()) === null) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
+  const sessionId = request.cookies.get('eb_session_id')?.value;
+  if (sessionId === undefined) {
+    return NextResponse.json(
+      { error: 'Nessuna sessione Enable Banking attiva. Autorizza da /debug/eb.' },
+      { status: 409 },
+    );
+  }
+
+  try {
+    const { connection, accounts } = await registerSessionAccounts(sessionId);
+    return NextResponse.json({
+      connection: {
+        id: connection.id,
+        aspsp: `${connection.aspsp_name} (${connection.aspsp_country})`,
+        valid_until: connection.valid_until,
+      },
+      accounts: accounts.map((a) => ({
+        id: a.id,
+        eb_account_uid: a.eb_account_uid,
+        name: a.name,
+        iban_masked: a.iban_masked,
+        currency: a.currency,
+        account_type: a.account_type,
+        include_in_totals: a.include_in_totals,
+      })),
+    });
+  } catch (errore) {
+    const messaggio = errore instanceof Error ? errore.message : String(errore);
+    console.error('[sync] registrazione conti fallita:', messaggio);
+    return NextResponse.json({ error: messaggio }, { status: 502 });
+  }
+}
