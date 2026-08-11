@@ -12,10 +12,21 @@ Nessun dato bancario e' ancora collegato.
 
 1. Su [supabase.com](https://supabase.com) crea un progetto nuovo, region **eu-central-1 (Frankfurt)**.
 2. Salva la password del database in un password manager: serve per il collegamento del CLI.
-3. **Project Settings → API**, annota:
-   - `Project URL` → sara' `NEXT_PUBLIC_SUPABASE_URL`
-   - chiave `anon` / `publishable` → sara' `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Apri il pannello **Connect** del progetto e annota:
+
+   | Nel pannello Supabase                           | Variabile dell'app              |
+   | ----------------------------------------------- | ------------------------------- |
+   | `SUPABASE_URL`                                  | `NEXT_PUBLIC_SUPABASE_URL`      |
+   | `SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`) | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+
+   Nello stesso pannello c'e' anche `SUPABASE_SECRET_KEY` (`sb_secret_…`), erede
+   della service role key: **bypassa la RLS**, non serve in Fase 0 e non va mai
+   in una variabile `NEXT_PUBLIC_*`. Ignorala.
+
 4. **Project Settings → General**, annota il `Reference ID` (una stringa tipo `abcdefghijklmnop`).
+   Se hai piu' di un progetto Supabase, verifica che sia lo stesso a cui punta
+   `SUPABASE_URL`: applicare la migration su un progetto e far puntare l'app a un
+   altro produce un database senza tabelle e un login che non entra mai.
 
 ## 2. Applicare la migration
 
