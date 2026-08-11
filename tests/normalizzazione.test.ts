@@ -255,3 +255,83 @@ describe('riferimentiSuPiuConti', () => {
     expect(condivisi.size).toBe(0);
   });
 });
+
+describe('riconosciGiroconto con controparti dichiarate', () => {
+  const propri = ['conto deposito senza vincoli', 'giovanni graziano mavilla'];
+
+  it('riconosce il deposito presso un altro istituto dalla causale', () => {
+    // L'altro lato non esiste nei nostri dati: senza la dichiarazione
+    // dell'utente questo movimento resterebbe contato come spesa.
+    expect(
+      riconosciGiroconto(
+        movimento({
+          bank_transaction_code: { code: 'TRANSFER' },
+          remittance_information: ['To Conto deposito senza vincoli'],
+        }),
+        propri,
+      ),
+    ).toBe(true);
+  });
+
+  it('riconosce il bonifico verso un proprio conto dal nome della controparte', () => {
+    expect(
+      riconosciGiroconto(
+        movimento({
+          bank_transaction_code: { code: 'TRANSFER' },
+          creditor: { name: 'Giovanni Graziano Mavilla' },
+          remittance_information: ['Bonifico'],
+        }),
+        propri,
+      ),
+    ).toBe(true);
+  });
+
+  it('continua a NON marcare un bonifico a un terzo', () => {
+    expect(
+      riconosciGiroconto(
+        movimento({
+          bank_transaction_code: { code: 'TRANSFER' },
+          creditor: { name: 'Vanna Reverberi' },
+          remittance_information: ['To Vanna Reverberi'],
+        }),
+        propri,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('la controparte dipende dalla direzione', () => {
+  const propri = ['giovanni graziano mavilla'];
+
+  it('su un uscita guarda il creditore, non il debitore', () => {
+    // Su ogni uscita il debitore e' l'intestatario del conto. Guardarlo
+    // marcherebbe come giroconto qualunque bonifico, cancellando spese reali.
+    expect(
+      riconosciGiroconto(
+        movimento({
+          credit_debit_indicator: 'DBIT',
+          bank_transaction_code: { code: 'TRANSFER' },
+          creditor: { name: 'Vanna Reverberi' },
+          debtor: { name: 'Giovanni Graziano Mavilla' },
+          remittance_information: ['To Vanna Reverberi'],
+        }),
+        propri,
+      ),
+    ).toBe(false);
+  });
+
+  it('su un entrata guarda il debitore', () => {
+    expect(
+      riconosciGiroconto(
+        movimento({
+          credit_debit_indicator: 'CRDT',
+          bank_transaction_code: { code: 'TRANSFER' },
+          creditor: { name: 'Giovanni Graziano Mavilla' },
+          debtor: { name: 'Giovanni Graziano Mavilla' },
+          remittance_information: ['Bonifico'],
+        }),
+        propri,
+      ),
+    ).toBe(true);
+  });
+});

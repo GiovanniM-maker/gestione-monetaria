@@ -12,7 +12,7 @@
 | 1     | Autenticazione Enable Banking, isolata    | **completata** |
 | 2     | Ingestion grezza + backfill riavviabile   | **completata** |
 | 2-bis | Import CSV                                | rimandata      |
-| 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
+| 3     | Normalizzazione, idempotenza, multivaluta | in corso       |
 | 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
 | 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
 | 6     | Dashboard                                 | non iniziata   |
@@ -181,6 +181,22 @@ non funziona.
 | `Anthropic* Claude Sub` / `Anthropic`           | suffisso del prodotto sul nome del marchio                                                            |
 | `Starbucks 17831` / `Starbucks 12172`           | numero del punto vendita                                                                              |
 | `To EUR MB:b260c88e-…` / `To EUR MB:ef475d8d-…` | identificativo tecnico in coda                                                                        |
+
+#### I giroconti verso conti non collegati — risolti a mano, in `own_counterparties`
+
+Verificato in Fase 3: i movimenti `"To/From Conto deposito senza vincoli"` hanno un
+`entry_reference` presente su **un conto solo**. Quel deposito non è fra i conti collegati, quindi
+l'altro lato dello spostamento non esiste nei nostri dati e nessun riconoscimento automatico —
+né quello strutturale né quello per movimenti speculari — potrà mai vederlo.
+
+La tabella `own_counterparties` è la risposta: l'utente dichiara una volta quali controparti sono
+conti propri, e la dichiarazione vale per tutte le occorrenze passate e future. Valeva 5.830 € sul
+solo mese di luglio.
+
+**La controparte da confrontare è una sola e dipende dalla direzione**: il creditore su un'uscita,
+il debitore su un'entrata. Guardarle entrambe è un errore silenzioso e grave, perché su ogni uscita
+il debitore è l'intestatario del conto: dichiarare il proprio nome marcherebbe come giroconto anche
+un bonifico a un terzo, cancellando spese reali.
 
 #### Il caso che il rilevamento automatico non può risolvere
 

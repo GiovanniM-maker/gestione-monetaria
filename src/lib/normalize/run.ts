@@ -88,8 +88,15 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
   const { data: contiGrezzi } = await supabase.from('accounts').select('*');
   const conti = comeArray<AccountRow>(contiGrezzi);
   const contoPerId = new Map(conti.map((c) => [c.id, c]));
-  const nomiContiPropri = conti
-    .map((c) => c.name)
+  const { data: controparti } = await supabase.from('own_counterparties').select('label');
+
+  // I conti collegati e le controparti dichiarate finiscono nello stesso
+  // elenco: per il riconoscimento sono la stessa cosa, cambia solo da dove
+  // arriva l'informazione.
+  const nomiContiPropri = [
+    ...conti.map((c) => c.name),
+    ...comeArray<{ label: string }>(controparti).map((c) => c.label),
+  ]
     .filter((n): n is string => typeof n === 'string' && n.trim() !== '')
     .map(normalizzaNome);
 
