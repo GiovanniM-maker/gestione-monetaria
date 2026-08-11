@@ -43,8 +43,28 @@ export const publicEnv = {
   get supabaseAnonKey(): string {
     return required('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   },
+  /**
+   * Origine pubblica dell'app: solo schema + host + porta, mai un percorso.
+   *
+   * Si tiene la sola `origin` invece del valore grezzo perche' e' facilissimo
+   * incollare qui l'URL di callback completo — nella configurazione di Supabase
+   * i due valori stanno a due righe di distanza. Se succedesse, il link di
+   * accesso punterebbe a `/auth/callback/auth/callback` e darebbe 404, con un
+   * errore che non dice niente su dove sia il problema.
+   *
+   * `new URL()` normalizza anche lo slash finale e, non accettando URL
+   * relativi, intercetta il caso in cui manchi `https://`.
+   */
   get siteUrl(): string {
-    return required('NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL).replace(/\/+$/, '');
+    const raw = required('NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL);
+    try {
+      return new URL(raw).origin;
+    } catch {
+      throw new Error(
+        `NEXT_PUBLIC_SITE_URL non e' un URL assoluto valido: "${raw}". ` +
+          'Atteso schema e dominio, per esempio https://esempio.vercel.app',
+      );
+    }
   },
 } as const;
 
