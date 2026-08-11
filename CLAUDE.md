@@ -12,7 +12,7 @@
 | 1     | Autenticazione Enable Banking, isolata    | **completata** |
 | 2     | Ingestion grezza + backfill riavviabile   | **completata** |
 | 2-bis | Import CSV                                | rimandata      |
-| 3     | Normalizzazione, idempotenza, multivaluta | in corso       |
+| 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
 | 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
 | 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
 | 6     | Dashboard                                 | non iniziata   |
@@ -204,10 +204,40 @@ I bonifici verso un **proprio conto presso un'altra banca** appaiono come uscite
 nome dell'intestatario come controparte e nessun segnale che li distingua da un bonifico a un terzo.
 Nei dati caricati sono la prima voce di spesa per importo.
 
-Non esiste modo di riconoscerli automaticamente finché l'altro conto non è collegato, e nemmeno
-dopo sarebbe immediato. Vanno marcati **una volta sola a mano** sul merchant, e da lì la marcatura
-si propaga a tutte le occorrenze passate e future. È un caso in cui l'input umano non è una
-scorciatoia: è l'unica fonte dell'informazione.
+Non esiste modo di riconoscerli automaticamente finché l'altro conto non è collegato. L'input umano
+qui non è una scorciatoia, è l'unica fonte dell'informazione — ed è per questo che sta in
+`own_counterparties`, dichiarato una volta e valido per tutte le occorrenze passate e future, e non
+in una correzione riga per riga.
+
+### Numeri di chiusura della Fase 3 — luglio 2026, conto `****3513`
+
+Servono da riferimento per ogni verifica futura: se una modifica li sposta, o c'è una ragione
+esplicita, o è una regressione.
+
+| Grandezza                            | Valore       |
+| ------------------------------------ | ------------ |
+| Movimenti normalizzati (storico)     | 581          |
+| Giroconti riconosciuti (storico)     | 141          |
+| Uscite lorde di luglio               | −12.670,32 € |
+| Uscite di luglio al netto dei pocket | −10.670,32 € |
+| **Spesa reale di luglio**            | **−3.640,32 €** |
+
+Le uscite lorde coincidono **al centesimo** con l'app della banca: è la prova che segno, parsing e
+aritmetica in centesimi sono corretti. Ogni euro della differenza fino alla spesa reale è
+riconducibile a un giroconto specifico — 2.000 € di pocket in valuta, 5.830 € verso il conto
+deposito, 1.200 € verso un proprio conto presso un altro istituto — non a un residuo non spiegato.
+
+I tre meccanismi che producono quei 141 giroconti sono indipendenti e non sostituibili l'uno
+all'altro:
+
+1. **riferimento condiviso fra due conti collegati** — prova strutturale, non interpreta niente;
+2. **causale `To`/`From` + sigla di valuta o nome di un conto proprio** — vede i pocket, di cui
+   registriamo un lato solo;
+3. **controparte dichiarata in `own_counterparties`** — vede i conti non collegati, che nessuna
+   delle prime due può raggiungere.
+
+L'idempotenza è verificata nel modo che conta: due normalizzazioni consecutive sull'intero storico
+lasciano 581 righe e nessun inserimento.
 
 ## Regole di sicurezza — NON NEGOZIABILI
 
