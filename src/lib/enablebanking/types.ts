@@ -50,10 +50,33 @@ export type EbAccount = {
   details?: string;
 };
 
-export type EbSession = {
+/**
+ * Risposta di `POST /sessions`: qui `accounts` contiene gli oggetti conto
+ * completi.
+ */
+export type EbAuthorizedSession = {
   session_id: string;
   status?: string;
   accounts: readonly EbAccount[];
+  aspsp?: { name: string; country: string };
+  access?: { valid_until?: string };
+};
+
+/**
+ * Risposta di `GET /sessions/{id}`, che ha una forma DIVERSA dalla precedente:
+ * `accounts` e' un elenco di UUID in chiaro, e i pochi dati identificativi
+ * stanno in `accounts_data`. Per nome, valuta e IBAN serve una chiamata a
+ * `/accounts/{uid}/details`.
+ *
+ * I due tipi restano separati apposta: unificarli avrebbe significato rendere
+ * opzionale meta' dei campi, e sarebbe stato il modo piu' rapido per
+ * ripresentare lo stesso errore che ha prodotto `/accounts/undefined/balances`.
+ */
+export type EbSession = {
+  session_id: string;
+  status?: string;
+  accounts: readonly string[];
+  accounts_data?: readonly { uid: string; identification_hash?: string }[];
   aspsp?: { name: string; country: string };
   access?: { valid_until?: string };
   created?: string;

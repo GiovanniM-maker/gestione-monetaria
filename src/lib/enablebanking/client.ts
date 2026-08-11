@@ -6,6 +6,7 @@ import type {
   EbAspsp,
   EbAspspsResponse,
   EbAuthResponse,
+  EbAuthorizedSession,
   EbBalancesResponse,
   EbSession,
   EbTransactionsResponse,
@@ -87,13 +88,22 @@ export async function startAuthorization(input: StartAuthorizationInput): Promis
   });
 }
 
-/** Scambia il codice di autorizzazione per una sessione con l'elenco dei conti. */
-export async function createSession(code: string): Promise<EbSession> {
-  return request<EbSession>('POST', '/sessions', { body: { code } });
+/**
+ * Scambia il codice di autorizzazione per una sessione.
+ * Attenzione: qui `accounts` contiene gli oggetti conto completi, mentre
+ * `getSession` restituisce solo UUID. Sono due tipi distinti apposta.
+ */
+export async function createSession(code: string): Promise<EbAuthorizedSession> {
+  return request<EbAuthorizedSession>('POST', '/sessions', { body: { code } });
 }
 
 export async function getSession(sessionId: string): Promise<EbSession> {
   return request<EbSession>('GET', `/sessions/${encodeURIComponent(sessionId)}`);
+}
+
+/** Dati descrittivi del conto: nome, valuta, prodotto, identificativi. */
+export async function getAccountDetails(accountUid: string): Promise<EbAccount> {
+  return request<EbAccount>('GET', `/accounts/${encodeURIComponent(accountUid)}/details`);
 }
 
 export async function getBalances(accountUid: string): Promise<EbBalancesResponse> {

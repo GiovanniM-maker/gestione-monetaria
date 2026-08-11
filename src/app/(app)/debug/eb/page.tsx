@@ -2,13 +2,13 @@ import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import {
   describeAccount,
+  getAccountDetails,
   getBalances,
   getSession,
   getTransactionsPage,
   listAspsps,
 } from '@/lib/enablebanking/client';
 import { ebConfigStatus } from '@/lib/enablebanking/config';
-import type { EbAccount } from '@/lib/enablebanking/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -190,13 +190,21 @@ async function UltimeTransazioni({ accountUid }: { accountUid: string }) {
   );
 }
 
-function Conto({ account }: { account: EbAccount }) {
+async function IntestazioneConto({ accountUid }: { accountUid: string }) {
+  const esito = await prova(() => getAccountDetails(accountUid));
+  if (!esito.ok) {
+    return <p className="text-sm font-medium text-neutral-500">Dettagli non disponibili</p>;
+  }
+  return <p className="text-sm font-medium">{describeAccount(esito.valore)}</p>;
+}
+
+function Conto({ accountUid }: { accountUid: string }) {
   return (
     <li className="space-y-1 border-t border-neutral-100 pt-3 first:border-0 first:pt-0 dark:border-neutral-900">
-      <p className="text-sm font-medium">{describeAccount(account)}</p>
-      <p className="font-mono text-xs text-neutral-500">uid {account.uid}</p>
-      <Saldi accountUid={account.uid} />
-      <UltimeTransazioni accountUid={account.uid} />
+      <IntestazioneConto accountUid={accountUid} />
+      <p className="font-mono text-xs text-neutral-500">uid {accountUid}</p>
+      <Saldi accountUid={accountUid} />
+      <UltimeTransazioni accountUid={accountUid} />
     </li>
   );
 }
@@ -217,6 +225,13 @@ async function SessioneCorrente() {
 
   const sessione = esito.valore;
 
+  // `GET /sessions/{id}` restituisce gli uid in `accounts` come stringhe; il
+  // fallback su `accounts_data` copre il caso in cui l'API cambi forma.
+  const uids =
+    sessione.accounts.length > 0
+      ? sessione.accounts
+      : (sessione.accounts_data ?? []).map((a) => a.uid);
+
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -229,12 +244,12 @@ async function SessioneCorrente() {
         <dt className="text-neutral-500">Valida fino a</dt>
         <dd>{sessione.access?.valid_until ?? '—'}</dd>
         <dt className="text-neutral-500">Conti</dt>
-        <dd>{sessione.accounts.length}</dd>
+        <dd>{uids.length}</dd>
       </dl>
 
       <ul className="space-y-3">
-        {sessione.accounts.map((account) => (
-          <Conto key={account.uid} account={account} />
+        {uids.map((uid) => (
+          <Conto key={uid} accountUid={uid} />
         ))}
       </ul>
     </div>
