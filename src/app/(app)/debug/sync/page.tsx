@@ -33,6 +33,17 @@ export default async function DebugSyncPage() {
       supabase.from('raw_transactions').select('*', { count: 'exact', head: true }),
     ]);
 
+  const [{ count: movimenti }, { data: perMese }] = await Promise.all([
+    supabase.from('transactions').select('*', { count: 'exact', head: true }),
+    supabase.from('v_expenses_by_month').select('*').order('mese', { ascending: false }),
+  ]);
+  const mesi = comeArray<{
+    mese: string;
+    movimenti: number;
+    totale_eur: string | null;
+    senza_cambio: number;
+  }>(perMese);
+
   const elencoConnessioni = comeArray<BankConnectionRow>(connessioni);
   const elencoConti = comeArray<AccountRow>(conti);
   const elencoCorse = comeArray<SyncRunRow>(corse);
@@ -109,6 +120,44 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo="Backfill">
         <PannelloBackfill corseRiprendibili={corseRiprendibili} />
+      </Riquadro>
+
+      <Riquadro titolo={`Uscite per mese · ${movimenti ?? 0} movimenti normalizzati`}>
+        {mesi.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            Nessun movimento normalizzato. Premi <strong>3 · Normalizza</strong>.
+          </p>
+        ) : (
+          <>
+            <table className="w-full max-w-md text-left text-sm">
+              <thead className="text-xs text-neutral-500">
+                <tr>
+                  <th className="py-1 pr-4">mese</th>
+                  <th className="py-1 pr-4 text-right">uscite</th>
+                  <th className="py-1 text-right">totale</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                {mesi.map((m) => (
+                  <tr key={m.mese} className="border-t border-neutral-100 dark:border-neutral-900">
+                    <td className="py-1 pr-4">{m.mese}</td>
+                    <td className="py-1 pr-4 text-right">{m.movimenti}</td>
+                    <td className="py-1 text-right">
+                      {m.totale_eur ?? '—'}
+                      {m.senza_cambio > 0 && (
+                        <span className="text-amber-600"> · {m.senza_cambio} senza cambio</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-xs text-neutral-500">
+              Solo uscite reali: esclusi giroconti, rimborsi, conti fuori dai totali e movimenti a
+              importo zero. E&rsquo; il numero da confrontare con l&rsquo;app della banca.
+            </p>
+          </>
+        )}
       </Riquadro>
 
       <Riquadro titolo={`Righe grezze: ${righeGrezze ?? 0}`}>

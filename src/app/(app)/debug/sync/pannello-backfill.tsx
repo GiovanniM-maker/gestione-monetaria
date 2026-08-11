@@ -124,6 +124,33 @@ export function PannelloBackfill({
     }
   }
 
+  async function normalizza() {
+    setInCorso(true);
+    aggiungi('Normalizzazione dell\u2019intero registro grezzo\u2026');
+    try {
+      const risposta = await fetch('/api/admin/normalize', { method: 'POST' });
+      const corpo = (await risposta.json()) as Record<string, unknown>;
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+      } else {
+        aggiungi(
+          `${corpo['esaminate']} righe grezze esaminate \u00b7 ${corpo['inserite']} inserite \u00b7 ` +
+            `${corpo['aggiornate']} aggiornate \u00b7 ${corpo['protette']} protette da correzione manuale \u00b7 ` +
+            `${corpo['scartate']} scartate \u00b7 ${corpo['girocontiSpeculari']} giroconti speculari marcati`,
+        );
+        const errori = corpo['errori'];
+        if (Array.isArray(errori) && errori.length > 0) {
+          for (const e of errori) aggiungi(`  ${String(e)}`);
+        }
+        router.refresh();
+      }
+    } catch (errore) {
+      aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   async function riprendi(id: string) {
     setInCorso(true);
     aggiungi(`Ripresa della corsa ${id.slice(0, 8)}…`);
@@ -166,6 +193,9 @@ export function PannelloBackfill({
         </button>
         <button type="button" onClick={avvia} disabled={inCorso} className={stileBottone}>
           2 · Avvia backfill
+        </button>
+        <button type="button" onClick={normalizza} disabled={inCorso} className={stileBottone}>
+          3 · Normalizza
         </button>
       </div>
 
