@@ -33,6 +33,7 @@ export function PannelloBackfill() {
   const [runId, setRunId] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [fetteCorte, setFetteCorte] = useState(false);
 
   const aggiungi = (testo: string) => setMessaggi((precedenti) => [...precedenti, testo]);
 
@@ -55,6 +56,13 @@ export function PannelloBackfill() {
       setInCorso(false);
     }
   }
+
+  /** Il budget viaggia anche nelle riprese, o la fetta successiva tornerebbe lunga. */
+  const urlRipresa = (id: string) => {
+    const parametri = new URLSearchParams({ run_id: id });
+    if (fetteCorte) parametri.set('budget_ms', '5000');
+    return `/api/admin/backfill?${parametri.toString()}`;
+  };
 
   /** Esegue fette finche' il server non dichiara il backfill completato. */
   async function eseguiCiclo(primaChiamata: string) {
@@ -86,7 +94,7 @@ export function PannelloBackfill() {
         return;
       }
 
-      url = `/api/admin/backfill?run_id=${encodeURIComponent(esito.runId)}`;
+      url = urlRipresa(esito.runId);
     }
   }
 
@@ -97,6 +105,7 @@ export function PannelloBackfill() {
     const parametri = new URLSearchParams();
     if (dateFrom !== '') parametri.set('date_from', dateFrom);
     if (dateTo !== '') parametri.set('date_to', dateTo);
+    if (fetteCorte) parametri.set('budget_ms', '5000');
     aggiungi('Avvio backfill…');
     try {
       await eseguiCiclo(`/api/admin/backfill?${parametri.toString()}`);
@@ -112,7 +121,7 @@ export function PannelloBackfill() {
     setInCorso(true);
     aggiungi('Ripresa…');
     try {
-      await eseguiCiclo(`/api/admin/backfill?run_id=${encodeURIComponent(runId)}`);
+      await eseguiCiclo(urlRipresa(runId));
     } catch (errore) {
       aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
     } finally {
@@ -160,6 +169,17 @@ export function PannelloBackfill() {
           Riprendi
         </button>
       </div>
+
+      <label className="flex items-center gap-2 text-xs text-neutral-500">
+        <input
+          type="checkbox"
+          checked={fetteCorte}
+          onChange={(e) => setFetteCorte(e.target.checked)}
+          disabled={inCorso}
+        />
+        Fette da 5 secondi — serve a verificare la ripresa: il backfill si spezza in piu&rsquo;
+        tranche anche su uno storico corto.
+      </label>
 
       <p className="text-xs text-neutral-500">
         Lasciare le date vuote chiede tutto lo storico che la banca concede. Il backfill procede a

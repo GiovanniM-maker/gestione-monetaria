@@ -15,6 +15,23 @@ export const maxDuration = 300;
 
 const BUDGET_MS = 240_000;
 
+/**
+ * Budget minimo accettato. Serve a rendere la riavviabilita' verificabile:
+ * con `?budget_ms=5000` una fetta esaurisce il tempo dopo poche pagine, quindi
+ * il backfill si spezza davvero e il percorso di ripresa viene percorso invece
+ * che dato per buono. Su uno storico corto, altrimenti, tutto finisce in una
+ * fetta sola e quel codice non viene mai eseguito.
+ */
+const BUDGET_MS_MINIMO = 5_000;
+
+function budgetRichiesto(parametri: URLSearchParams): number {
+  const grezzo = parametri.get('budget_ms');
+  if (grezzo === null) return BUDGET_MS;
+  const valore = Number.parseInt(grezzo, 10);
+  if (!Number.isFinite(valore)) return BUDGET_MS;
+  return Math.min(Math.max(valore, BUDGET_MS_MINIMO), BUDGET_MS);
+}
+
 /** `YYYY-MM-DD`, l'unico formato che accettiamo per gli estremi dell'intervallo. */
 const GIORNO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -35,10 +52,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const parametri = request.nextUrl.searchParams;
   const runIdEsistente = parametri.get('run_id');
+  const budget = budgetRichiesto(parametri);
 
   try {
     if (runIdEsistente !== null) {
-      const esito = await eseguiFettaBackfill(runIdEsistente, BUDGET_MS);
+      const esito = await eseguiFettaBackfill(runIdEsistente, budget);
       return NextResponse.json(esito, { status: esito.status === 'failed' ? 502 : 200 });
     }
 
@@ -97,7 +115,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       dateTo,
     });
 
-    const esito = await eseguiFettaBackfill(run.id, BUDGET_MS);
+    const esito = await eseguiFettaBackfill(run.id, budget);
     return NextResponse.json(esito, { status: esito.status === 'failed' ? 502 : 200 });
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);

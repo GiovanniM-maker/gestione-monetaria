@@ -258,6 +258,16 @@ export async function eseguiFettaBackfill(
 
   const finito = backfillCompletato(cursore);
 
+  // `last_sync_at` sulla connessione, non solo sulla corsa: e' il campo che in
+  // Fase 7 fa scattare l'alert "nessuna sincronizzazione riuscita da giorni",
+  // e va scritto solo quando il backfill si e' davvero concluso.
+  if (finito && run.connection_id !== null) {
+    await supabase
+      .from('bank_connections')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('id', run.connection_id);
+  }
+
   await supabase
     .from('sync_runs')
     .update({
