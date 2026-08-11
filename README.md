@@ -66,10 +66,17 @@ where schemaname = 'public';
 
 **Authentication → URL Configuration**
 
-- `Site URL`: `https://gestione-monetaria.vercel.app`
+Sostituisci `<DOMINIO>` con il dominio di **produzione** del progetto Vercel
+(Settings → Domains): quello senza il segmento `-git-<branch>-` e senza la
+stringa casuale del singolo deployment, che cambia a ogni commit.
+
+- `Site URL`: `https://<DOMINIO>`
 - `Redirect URLs`: aggiungi
-  - `https://gestione-monetaria.vercel.app/auth/callback`
+  - `https://<DOMINIO>/auth/callback`
   - `http://localhost:3000/auth/callback` (per lo sviluppo locale)
+
+Lo stesso identico valore va in `NEXT_PUBLIC_SITE_URL` su Vercel. Se le tre
+stringhe non combaciano, il magic link parte ma Supabase rifiuta il redirect.
 
 **Authentication → Users → Add user → Create new user**
 
@@ -108,7 +115,7 @@ Per `.env.local`:
    | ------------------------------- | ------------------------------------------------------- |
    | `NEXT_PUBLIC_SUPABASE_URL`      | Project URL di Supabase                                 |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | chiave anon / publishable                               |
-   | `NEXT_PUBLIC_SITE_URL`          | `https://gestione-monetaria.vercel.app`                 |
+   | `NEXT_PUBLIC_SITE_URL`          | `https://<DOMINIO>` — vedi sezione 3                    |
    | `ALLOWED_EMAIL`                 | il tuo indirizzo                                        |
    | `CRON_SECRET`                   | `openssl rand -hex 32`, valore diverso da quello locale |
 
