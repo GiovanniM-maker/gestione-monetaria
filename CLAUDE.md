@@ -147,6 +147,27 @@ qui, che è ciò che l'API fa davvero.
 - `exchange_rate` esiste come campo ma arriva a null sul conto EUR, dove Revolut riporta importi già
   convertiti. Sui conti in valuta va verificato prima di scrivere la conversione FX.
 
+### L'`eb_account_uid` NON è stabile fra due autorizzazioni
+
+Verificato l'11 agosto 2026, riautorizzando Revolut: gli stessi tre conti sono tornati con
+`eb_account_uid` **tutti nuovi**. Cercandoli solo per uid non se ne trova nessuno, se ne creano tre
+paralleli, e lo storico si spacca in due metà — da 3 conti a 6, senza un errore.
+
+Il danno non è la riga in più. Il riconoscimento strutturale dei giroconti marca come giroconto ogni
+`entry_reference` presente su due conti diversi: con il conto sdoppiato, **tutto il periodo scaricato
+due volte diventa giroconto**. I giroconti sono passati dal 24% al 59% dei movimenti, cioè metà delle
+spese reali è sparita dalle analisi in silenzio. È la peggiore categoria di guasto possibile qui.
+
+Due difese, in `abbinaConti`:
+
+1. **si abbina anche per IBAN**, e il conto ritrovato si aggiorna uid compreso;
+2. **se restano conti noti spaiati mentre arrivano uid mai visti, ci si ferma** — è la firma esatta
+   della rotazione sui conti senza IBAN, e i pocket Revolut hanno `iban_masked` nullo.
+
+La riparazione dei duplicati già creati sta in `0007_unifica_conti_duplicati.sql`. Abbina i conti dal
+`payload_hash` condiviso: due conti diversi non condividono mai un payload intero, perché i due lati
+di un giroconto hanno `credit_debit_indicator` opposto e controparti diverse.
+
 ### Cosa serve per raggruppare la spesa — osservato sui dati caricati
 
 Verificato in chiusura di Fase 2, ordinando le uscite per importo. Determina Fase 3 e Fase 4.

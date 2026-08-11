@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import { registerSessionAccounts } from '@/lib/sync/accounts';
+import { registerSessionAccounts, UidRuotati } from '@/lib/sync/accounts';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -47,6 +47,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     console.error('[sync] registrazione conti fallita:', messaggio);
-    return NextResponse.json({ error: messaggio }, { status: 502 });
+    // Gli uid ruotati non sono un guasto dell'API: e' uno stato che richiede un
+    // intervento, e 409 lo dice meglio di 502.
+    const stato = errore instanceof UidRuotati ? 409 : 502;
+    return NextResponse.json({ error: messaggio }, { status: stato });
   }
 }
