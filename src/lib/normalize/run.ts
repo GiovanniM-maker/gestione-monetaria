@@ -175,7 +175,16 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
   aggiornate = daScrivere.length - inserite;
 
   // Rete di sicurezza dietro al riconoscimento per codice e causale.
-  const { data: speculari } = await supabase.rpc('rileva_giroconti_speculari', { giorni: 3 });
+  // L'errore va riportato, non ingoiato: se questa chiamata fallisce e il
+  // risultato resta zero, il resoconto dice "nessun giroconto speculare" — che
+  // e' indistinguibile da "la funzione non e' mai stata eseguita".
+  const { data: speculari, error: erroreSpeculari } = await supabase.rpc(
+    'rileva_giroconti_speculari',
+    { giorni: 3 },
+  );
+  if (erroreSpeculari !== null) {
+    errori.push(`rileva_giroconti_speculari: ${erroreSpeculari.message}`);
+  }
 
   return {
     esaminate,
