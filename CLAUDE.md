@@ -112,6 +112,36 @@ qui, che è ciò che l'API fa davvero.
   legge non deve mai fidarsene: niente accessi diretti a `.length` o `.map` su valori che arrivano
   dalla rete, o un campo assente diventa un 500 al posto della pagina.
 
+### Forma delle transazioni Revolut — osservata su payload reale
+
+- **`transaction_amount.amount` è SEMPRE positivo**, anche per le uscite. Il segno sta in
+  `credit_debit_indicator`: `DBIT` = uscita, `CRDT` = entrata. La normalizzazione a "uscite
+  negative" si fa qui, una volta sola, in ingestion. Sbagliare questo punto falsa ogni numero
+  dell'applicazione.
+- **`status`** vale `PDNG` o `BOOK`. Le `PDNG` hanno **`value_date` a null**: la transizione
+  pending → booked è reale e va riconciliata, non duplicata (Fase 3).
+- **`entry_reference` è sempre presente** ed è l'unico identificativo utilizzabile: `transaction_id`,
+  `reference_number` e `merchant_category_code` arrivano tutti a null. È la chiave di idempotenza.
+- **Pagina da 50 transazioni**, con `continuation_key` quando ce ne sono altre.
+- Il `continuation_key` è base64 di un JSON che contiene l'URL chiamato all'ASPSP, con
+  `fromBookingDateTime` in chiaro: **decodificarlo è il modo più diretto per verificare quale
+  finestra temporale la banca sta effettivamente concedendo**. Verificato l'11 agosto 2026 su una
+  sessione autorizzata il giorno prima: 90 giorni, cioè la finestra dello storico completo era già
+  chiusa.
+- **Esistono transazioni con importo `0.00`** (preautorizzazioni di carta rilasciate, tipiche di
+  trasporti e distributori). Non sono spese: vanno riconosciute, non sommate.
+- **`bank_transaction_code.code`** distingue `CARD_PAYMENT`, `TRANSFER`, `CARD_CREDIT`,
+  `REV_PAYMENT`. I giroconti fra conti propri sono `TRANSFER` con `remittance_information` del tipo
+  `"To EUR"` o `"From Conto deposito senza vincoli"`: è il segnale più affidabile per `is_transfer`,
+  molto più del confronto fra movimenti speculari.
+- Il nome dell'esercente sta in `creditor.name` e ricompare in `remittance_information[0]`.
+- **`debtor_account_additional_identification` contiene le ultime 4 cifre della carta** (`scheme_name`
+  `CPAN`). Rientra nella regola 8: non esce mai verso un LLM.
+- I bonifici verso privati riportano nome e IBAN della controparte: sono dati di terzi, e la
+  regola 8 li esclude esplicitamente da qualsiasi invio a un LLM.
+- `exchange_rate` esiste come campo ma arriva a null sul conto EUR, dove Revolut riporta importi già
+  convertiti. Sui conti in valuta va verificato prima di scrivere la conversione FX.
+
 ## Regole di sicurezza — NON NEGOZIABILI
 
 1. La chiave privata Enable Banking (`.pem`) **non entra mai nel repository**. `.gitignore` la esclude
