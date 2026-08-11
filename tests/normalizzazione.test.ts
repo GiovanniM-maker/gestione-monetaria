@@ -6,6 +6,7 @@ import {
   riconosciGiroconto,
   ripulisciCausale,
 } from '@/lib/normalize/movimento';
+import { riferimentiSuPiuConti } from '@/lib/normalize/run';
 
 const CONTESTO = {
   valutaConto: 'EUR',
@@ -222,5 +223,35 @@ describe('normalizzaNome', () => {
     expect(normalizzaNome('  Conto   Deposito Senza Vincoli ')).toBe(
       'conto deposito senza vincoli',
     );
+  });
+});
+
+describe('riferimentiSuPiuConti', () => {
+  it('riconosce un giroconto dallo stesso riferimento su due conti', () => {
+    // E' la prova strutturale: la banca registra lo stesso entry_reference su
+    // entrambi i lati dello spostamento.
+    const condivisi = riferimentiSuPiuConti([
+      { account_id: 'conto-a', riferimento: 'rif-1' },
+      { account_id: 'conto-b', riferimento: 'rif-1' },
+      { account_id: 'conto-a', riferimento: 'rif-2' },
+    ]);
+    expect([...condivisi]).toEqual(['rif-1']);
+  });
+
+  it('non confonde due versioni dello stesso movimento sullo stesso conto', () => {
+    // PDNG e BOOK stanno sullo stesso conto: non sono un giroconto.
+    const condivisi = riferimentiSuPiuConti([
+      { account_id: 'conto-a', riferimento: 'rif-1' },
+      { account_id: 'conto-a', riferimento: 'rif-1' },
+    ]);
+    expect(condivisi.size).toBe(0);
+  });
+
+  it('ignora i movimenti senza riferimento', () => {
+    const condivisi = riferimentiSuPiuConti([
+      { account_id: 'conto-a', riferimento: null },
+      { account_id: 'conto-b', riferimento: null },
+    ]);
+    expect(condivisi.size).toBe(0);
   });
 });

@@ -20,6 +20,7 @@ import type { AccountRow } from '@/lib/db/types';
 
 export type EsitoNormalizzazione = {
   esaminate: number;
+  girocontiStrutturali: number;
   inserite: number;
   aggiornate: number;
   protette: number;
@@ -35,6 +36,37 @@ type RigaGrezza = {
   payload: Record<string, unknown>;
   fetched_at: string;
 };
+
+/**
+ * Riferimenti che compaiono su più di un conto nostro.
+ *
+ * È la prova strutturale che un movimento è un giroconto interno: la banca
+ * registra lo stesso `entry_reference` sul conto di partenza e su quello di
+ * arrivo. Non c'è niente da interpretare — nessuna causale da confrontare,
+ * nessun nome da indovinare — e funziona anche quando la causale è muta.
+ *
+ * Resta un limite, ed è insuperabile: vale solo se entrambi i lati sono conti
+ * collegati. Un bonifico verso un proprio conto presso un'altra banca continua
+ * a essere indistinguibile da un bonifico a un terzo, e va marcato a mano.
+ */
+export function riferimentiSuPiuConti(
+  righe: readonly { account_id: string; riferimento: string | null }[],
+): ReadonlySet<string> {
+  const contiPerRiferimento = new Map<string, Set<string>>();
+
+  for (const riga of righe) {
+    if (riga.riferimento === null) continue;
+    const conti = contiPerRiferimento.get(riga.riferimento) ?? new Set<string>();
+    conti.add(riga.account_id);
+    contiPerRiferimento.set(riga.riferimento, conti);
+  }
+
+  const condivisi = new Set<string>();
+  for (const [riferimento, conti] of contiPerRiferimento) {
+    if (conti.size > 1) condivisi.add(riferimento);
+  }
+  return condivisi;
+}
 
 /** Ordina PDNG prima di BOOK, così l'ultima versione vista vince. */
 function piuRecente(a: RigaGrezza, b: RigaGrezza): RigaGrezza {
@@ -75,6 +107,7 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
 
   // Ultima versione per chiave, accumulata mentre si scorre.
   const migliori = new Map<string, RigaGrezza>();
+  const riferimentiVisti: { account_id: string; riferimento: string | null }[] = [];
 
   for (;;) {
     const { data, error } = await supabase
@@ -92,6 +125,10 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
       esaminate += 1;
       const riferimento = riga.payload['entry_reference'];
       const chiave = `${riga.account_id}::${typeof riferimento === 'string' ? riferimento : `raw-${riga.id}`}`;
+      riferimentiVisti.push({
+        account_id: riga.account_id,
+        riferimento: typeof riferimento === 'string' ? riferimento : null,
+      });
       const esistente = migliori.get(chiave);
       migliori.set(chiave, esistente === undefined ? riga : piuRecente(esistente, riga));
     }
@@ -111,6 +148,9 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
       (r) => `${r.account_id}::${r.match_key}`,
     ),
   );
+
+  const girocontiPerRiferimento = riferimentiSuPiuConti(riferimentiVisti);
+  let girocontiStrutturali = 0;
 
   const daScrivere: Record<string, unknown>[] = [];
 
@@ -134,11 +174,19 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
         continue;
       }
 
+      // Il riconoscimento strutturale si somma a quello per causale: uno vede
+      // i giroconti fra conti collegati, l'altro i pocket in valuta di cui
+      // registriamo un lato solo.
+      const strutturale =
+        movimento.external_id !== null && girocontiPerRiferimento.has(movimento.external_id);
+      if (strutturale && !movimento.is_transfer) girocontiStrutturali += 1;
+
       daScrivere.push({
         account_id: riga.account_id,
         raw_transaction_id: riga.id,
         source: riga.source,
         ...movimento,
+        is_transfer: movimento.is_transfer || strutturale,
       });
     } catch (errore) {
       scartate += 1;
@@ -188,6 +236,7 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
 
   return {
     esaminate,
+    girocontiStrutturali,
     inserite,
     aggiornate,
     protette,
