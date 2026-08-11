@@ -10,8 +10,8 @@
 | ----- | ----------------------------------------- | -------------- |
 | 0     | Fondamenta e segreti                      | **completata** |
 | 1     | Autenticazione Enable Banking, isolata    | **completata** |
-| 2     | Ingestion grezza + backfill riavviabile   | non iniziata   |
-| 2-bis | Import CSV                                | non iniziata   |
+| 2     | Ingestion grezza + backfill riavviabile   | **completata** |
+| 2-bis | Import CSV                                | rimandata      |
 | 3     | Normalizzazione, idempotenza, multivaluta | non iniziata   |
 | 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
 | 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
