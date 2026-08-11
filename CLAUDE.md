@@ -9,7 +9,7 @@
 | Fase  | Titolo                                    | Stato          |
 | ----- | ----------------------------------------- | -------------- |
 | 0     | Fondamenta e segreti                      | **completata** |
-| 1     | Autenticazione Enable Banking, isolata    | non iniziata   |
+| 1     | Autenticazione Enable Banking, isolata    | **completata** |
 | 2     | Ingestion grezza + backfill riavviabile   | non iniziata   |
 | 2-bis | Import CSV                                | non iniziata   |
 | 3     | Normalizzazione, idempotenza, multivaluta | non iniziata   |
@@ -81,6 +81,28 @@ più solido di entrambe le opzioni considerate qui.
 | ----------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Revolut personale | Revolut Bank UAB → connettore sotto **LT**, non IT | Conto principale, la maggior parte delle spese variabili                                                                                                         |
 | Intesa Sanpaolo   | IT                                                 | Domiciliazioni utenze = spese fisse. Attenzione: molte banche italiane ammettono **un solo consenso attivo per TPP**, attivarne uno nuovo invalida il precedente |
+
+## Enable Banking — fatti verificati sul campo
+
+Raccolti in Fase 1 provando l'API vera. Alcuni contraddicono la documentazione: vale quanto scritto
+qui, che è ciò che l'API fa davvero.
+
+- **Application ID** `b9595d06-a1e1-4937-afa6-46d92d079031`. È il `kid` dell'header JWT. La chiave
+  privata sta **fuori dal repository**, in `~/enablebanking-keys/`, ed è stata generata dal browser
+  al momento della registrazione: non esiste altra copia da nessuna parte.
+- L'applicazione è in **modalità ristretta** (production, non "unrestricted"). L'API restituisce
+  soltanto i conti esplicitamente collegati dal Control Panel: un conto autorizzato ma non collegato
+  viene rimosso dalla risposta senza alcun errore. È il regime previsto per l'uso personale e non va
+  cambiato.
+- **`POST /sessions` e `GET /sessions/{id}` hanno forme diverse**, ed è la trappola che è costata di
+  più: la prima restituisce `accounts` come array di oggetti conto completi, la seconda come array
+  di UUID in chiaro, più un `accounts_data` con i soli identificativi. Nome, valuta e IBAN si
+  leggono da `GET /accounts/{uid}/details`, che nella sessione non ci sono.
+- Il connettore **Revolut (LT)** dichiara **consenso massimo 180 giorni**, non 90. All'autorizzazione
+  definitiva conviene chiedere il massimo: dimezza i rinnovi manuali via SCA.
+- I tipi TypeScript delle risposte descrivono ciò che l'API _dovrebbe_ restituire. Il codice che le
+  legge non deve mai fidarsene: niente accessi diretti a `.length` o `.map` su valori che arrivano
+  dalla rete, o un campo assente diventa un 500 al posto della pagina.
 
 ## Regole di sicurezza — NON NEGOZIABILI
 
