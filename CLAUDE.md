@@ -165,6 +165,29 @@ Verificato in chiusura di Fase 2, ordinando le uscite per importo. Determina Fas
   leggibili, ma senza normalizzazione lo stesso marchio si spezza in decine di merchant diversi e
   nessun abbonamento o ricorrenza verrebbe mai rilevato.
 
+#### Casi reali da usare come test della normalizzazione
+
+Presi dai dati caricati. Servono come banco di prova della Fase 4: se la pipeline non li risolve,
+non funziona.
+
+| Varianti osservate                              | Perché è difficile                                                                                    |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `Hotel At Booking.com` / `Booking.com Hotel`    | stesse parole, ordine invertito: nessun match esatto le unisce, e sono 1.080 € che non si sommano mai |
+| `Anthropic* Claude Sub` / `Anthropic`           | suffisso del prodotto sul nome del marchio                                                            |
+| `Starbucks 17831` / `Starbucks 12172`           | numero del punto vendita                                                                              |
+| `To EUR MB:b260c88e-…` / `To EUR MB:ef475d8d-…` | identificativo tecnico in coda                                                                        |
+
+#### Il caso che il rilevamento automatico non può risolvere
+
+I bonifici verso un **proprio conto presso un'altra banca** appaiono come uscite normali: hanno il
+nome dell'intestatario come controparte e nessun segnale che li distingua da un bonifico a un terzo.
+Nei dati caricati sono la prima voce di spesa per importo.
+
+Non esiste modo di riconoscerli automaticamente finché l'altro conto non è collegato, e nemmeno
+dopo sarebbe immediato. Vanno marcati **una volta sola a mano** sul merchant, e da lì la marcatura
+si propaga a tutte le occorrenze passate e future. È un caso in cui l'input umano non è una
+scorciatoia: è l'unica fonte dell'informazione.
+
 ## Regole di sicurezza — NON NEGOZIABILI
 
 1. La chiave privata Enable Banking (`.pem`) **non entra mai nel repository**. `.gitignore` la esclude
