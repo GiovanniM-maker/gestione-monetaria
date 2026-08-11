@@ -98,7 +98,10 @@ export async function registerSessionAccounts(ebSessionId: string): Promise<Regi
     const campiDescrittivi = {
       connection_id: connection.id,
       iban_masked: typeof iban === 'string' ? maskIban(iban) : null,
-      name: dettagli.name ?? dettagli.product ?? null,
+      // `product` prima di `name`: nella risposta Enable Banking `name` e'
+      // l'intestatario del conto, quindi su un'utenza mono-persona sarebbe lo
+      // stesso identico valore su tutte le righe e non distinguerebbe niente.
+      name: dettagli.product ?? dettagli.name ?? null,
       currency: dettagli.currency ?? 'EUR',
       account_type: tipo,
       is_active: true,
