@@ -142,6 +142,29 @@ qui, che è ciò che l'API fa davvero.
 - `exchange_rate` esiste come campo ma arriva a null sul conto EUR, dove Revolut riporta importi già
   convertiti. Sui conti in valuta va verificato prima di scrivere la conversione FX.
 
+### Cosa serve per raggruppare la spesa — osservato sui dati caricati
+
+Verificato in chiusura di Fase 2, ordinando le uscite per importo. Determina Fase 3 e Fase 4.
+
+- **La banca non fornisce nessuna categoria**: `merchant_category_code` è `null` su ogni singola
+  transazione. Il raggruppamento si costruisce interamente da `creditor.name`, con
+  `remittance_information[0]` come seconda fonte quando il primo manca.
+- **Senza `is_transfer` la classifica delle uscite è inutilizzabile.** Le prime sei voci per importo
+  sono tutte giroconti fra conti propri: la prima spesa reale compare al settimo posto, con un
+  ventesimo dell'importo della prima riga. Distinguere i giroconti non è un raffinamento
+  dell'analisi, è il presupposto perché l'analisi dica qualcosa di vero.
+- **Il codice `TRANSFER` da solo NON identifica i giroconti.** Comprende anche i bonifici verso
+  persone fisiche, che sono uscite reali a tutti gli effetti. Il segnale corretto è `TRANSFER`
+  **più** una `remittance_information` del tipo `"To EUR"`, `"To Conto deposito…"`, `"From …"`.
+  Filtrare sul solo codice cancellerebbe spese vere.
+- **La `remittance_information` può portare un suffisso tecnico**: `"To EUR MB:b260c88e-a671-…"`.
+  Senza normalizzazione la stessa identica operazione genera un merchant distinto per ogni
+  identificativo, e il raggruppamento si polverizza.
+- **I nomi degli esercenti portano il numero del punto vendita**: `Starbucks 17831`,
+  `Starbucks 12172`, `Mcdonalds 1210`, `Poundland Ltd - 2205`, `Scotmid Coop 0403`. Sono puliti e
+  leggibili, ma senza normalizzazione lo stesso marchio si spezza in decine di merchant diversi e
+  nessun abbonamento o ricorrenza verrebbe mai rilevato.
+
 ## Regole di sicurezza — NON NEGOZIABILI
 
 1. La chiave privata Enable Banking (`.pem`) **non entra mai nel repository**. `.gitignore` la esclude
