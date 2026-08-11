@@ -131,22 +131,32 @@ export async function getTransactionsPage(
   );
 }
 
-/** Etichetta leggibile di un conto, con IBAN sempre mascherato. */
-export function describeAccount(account: EbAccount): string {
-  const iban = account.account_id?.iban;
-  const other = account.account_id?.other?.identification;
-  const identifier = iban !== undefined ? maskIban(iban) : maskOther(other);
-  const label = account.name ?? account.product ?? 'Conto';
-  return `${label} · ${identifier} · ${account.currency ?? '—'}`;
+/**
+ * Etichetta leggibile di un conto, con IBAN sempre mascherato.
+ *
+ * Accetta `unknown` e non `EbAccount`: il tipo descrive cio' che l'API
+ * dovrebbe restituire, non cio' che restituisce. Una risposta di forma diversa
+ * deve produrre un'etichetta povera, non un'eccezione che porta giu' la pagina.
+ */
+export function describeAccount(account: unknown): string {
+  if (account === null || typeof account !== 'object') return 'Conto · — · —';
+
+  const a = account as EbAccount;
+  const iban = a.account_id?.iban;
+  const other = a.account_id?.other?.identification;
+  const identifier = typeof iban === 'string' ? maskIban(iban) : maskOther(other);
+  const label = a.name ?? a.product ?? 'Conto';
+  return `${label} · ${identifier} · ${a.currency ?? '—'}`;
 }
 
 /** Regola 7 di CLAUDE.md: in UI gli IBAN si mostrano solo mascherati. */
 export function maskIban(iban: string): string {
+  if (typeof iban !== 'string') return '****';
   const compact = iban.replace(/\s+/g, '');
   return compact.length <= 4 ? '****' : `****${compact.slice(-4)}`;
 }
 
 function maskOther(identification: string | undefined): string {
-  if (identification === undefined || identification === '') return '—';
+  if (typeof identification !== 'string' || identification === '') return '—';
   return identification.length <= 4 ? '****' : `****${identification.slice(-4)}`;
 }

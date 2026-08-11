@@ -277,25 +277,34 @@ async function SessioneCorrente() {
   const esito = await prova(() => getSession(sessionId));
   if (!esito.ok) return <Errore>Sessione non leggibile: {esito.errore}</Errore>;
 
-  const sessione = esito.valore;
-  const uids = estraiUid(sessione);
+  // La sessione viene letta come struttura sconosciuta: i campi si estraggono
+  // uno a uno, cosi' una risposta di forma diversa produce trattini e non un 500.
+  const sessione = (esito.valore ?? {}) as {
+    status?: unknown;
+    aspsp?: { name?: unknown; country?: unknown };
+    access?: { valid_until?: unknown };
+  };
+  const uids = estraiUid(esito.valore);
+
+  const testo = (valore: unknown): string =>
+    typeof valore === 'string' || typeof valore === 'number' ? String(valore) : '—';
 
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-neutral-500">Banca</dt>
         <dd>
-          {sessione.aspsp?.name ?? '—'} ({sessione.aspsp?.country ?? '—'})
+          {testo(sessione.aspsp?.name)} ({testo(sessione.aspsp?.country)})
         </dd>
         <dt className="text-neutral-500">Stato</dt>
-        <dd>{sessione.status ?? '—'}</dd>
+        <dd>{testo(sessione.status)}</dd>
         <dt className="text-neutral-500">Valida fino a</dt>
-        <dd>{sessione.access?.valid_until ?? '—'}</dd>
+        <dd>{testo(sessione.access?.valid_until)}</dd>
         <dt className="text-neutral-500">Conti</dt>
         <dd>{uids.length}</dd>
       </dl>
 
-      <Grezzo etichetta="risposta grezza · sessione" valore={sessione} />
+      <Grezzo etichetta="risposta grezza · sessione" valore={esito.valore} />
 
       {uids.length === 0 ? (
         <Errore>
