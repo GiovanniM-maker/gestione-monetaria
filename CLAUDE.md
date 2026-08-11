@@ -12,7 +12,7 @@
 | 1     | Autenticazione Enable Banking, isolata    | **completata** |
 | 2     | Ingestion grezza + backfill riavviabile   | **completata** |
 | 2-bis | Import CSV                                | rimandata      |
-| 3     | Normalizzazione, idempotenza, multivaluta | non iniziata   |
+| 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
 | 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
 | 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
 | 6     | Dashboard                                 | non iniziata   |
@@ -122,6 +122,11 @@ qui, che è ciò che l'API fa davvero.
   pending → booked è reale e va riconciliata, non duplicata (Fase 3).
 - **`entry_reference` è sempre presente** ed è l'unico identificativo utilizzabile: `transaction_id`,
   `reference_number` e `merchant_category_code` arrivano tutti a null. È la chiave di idempotenza.
+- **Lo stesso `entry_reference` compare su entrambi i conti coinvolti in un giroconto interno.**
+  Verificato in Fase 3: tutti e 34 i riferimenti duplicati nel registro grezzo stavano su conti
+  diversi, nessuno sullo stesso conto. È la prova strutturale di un giroconto — più forte di
+  qualsiasi confronto fra causali, e indipendente da come la banca scrive la descrizione. Vale solo
+  se entrambi i lati sono conti collegati.
 - **Pagina da 50 transazioni**, con `continuation_key` quando ce ne sono altre.
 - Il `continuation_key` è base64 di un JSON che contiene l'URL chiamato all'ASPSP, con
   `fromBookingDateTime` in chiaro: **decodificarlo è il modo più diretto per verificare quale
