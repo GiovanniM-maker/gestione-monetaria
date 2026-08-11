@@ -11,7 +11,7 @@ import { redirectPreservingCookies, updateSession } from '@/lib/supabase/proxy';
  * "temporanee per test": per aggiungere una route pubblica bisogna scriverla
  * in questa lista, e la lista si legge in code review.
  */
-const PUBLIC_PATHS = ['/login', '/auth/error'] as const;
+const PUBLIC_PATHS = ['/login', '/auth/error', '/privacy', '/terms'] as const;
 
 /**
  * Le route cron NON passano dal controllo di sessione: le invoca Vercel Cron,
