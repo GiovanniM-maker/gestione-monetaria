@@ -23,5 +23,9 @@ declare namespace NodeJS {
     readonly ALLOWED_EMAIL?: string;
     /** Segreto inviato da Vercel Cron come Bearer token. NON pubblica. */
     readonly CRON_SECRET?: string;
+    /** Application ID Enable Banking, usato come `kid` del JWT. NON pubblica. */
+    readonly EB_APPLICATION_ID?: string;
+    /** Chiave privata Enable Banking (.pem) codificata in base64. SEGRETO. */
+    readonly EB_PRIVATE_KEY_BASE64?: string;
   }
 }
