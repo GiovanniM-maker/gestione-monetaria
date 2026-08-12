@@ -187,6 +187,13 @@ export function PannelloBackfill({
           `${corpo['nonAbbinate']} senza esercente · ${corpo['protette']} protette da correzione manuale`,
       );
 
+      const nonLetti = Number(corpo['importiNonLetti'] ?? 0);
+      if (nonLetti > 0) {
+        aggiungi(
+          `  ⚠ ${nonLetti} importi non letti: l’ordine della lista qui sotto e’ parziale.`,
+        );
+      }
+
       // L'elenco degli scoperti non e' un dettaglio diagnostico: e' la lista di
       // lavoro, ordinata per quanto costa ignorarla.
       const daGuardare = corpo['daGuardare'];

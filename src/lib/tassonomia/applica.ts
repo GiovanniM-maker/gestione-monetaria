@@ -1,6 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { formattaCentesimi, parseCentesimiTollerante } from '@/lib/money';
 import { abbinaMerchant, etichettaDiRiferimento, type Alias } from './abbinamento';
 import type {
   CategoryRow,
@@ -33,11 +34,14 @@ export type EsitoCategorizzazione = {
   protette: number;
   /** Le etichette non abbinate, per spesa decrescente: e' la lista di lavoro. */
   daGuardare: readonly { etichetta: string; movimenti: number; totale: string }[];
+  /** Importi che non si sono lasciati leggere: se non e' zero, l'ordinamento sopra e' parziale. */
+  importiNonLetti: number;
 };
 
 type RigaDaClassificare = {
   id: string;
-  amount: string;
+  /** `unknown` di proposito: e' cio' che arriva dalla rete, non cio' che vorremmo. */
+  amount: unknown;
   counterparty_raw: string | null;
   raw_description: string | null;
 };
@@ -110,6 +114,7 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
 
   let esaminate = 0;
   let abbinate = 0;
+  let importiNonLetti = 0;
   const perAssegnazione = new Map<string, string[]>();
   const daSvuotare: string[] = [];
   const scoperte = new Map<string, { movimenti: number; centesimi: bigint }>();
@@ -117,7 +122,11 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
   for (let da = 0; ; da += DIMENSIONE_BLOCCO) {
     const { data, error } = await supabase
       .from('transactions')
-      .select('id, amount, counterparty_raw, raw_description')
+      // `amount::text` non e' un vezzo: PostgREST serializza `numeric` come
+      // numero JSON, quindi senza il cast l'importo arriverebbe qui come float
+      // — proprio il tipo che CLAUDE.md vieta per il denaro. Chiedendo il testo
+      // si parla a `parseCentesimi` nella lingua che si aspetta.
+      .select('id, amount::text, counterparty_raw, raw_description')
       .eq('manually_categorized', false)
       .order('id', { ascending: true })
       .range(da, da + DIMENSIONE_BLOCCO - 1);
@@ -137,7 +146,9 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
         if (etichetta !== null) {
           const corrente = scoperte.get(etichetta) ?? { movimenti: 0, centesimi: 0n };
           corrente.movimenti += 1;
-          corrente.centesimi += centesimiDaDecimale(riga.amount);
+          const centesimi = parseCentesimiTollerante(riga.amount);
+          if (centesimi === null) importiNonLetti += 1;
+          else corrente.centesimi += centesimi;
           scoperte.set(etichetta, corrente);
         }
         continue;
@@ -169,7 +180,7 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
     .map((v) => ({
       etichetta: v.etichetta,
       movimenti: v.movimenti,
-      totale: decimaleDaCentesimi(v.centesimi),
+      totale: formattaCentesimi(v.centesimi),
     }));
 
   return {
@@ -178,6 +189,7 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
     nonAbbinate: esaminate - abbinate,
     protette: protette ?? 0,
     daGuardare,
+    importiNonLetti,
   };
 }
 
@@ -196,24 +208,4 @@ async function aggiornaAScaglioni(
 
     if (error !== null) throw new Error(`Aggiornamento transactions fallito: ${error.message}`);
   }
-}
-
-/**
- * Da stringa decimale a centesimi interi. Duplica di proposito la logica di
- * `parseCentesimi` in forma tollerante: qui un importo malformato non deve far
- * fallire l'intera categorizzazione, perche' serve solo a ordinare una lista.
- */
-function centesimiDaDecimale(valore: string): bigint {
-  const trovato = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(valore.trim());
-  if (trovato === null) return 0n;
-  const segno = trovato[1] === '-' ? -1n : 1n;
-  const interi = BigInt(trovato[2] ?? '0');
-  const decimali = BigInt((trovato[3] ?? '').padEnd(2, '0'));
-  return segno * (interi * 100n + decimali);
-}
-
-function decimaleDaCentesimi(centesimi: bigint): string {
-  const negativo = centesimi < 0n;
-  const assoluto = negativo ? -centesimi : centesimi;
-  return `${negativo ? '-' : ''}${assoluto / 100n}.${String(assoluto % 100n).padStart(2, '0')}`;
 }

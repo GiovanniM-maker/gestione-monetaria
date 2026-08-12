@@ -30,6 +30,31 @@ export function parseCentesimi(valore: string): bigint {
   return segno * (interi * 100n + BigInt(decimali));
 }
 
+/**
+ * Variante tollerante, per i valori che arrivano dalla rete.
+ *
+ * Esiste per un motivo preciso, scoperto sul campo: **PostgREST serializza
+ * `numeric` come numero JSON**, non come stringa. Il codice che legge un
+ * importo da Supabase senza chiedere `::text` riceve quindi un float, e
+ * `parseCentesimi` gli muore in mano con "trim is not a function".
+ *
+ * La cura vera e' il cast a testo nella query. Questa funzione e' la rete
+ * sotto: restituisce `null` invece di sollevare, cosi' un singolo importo
+ * illeggibile non fa fallire un'elaborazione che ne sta scorrendo duemila.
+ *
+ * `null` e non `0n` di proposito: chi chiama deve poter distinguere "vale zero"
+ * da "non l'ho saputo leggere", e riportarlo. Uno zero silenzioso in un'app di
+ * spese e' esattamente il tipo di errore che sembra un dato.
+ */
+export function parseCentesimiTollerante(valore: unknown): bigint | null {
+  if (typeof valore !== 'string') return null;
+  try {
+    return parseCentesimi(valore);
+  } catch {
+    return null;
+  }
+}
+
 /** Da centesimi a stringa decimale, la forma che Postgres accetta per `numeric`. */
 export function formattaCentesimi(centesimi: bigint): string {
   const negativo = centesimi < 0n;
