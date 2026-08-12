@@ -1,7 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { chiediAlModello, estraiArrayJson } from '@/lib/ai/modello';
+import { chiediAlModello, estraiArrayJson, modelloInUso } from '@/lib/ai/modello';
 import { selezionaInviabili } from './persone';
 import { applicaTassonomia, type EsitoCategorizzazione } from './applica';
 import { DISCREZIONALITA, CONTESTI } from './assegna';
@@ -78,6 +78,10 @@ export type EsitoProposte = {
    * verrebbe richiamato all'infinito sulle stesse etichette.
    */
   progresso: boolean;
+  /** Token e costo di questa fetta, quando il fornitore li dichiara. */
+  token: number | null;
+  costo: number | null;
+  modello: string;
   errori: readonly string[];
   categorizzazione: EsitoCategorizzazione | null;
 };
@@ -124,6 +128,8 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
   const errori: string[] = [];
   const accettate: Proposta[] = [];
   let scartate = 0;
+  let token: number | null = null;
+  let costo: number | null = null;
 
   // Le piu' costose per prime: se qualcosa va storto a meta', si e' comunque
   // classificato cio' che pesa di piu'.
@@ -132,7 +138,9 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
   if (lotto.length > 0) {
     try {
       const grezze = await chiediLotto(lotto, categorie, perEtichetta);
-      for (const p of grezze) {
+      token = grezze.token;
+      costo = grezze.costo;
+      for (const p of grezze.voci) {
         const valida = valida_proposta(p, slugValidi, lotto);
         if (valida === null) scartate += 1;
         else accettate.push(valida);
@@ -152,6 +160,9 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
     scartate,
     rimaste: Math.max(inviabili.length - accettate.length, 0),
     progresso: accettate.length > 0,
+    token,
+    costo,
+    modello: modelloInUso(),
     errori: errori.slice(0, 10),
     // Le proposte valgono subito per la categorizzazione: una classificazione
     // probabile e visibile e' piu' utile di nessuna classificazione, e resta
@@ -164,7 +175,7 @@ async function chiediLotto(
   etichette: readonly string[],
   categorie: readonly CategoryRow[],
   perEtichetta: ReadonlyMap<string, Candidata>,
-): Promise<unknown[]> {
+): Promise<{ voci: unknown[]; token: number | null; costo: number | null }> {
   const albero = categorie
     .map((c) => `- ${c.slug}: ${c.name}${c.default_discretion === null ? '' : ` (${c.default_discretion})`}`)
     .join('\n');
@@ -177,13 +188,17 @@ async function chiediLotto(
     })
     .join('\n');
 
-  const testo = await chiediAlModello({
+  const risposta = await chiediAlModello({
     system: SYSTEM,
     prompt: `Categorie disponibili:\n${albero}\n\nEsercenti da classificare:\n${righe}\n\nRispondi con un array JSON di oggetti con i campi: etichetta, nome, categoria, discrezionalita, contesto, abbonamento, motivo, sicuro. Una voce per ogni esercente, con "etichetta" copiata esattamente come te l'ho data.`,
     maxTokens: 8192,
   });
 
-  return estraiArrayJson(testo);
+  return {
+    voci: estraiArrayJson(risposta.testo),
+    token: risposta.token,
+    costo: risposta.costo,
+  };
 }
 
 /**

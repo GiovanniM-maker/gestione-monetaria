@@ -261,6 +261,9 @@ export function PannelloBackfill({
     setInCorso(true);
     aggiungi('Chiedo al modello una proposta per gli esercenti mai visti\u2026');
     try {
+      let costoTotale = 0;
+      let tokenTotali = 0;
+      let ultimoModello: unknown = '';
       for (let fetta = 1; ; fetta += 1) {
         const risposta = await fetch('/api/admin/proponi', { method: 'POST' });
         const corpo = await leggiRisposta(risposta);
@@ -270,9 +273,17 @@ export function PannelloBackfill({
           return;
         }
 
+        ultimoModello = corpo['modello'] ?? ultimoModello;
+        const token = Number(corpo['token'] ?? 0);
+        const costo = Number(corpo['costo'] ?? 0);
+        tokenTotali += Number.isFinite(token) ? token : 0;
+        costoTotale += Number.isFinite(costo) ? costo : 0;
+
         aggiungi(
           `fetta ${fetta}: ${corpo['inviate']} inviate \u00b7 ${corpo['proposte']} proposte \u00b7 ` +
-            `${corpo['scartate']} scartate \u00b7 ${corpo['rimaste']} rimaste`,
+            `${corpo['scartate']} scartate \u00b7 ${corpo['rimaste']} rimaste` +
+            (token > 0 ? ` \u00b7 ${token} token` : '') +
+            (costo > 0 ? ` \u00b7 $${costo.toFixed(5)}` : ''),
         );
 
         const errori = corpo['errori'];
@@ -292,6 +303,15 @@ export function PannelloBackfill({
         }
       }
 
+      // Il totale in fondo: e' la risposta alla domanda "quanto costa", detta
+      // con un numero misurato invece che con una stima.
+      if (tokenTotali > 0) {
+        aggiungi(
+          `Totale: ${tokenTotali} token` +
+            (costoTotale > 0 ? ` \u00b7 $${costoTotale.toFixed(4)}` : '') +
+            ` \u00b7 modello ${String(ultimoModello)}`,
+        );
+      }
       aggiungi(
         'Le proposte sono in /revisione, marcate come da confermare. ' +
           'Quelle su cui il modello non era sicuro lo dichiarano nella motivazione.',

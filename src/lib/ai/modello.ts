@@ -19,12 +19,24 @@ import 'server-only';
 const URL_CHAT = 'https://openrouter.ai/api/v1/chat/completions';
 
 /**
- * Il modello, sovrascrivibile senza toccare il codice.
+ * Il modello, sovrascrivibile con `OPENROUTER_MODEL` senza toccare il codice:
+ * gli slug di OpenRouter cambiano nel tempo e aggiornarne uno non deve
+ * richiedere un deploy.
  *
- * Gli slug di OpenRouter cambiano nel tempo e non voglio che aggiornarne uno
- * richieda un deploy: si cambia la variabile e basta.
+ * Il predefinito e' un modello **piccolo**, e non e' un risparmio a scapito
+ * della qualita': e' la taglia giusta per il compito.
+ *
+ * Qui non si scrive niente. Si legge un nome di esercente di tre parole, si
+ * sceglie una voce da un elenco chiuso di trentaquattro categorie e si
+ * risponde con un oggetto a otto campi. Non serve un modello da ragionamento
+ * lungo, serve uno che non sbagli il formato — e su quello i piccoli sono
+ * ormai affidabili quanto i grandi.
+ *
+ * Se le proposte risultassero scadenti si cambia `OPENROUTER_MODEL` e si
+ * rilancia: le proposte vecchie restano marcate `ai` e non confermate, quindi
+ * si vede subito se il modello nuovo fa meglio.
  */
-const MODELLO_PREDEFINITO = 'anthropic/claude-sonnet-4.5';
+const MODELLO_PREDEFINITO = 'anthropic/claude-haiku-4.5';
 
 export class ConfigurazioneAiMancante extends Error {}
 export class ErroreAi extends Error {}
@@ -56,8 +68,22 @@ export type RichiestaAi = {
   maxTokens?: number;
 };
 
+export type RispostaAi = {
+  testo: string;
+  /**
+   * Quanto e' costata, quando il fornitore lo dice.
+   *
+   * Serve a rispondere con un numero alla domanda "quanto stiamo spendendo",
+   * invece che con una stima. Sono campi opzionali di proposito: se OpenRouter
+   * smettesse di restituirli, il conteggio sparisce ma la classificazione
+   * continua a funzionare.
+   */
+  token: number | null;
+  costo: number | null;
+};
+
 /** Chiede una risposta al modello e restituisce il testo, senza interpretarlo. */
-export async function chiediAlModello(richiesta: RichiestaAi): Promise<string> {
+export async function chiediAlModello(richiesta: RichiestaAi): Promise<RispostaAi> {
   const risposta = await fetch(URL_CHAT, {
     method: 'POST',
     headers: {
@@ -74,6 +100,8 @@ export async function chiediAlModello(richiesta: RichiestaAi): Promise<string> {
         { role: 'system', content: richiesta.system },
         { role: 'user', content: richiesta.prompt },
       ],
+      // Chiede a OpenRouter di allegare il conteggio dei token e il costo.
+      usage: { include: true },
     }),
     cache: 'no-store',
   });
@@ -88,7 +116,11 @@ export async function chiediAlModello(richiesta: RichiestaAi): Promise<string> {
   // La forma della risposta non si dà per scontata, come per Enable Banking:
   // un campo assente deve produrre un errore leggibile, non un `undefined` che
   // viaggia fino a rompere qualcosa tre funzioni più in là.
-  const dati = (await risposta.json()) as { choices?: unknown; error?: unknown };
+  const dati = (await risposta.json()) as {
+    choices?: unknown;
+    error?: unknown;
+    usage?: { total_tokens?: unknown; cost?: unknown };
+  };
 
   // OpenRouter può rispondere 200 con un errore nel corpo, quando è il
   // fornitore a monte a rifiutare. Senza questo controllo si leggerebbe una
@@ -108,7 +140,14 @@ export async function chiediAlModello(richiesta: RichiestaAi): Promise<string> {
   if (typeof testo !== 'string' || testo.trim() === '') {
     throw new ErroreAi('Risposta del modello senza testo.');
   }
-  return testo;
+
+  const numero = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
+
+  return {
+    testo,
+    token: numero(dati.usage?.total_tokens),
+    costo: numero(dati.usage?.cost),
+  };
 }
 
 /**
