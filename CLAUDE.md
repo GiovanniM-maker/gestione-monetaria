@@ -13,7 +13,7 @@
 | 2     | Ingestion grezza + backfill riavviabile   | **completata** |
 | 2-bis | Import CSV                                | **archiviata** |
 | 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
-| 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
+| 4     | Tassonomia e categorizzazione a cascata   | **completata** |
 | 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
 | 6     | Dashboard                                 | non iniziata   |
 | 7     | Automazione                               | non iniziata   |
@@ -359,6 +359,80 @@ si annulla; sul confine di mese sposta l'importo nell'aggregato sbagliato.
 le 02:00, per **243,95 €** netti. Su 71 movimenti notturni totali, gli altri 67 restano nel mese
 giusto. Non tocca il costo *ricorrente*, che è la metrica principale, quindi non giustifica la
 riapertura della Fase 3 — ma va saputo prima di stupirsi di uno scarto su un totale mensile.
+
+### Numeri di chiusura della Fase 4
+
+| Grandezza | Valore |
+| --------- | ------ |
+| Copertura della spesa reale, in euro | **94,0%** — 31.887,13 su 33.915,37 |
+| Copertura in movimenti | 98,2% — 1.294 su 1.318 |
+| Categorie / esercenti / alias | 35 / ~160 / ~180 |
+| Etichette ancora da assegnare | 24, per 2.028 € |
+
+Delle 24 scoperte, **11 sono nomi di persona** per 2.018 €: non sono un fallimento, sono il confine
+della macchina. Solo l'utente sa se un bonifico a un privato è un affitto, un prestito o un
+compenso, e la regola 8 vieta comunque di chiederlo a un modello.
+
+La ventiquattresima è `Annual Stamp Duty Tax` — l'imposta di bollo del conto, trattenuta dal filtro
+perché quattro parole maiuscole senza nessuna parola di mestiere non si distinguono da un nome
+proprio. È un falso positivo previsto: costa un'assegnazione a mano.
+
+### Come funziona la cascata, e perché in quest'ordine
+
+1. **Alias deterministici.** Coprono da soli la quasi totalità dei movimenti ricorrenti.
+2. **Proposta del modello**, solo per gli esercenti mai visti. Le proposte nascono con
+   `origine = 'ai'` e `confermato_at` nullo: valgono subito per la categorizzazione — una
+   classificazione probabile e visibile è più utile di nessuna — ma restano marcate da confermare.
+3. **Correzione umana**, che scrive un alias e diventa definitiva.
+
+**Gli alias sono la memoria delle risposte**, ed è ciò che rende l'automatismo sostenibile: senza,
+si pagherebbe una chiamata al modello ogni volta che si ordina da Deliveroo. È anche il motivo per
+cui il modello restituisce un **frammento** (`canva` per `Canva* I04731-63857386`): la banca cambia
+il codice a ogni addebito, e un alias sull'etichetta intera non riconoscerebbe mai il prossimo.
+
+### Le tre lezioni della Fase 4
+
+**La normalizzazione delle stringhe non serve quasi a niente.** Misurata sui 60 esercenti veri: da
+60 forme a 58. I casi che contano non sono errori di ortografia — che Claude sia Anthropic, o che
+dietro `Paddle.net* N8n Cloud1` ci sia n8n, è un'informazione sul mondo. E un normalizzatore
+aggressivo non è neutro: univa `Comet Spa` e `Bruno Spa-modica`. **Fondere due esercenti distinti è
+peggio che tenerne uno diviso in due**: il secondo si vede e si corregge, il primo produce un totale
+plausibile e sbagliato.
+
+**Cosa può uscire verso un LLM lo decide il tipo di operazione, non la forma del nome.**
+`Bovi Laura` e `Panfe Bologna` sono la stessa identica forma: l'informazione non è nella stringa.
+Dall'altra parte di un pagamento con carta c'è un esercente per costruzione; dall'altra parte di un
+bonifico può esserci chiunque. Per questo `transactions.bank_code` esiste.
+
+**Una regola di sicurezza deve fallire chiusa, e la nostra falliva aperta.** Il filtro chiedeva
+"sembra una persona?" e in caso di dubbio inviava. Il 12 agosto ha lasciato uscire
+`Massimiliano De Jesus Sarta Naccarata` — cinque parole, fuori dalla finestra di due-quattro che il
+riconoscimento prevedeva. Allargare la finestra avrebbe curato il sintomo. La domanda è stata
+rovesciata in **"sembra un'azienda?"**, che è un test positivo: forma societaria, parola di
+mestiere, dominio, cifre, prefisso di incasso. Senza uno di questi segnali l'etichetta resta dentro.
+
+### Cosa il modello sbaglia, osservato su 100 proposte
+
+Utile alla Fase 9, dove un LLM scriverà i report.
+
+- **Ragiona dall'importo quando il nome non basta.** `Bruno` è stato messo in `casa` /
+  `essenziale` perché *"importo alto suggerisce spesa casa"*. Era un negozio di elettronica, e
+  `essenziale` è la classe che più distorce la metrica.
+- **Inventa una motivazione plausibile pur di averne una.** `Aspit` → *"associazione
+  bar/ristorazione in Emilia"*: falso, ed è un'azienda di trasporti.
+- **Non è coerente fra un lotto e l'altro.** `Aspit` e `Aspit Campogalliano`, stessi dati,
+  classificazioni opposte, perché ogni chiamata non sa cosa ha risposto la precedente.
+- **Il flag `sicuro: false` funziona** e compare su quasi tutte le voci discutibili. È la valvola
+  che rende il resto accettabile.
+
+### Prova manuale della Fase 4, sotto i 5 minuti
+
+1. `/debug/sync` → **`4 · Categorizza`**. Attesi ≈94% in euro e ≈98% in movimenti.
+2. Rilanciare: gli stessi numeri, nessuna riga cambiata. È idempotente.
+3. `/revisione`: la lista mostra solo le etichette che tornano almeno due volte, con accanto quante
+   ne nasconde e quanto valgono.
+4. Assegnare un'etichetta a un esercente: la copertura sale nella riga di esito, e l'etichetta
+   sparisce dalla lista.
 
 I tre meccanismi che producono quei 141 giroconti sono indipendenti e non sostituibili l'uno
 all'altro:
