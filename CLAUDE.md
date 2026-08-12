@@ -32,6 +32,43 @@ Da riaprire **solo** se si collega Intesa e serve il suo storico pregresso.
 
 ---
 
+## Idee registrate, da valutare quando la fase arriva
+
+Non sono lavoro pianificato. Stanno qui perché il momento in cui vengono in mente non è il
+momento in cui vanno fatte, e perché dimenticarle costa più che scriverle.
+
+### L'intento dell'acquisto non sta sull'esercente — chiedere a fine giornata
+
+`discretion` vive sul merchant e si propaga a tutte le sue transazioni. È la scelta che rende
+sostenibile la classificazione: si risponde "Deliveroo è voluttuario" una volta invece che su
+59 righe.
+
+Ma ha un limite strutturale, notato dall'utente in Fase 4: **lo stesso esercente ospita acquisti
+con intenti diversi.** Un computer comprato da Euronics per lavorare è `investimento` e `business`;
+una sciocchezza comprata nello stesso negozio è `voluttuario` e `personale`. Il negozio è identico,
+la spesa no. Nessuna regola sull'esercente può distinguerli, e nemmeno un LLM può: l'informazione
+non è nei dati bancari, è nella testa di chi ha comprato.
+
+**Lo schema regge già il caso**: `transactions` ha `discretion`, `context`, `notes` e
+`manually_categorized` per riga, e quest'ultimo blocca ogni sovrascrittura automatica successiva.
+Non serve cambiare niente nel database.
+
+Manca il **momento in cui chiedere**. L'idea: a fine giornata l'app mostra i movimenti nuovi e
+propone la sua classificazione, che si conferma con un gesto o si corregge. Due ragioni per cui la
+sera e non dopo:
+
+1. **La memoria dell'intento decade in fretta.** A un mese di distanza "89 € da Euronics" non si
+   ricostruisce più, e la risposta diventa un'ipotesi. La sera è ancora un fatto.
+2. **I movimenti di una giornata sono pochi.** È un gesto da trenta secondi, non una sessione di
+   riordino — ed è la differenza fra una cosa che si fa e una che si rimanda.
+
+Da collocare fra la Fase 6 (dashboard) e la Fase 7 (automazione): serve una schermata dove mostrarli
+e un lavoro schedulato che li raccolga. Se la proposta la scrive un LLM, vale la regola 8: nome
+merchant normalizzato, importo, data, categoria — mai la descrizione grezza, mai le controparti dei
+bonifici privati.
+
+---
+
 # PARTE 0 — Contesto permanente
 
 ## Cosa stiamo costruendo
