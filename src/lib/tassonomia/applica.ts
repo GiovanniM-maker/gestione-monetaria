@@ -44,6 +44,16 @@ export type EsitoCategorizzazione = {
    */
   speseEsaminate: number;
   speseAbbinate: number;
+  /**
+   * La copertura in euro, che e' quella che decide.
+   *
+   * Contare i movimenti sopravvaluta la coda: cinquecento caffe' da due euro
+   * sono cinquecento righe e mille euro, un affitto e' una riga e settecento.
+   * La metrica dell'app e' un importo, quindi la domanda giusta e' «quanta
+   * spesa e' classificata», non «quante righe».
+   */
+  speseTotale: string;
+  speseTotaleAbbinato: string;
   /** Le etichette non abbinate, per spesa decrescente: e' la lista di lavoro. */
   daGuardare: readonly { etichetta: string; movimenti: number; totale: string }[];
   /** Importi che non si sono lasciati leggere: se non e' zero, l'ordinamento sopra e' parziale. */
@@ -158,6 +168,8 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
   let abbinate = 0;
   let speseEsaminate = 0;
   let speseAbbinate = 0;
+  let speseCentesimi = 0n;
+  let speseCentesimiAbbinati = 0n;
   let importiNonLetti = 0;
   const perAssegnazione = new Map<string, string[]>();
   const daSvuotare: string[] = [];
@@ -189,7 +201,10 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
       if (centesimi === null) importiNonLetti += 1;
 
       const spesa = eSpesaReale(riga, centesimi);
-      if (spesa) speseEsaminate += 1;
+      if (spesa) {
+        speseEsaminate += 1;
+        speseCentesimi += centesimi ?? 0n;
+      }
 
       const etichetta = etichettaDiRiferimento(riga);
       const trovato = etichetta === null ? null : abbinaMerchant(etichetta, alias);
@@ -209,7 +224,10 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
       }
 
       abbinate += 1;
-      if (spesa) speseAbbinate += 1;
+      if (spesa) {
+        speseAbbinate += 1;
+        speseCentesimiAbbinati += centesimi ?? 0n;
+      }
       const gruppo = perAssegnazione.get(trovato.merchantId) ?? [];
       gruppo.push(riga.id);
       perAssegnazione.set(trovato.merchantId, gruppo);
@@ -244,6 +262,8 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
     nonAbbinate: esaminate - abbinate,
     speseEsaminate,
     speseAbbinate,
+    speseTotale: formattaCentesimi(speseCentesimi),
+    speseTotaleAbbinato: formattaCentesimi(speseCentesimiAbbinati),
     protette: protette ?? 0,
     daGuardare,
     importiNonLetti,

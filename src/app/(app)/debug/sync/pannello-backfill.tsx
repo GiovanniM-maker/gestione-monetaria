@@ -188,8 +188,17 @@ export function PannelloBackfill({
       // La copertura sulle spese reali per prima: e' l'unica che dice qualcosa.
       // Sul totale delle transazioni si misurerebbe anche quanto bene
       // categorizziamo i giroconti, che non vanno categorizzati.
+      // In euro per prima: contare i movimenti sopravvaluta la coda, e la
+      // metrica dell'app e' un importo, non un numero di righe.
+      const euro = (v: unknown) => Number(String(v ?? '0'));
+      const totale = euro(corpo['speseTotale']);
+      const abbinato = euro(corpo['speseTotaleAbbinato']);
       aggiungi(
-        `SPESE REALI: ${speseAbbinate} su ${speseEsaminate} abbinate ` +
+        `SPESE REALI in euro: ${abbinato.toFixed(2)} su ${totale.toFixed(2)} classificati ` +
+          `(${quota(abbinato, totale)}%)`,
+      );
+      aggiungi(
+        `SPESE REALI in movimenti: ${speseAbbinate} su ${speseEsaminate} ` +
           `(${quota(speseAbbinate, speseEsaminate)}%) · ` +
           `${speseEsaminate - speseAbbinate} da assegnare a mano`,
       );
