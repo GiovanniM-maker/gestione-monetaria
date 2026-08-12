@@ -2,9 +2,10 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { chiediAlModello, estraiArrayJson, modelloInUso } from '@/lib/ai/modello';
+import { abbinaMerchant, type Alias } from './abbinamento';
 import { selezionaInviabili } from './persone';
 import { interpretaProposta, type Proposta } from './interpreta';
-import type { CategoryRow } from '@/lib/db/types';
+import type { CategoryRow, MerchantAliasRow } from '@/lib/db/types';
 
 /**
  * Lo strato che mancava: il modello propone una classificazione per gli
@@ -111,13 +112,15 @@ type Candidata = {
 export async function proponiClassificazioni(): Promise<EsitoProposte> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: candidateGrezze }, { data: categorieGrezze }] = await Promise.all([
-    supabase
-      .from('v_da_classificare')
-      .select('etichetta, movimenti, totale::text, solo_carta')
-      .order('totale', { ascending: true }),
-    supabase.from('categories').select('*').eq('is_archived', false),
-  ]);
+  const [{ data: candidateGrezze }, { data: categorieGrezze }, { data: aliasGrezzi }] =
+    await Promise.all([
+      supabase
+        .from('v_da_classificare')
+        .select('etichetta, movimenti, totale::text, solo_carta')
+        .order('totale', { ascending: true }),
+      supabase.from('categories').select('*').eq('is_archived', false),
+      supabase.from('merchant_aliases').select('*'),
+    ]);
 
   const candidate = comeArray<Candidata>(candidateGrezze);
   const categorie = comeArray<CategoryRow>(categorieGrezze);
@@ -128,6 +131,25 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
     candidate.map((c) => ({ etichetta: c.etichetta, soloCarta: c.solo_carta })),
   );
 
+  // Le etichette per cui un alias esiste gia' non si richiedono.
+  //
+  // Serve perche' questa funzione non applica piu' la tassonomia: scrive
+  // l'alias e basta, quindi `transactions.merchant_id` resta nullo fino alla
+  // categorizzazione finale e `v_da_classificare` continua a elencarle. Senza
+  // questo filtro il ciclo ripescava le stesse quindici etichette a ogni giro
+  // — sette chiamate identiche, pagate tutte, e nessun avanzamento.
+  //
+  // Il controllo passa dallo stesso `abbinaMerchant` che usa la
+  // categorizzazione vera: due implementazioni di "questa etichetta e' gia'
+  // coperta?" divergerebbero al primo alias `contains`.
+  const alias: Alias[] = comeArray<MerchantAliasRow>(aliasGrezzi).map((a) => ({
+    merchantId: a.merchant_id,
+    pattern: a.pattern,
+    matchType: a.match_type,
+    priority: a.priority,
+  }));
+  const daChiedere = inviabili.filter((e) => abbinaMerchant(e, alias) === null);
+
   const errori: string[] = [];
   const accettate: Proposta[] = [];
   const motiviScarto: string[] = [];
@@ -137,7 +159,7 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
 
   // Le piu' costose per prime: se qualcosa va storto a meta', si e' comunque
   // classificato cio' che pesa di piu'.
-  const lotto = inviabili.slice(0, LOTTO);
+  const lotto = daChiedere.slice(0, LOTTO);
 
   if (lotto.length > 0) {
     try {
@@ -170,7 +192,7 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
     inviate: lotto.length,
     proposte: accettate.length,
     scartate,
-    rimaste: Math.max(inviabili.length - accettate.length, 0),
+    rimaste: Math.max(daChiedere.length - accettate.length, 0),
     progresso: accettate.length > 0,
     token,
     costo,

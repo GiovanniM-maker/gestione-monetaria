@@ -286,6 +286,10 @@ export function PannelloBackfill({
       let costoTotale = 0;
       let tokenTotali = 0;
       let ultimoModello: unknown = '';
+      // Quante ne restavano al giro prima. Se non cala, il ciclo sta girando
+      // a vuoto: e' successo davvero, sette chiamate identiche pagate tutte
+      // prima che qualcuno guardasse i numeri e notasse che erano uguali.
+      let rimasteAlGiroPrima = Number.POSITIVE_INFINITY;
       for (let fetta = 1; ; fetta += 1) {
         const risposta = await fetchConAttesa('/api/admin/proponi', 90);
         const corpo = await leggiRisposta(risposta);
@@ -311,6 +315,17 @@ export function PannelloBackfill({
         const errori = corpo['errori'];
         if (Array.isArray(errori)) for (const e of errori) aggiungi(`  \u26a0 ${String(e)}`);
 
+        const rimaste = Number(corpo['rimaste'] ?? 0);
+        if (rimaste >= rimasteAlGiroPrima) {
+          aggiungi(
+            `Mi fermo: dopo questa fetta ne restano ancora ${rimaste}, ` +
+              'come prima. Il ciclo non sta avanzando e continuare costerebbe ' +
+              'solo chiamate identiche.',
+          );
+          break;
+        }
+        rimasteAlGiroPrima = rimaste;
+
         if (corpo['progresso'] !== true) {
           aggiungi(
             Number(corpo['rimaste'] ?? 0) === 0
@@ -319,7 +334,7 @@ export function PannelloBackfill({
           );
           break;
         }
-        if (Number(corpo['rimaste'] ?? 0) === 0) {
+        if (rimaste === 0) {
           aggiungi('Finito: tutte le etichette inviabili hanno una proposta.');
           break;
         }
