@@ -115,6 +115,19 @@ qui, che è ciò che l'API fa davvero.
   Conseguenza diretta: **sotto i 12 mesi, un abbonamento annuale non si vede ripetere nemmeno una
   volta**, quindi la Fase 5 non potrà rilevarlo dai soli dati API e la Fase 2-bis torna a essere
   l'unica strada per il primo anno di storico.
+- **Non manca nessuno storico: il conto è stato aperto il 23 settembre 2025.** Verificato il
+  12 agosto 2026 sull'estratto conto CSV, che è una fonte indipendente dall'API: ordinando i
+  movimenti del conto corrente per data di completamento, il saldo implicito *prima* del primo
+  movimento è **0,00**. API e CSV partono dallo stesso identico giorno perché prima di quel giorno
+  non esiste niente. Quindi i "10 mesi e mezzo invece di 24" non sono una finestra tagliata dalla
+  banca: sono tutta la vita del conto, e **la Fase 2-bis non ha niente da recuperare per Revolut**.
+  Conseguenza sugli abbonamenti annuali: diventano visibili da soli il **23 settembre 2026**, quando
+  il conto compie un anno. Non c'è modo di anticipare quella data, con nessun import.
+- **Nel CSV la colonna `Costo` è un addebito separato, NON incluso in `Importo`.** Verificato:
+  le 12 righe in cui la serie dei saldi non torna sono spiegate **tutte** ed esattamente dal `Costo`.
+  Il caso che conta: il **canone Premium** ha `Importo` `0.00` e `Costo` `9.99` — un abbonamento
+  ricorrente il cui importo sta interamente in una colonna che non è l'importo. Da verificare come
+  lo espone l'API prima di fidarsi degli aggregati sui costi fissi.
 - I tipi TypeScript delle risposte descrivono ciò che l'API _dovrebbe_ restituire. Il codice che le
   legge non deve mai fidarsene: niente accessi diretti a `.length` o `.map` su valori che arrivano
   dalla rete, o un campo assente diventa un 500 al posto della pagina.
