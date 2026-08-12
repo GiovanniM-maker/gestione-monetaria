@@ -3,8 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { chiediAlModello, estraiArrayJson, modelloInUso } from '@/lib/ai/modello';
 import { selezionaInviabili } from './persone';
-import { DISCREZIONALITA, CONTESTI } from './assegna';
-import type { CategoryRow, Context, Discretion } from '@/lib/db/types';
+import { interpretaProposta, type Proposta } from './interpreta';
+import type { CategoryRow } from '@/lib/db/types';
 
 /**
  * Lo strato che mancava: il modello propone una classificazione per gli
@@ -101,16 +101,6 @@ type Candidata = {
   solo_carta: boolean;
 };
 
-type Proposta = {
-  etichetta: string;
-  nome: string;
-  categoria: string;
-  discrezionalita: Discretion;
-  contesto: Context;
-  abbonamento: boolean;
-  motivo: string;
-  sicuro: boolean;
-};
 
 /** Esegue **una fetta**. Va richiamata finche' `rimaste` non e' zero. */
 export async function proponiClassificazioni(): Promise<EsitoProposte> {
@@ -135,6 +125,7 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
 
   const errori: string[] = [];
   const accettate: Proposta[] = [];
+  const motiviScarto: string[] = [];
   let scartate = 0;
   let token: number | null = null;
   let costo: number | null = null;
@@ -149,9 +140,17 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
       token = grezze.token;
       costo = grezze.costo;
       for (const p of grezze.voci) {
-        const valida = valida_proposta(p, slugValidi, lotto);
-        if (valida === null) scartate += 1;
-        else accettate.push(valida);
+        const esito = interpretaProposta(p, slugValidi, lotto);
+        if ('scarto' in esito) {
+          scartate += 1;
+          // Solo i primi: quindici righe uguali non aggiungono niente. Ma
+          // almeno uno deve arrivare a chi guarda, o «15 scartate» resta un
+          // numero senza spiegazione — che e' esattamente com'e' andata la
+          // prima volta.
+          if (motiviScarto.length < 5) motiviScarto.push(esito.scarto);
+        } else {
+          accettate.push(esito.proposta);
+        }
       }
     } catch (errore) {
       errori.push(errore instanceof Error ? errore.message : String(errore));
@@ -171,7 +170,7 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
     token,
     costo,
     modello: modelloInUso(),
-    errori: errori.slice(0, 10),
+    errori: [...errori, ...motiviScarto].slice(0, 10),
   };
 }
 
@@ -202,53 +201,6 @@ async function chiediLotto(
     voci: estraiArrayJson(risposta.testo),
     token: risposta.token,
     costo: risposta.costo,
-  };
-}
-
-/**
- * Accetta solo ciò che è utilizzabile.
- *
- * Il modello può restituire uno slug che non esiste, una discrezionalità
- * inventata o un'etichetta che non gli avevamo dato. Scartare in silenzio
- * sarebbe sbagliato quanto fidarsi: qui si scarta, e il chiamante conta gli
- * scarti e li riporta.
- */
-function valida_proposta(
-  grezza: unknown,
-  slugValidi: ReadonlySet<string>,
-  lotto: readonly string[],
-): Proposta | null {
-  if (grezza === null || typeof grezza !== 'object') return null;
-  const p = grezza as Record<string, unknown>;
-
-  const testo = (v: unknown): string | null =>
-    typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
-
-  const etichetta = testo(p['etichetta']);
-  const nome = testo(p['nome']);
-  const categoria = testo(p['categoria']);
-  const discrezionalita = testo(p['discrezionalita']);
-  const contesto = testo(p['contesto']);
-
-  if (etichetta === null || nome === null || categoria === null) return null;
-  // L'etichetta deve essere una di quelle inviate: altrimenti si creerebbe un
-  // alias per un testo che non compare in nessun movimento.
-  if (!lotto.includes(etichetta)) return null;
-  if (!slugValidi.has(categoria)) return null;
-  if (discrezionalita === null || !DISCREZIONALITA.includes(discrezionalita as Discretion)) {
-    return null;
-  }
-  if (contesto === null || !CONTESTI.includes(contesto as Context)) return null;
-
-  return {
-    etichetta,
-    nome,
-    categoria,
-    discrezionalita: discrezionalita as Discretion,
-    contesto: contesto as Context,
-    abbonamento: p['abbonamento'] === true,
-    motivo: testo(p['motivo']) ?? '',
-    sicuro: p['sicuro'] === true,
   };
 }
 
