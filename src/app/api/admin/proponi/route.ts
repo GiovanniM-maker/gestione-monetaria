@@ -4,7 +4,7 @@ import { ConfigurazioneAiMancante } from '@/lib/ai/modello';
 import { proponiClassificazioni } from '@/lib/tassonomia/proposte';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+export const maxDuration = 120;
 
 /**
  * Chiede al modello una classificazione per gli esercenti mai visti.

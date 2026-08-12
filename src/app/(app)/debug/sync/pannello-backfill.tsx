@@ -230,28 +230,75 @@ export function PannelloBackfill({
     }
   }
 
+  /**
+   * Legge la risposta senza dare per scontato che sia JSON.
+   *
+   * Quando Vercel interrompe una funzione, il corpo e' HTML: `response.json()`
+   * esplode e il `catch` di turno stampa "errore di rete", che e' vero e non
+   * dice niente. Questo e' esattamente il modo in cui il primo tentativo di
+   * proposta ha nascosto un timeout.
+   */
+  async function leggiRisposta(risposta: Response): Promise<Record<string, unknown>> {
+    const testo = await risposta.text();
+    try {
+      return JSON.parse(testo) as Record<string, unknown>;
+    } catch {
+      throw new Error(
+        `Il server ha risposto ${risposta.status} con qualcosa che non e' JSON: ` +
+          `${testo.slice(0, 200).replace(/\s+/g, ' ')}`,
+      );
+    }
+  }
+
+  /**
+   * Chiede le proposte a fette, finche' ce ne sono.
+   *
+   * Stesso schema del backfill: il server fa un lotto e dice quante ne
+   * restano, il browser richiama. Serve perche' dieci chiamate al modello in
+   * fila superano il tetto di durata di una funzione serverless.
+   */
   async function proponi() {
     setInCorso(true);
-    aggiungi('Chiedo al modello una proposta per gli esercenti mai visti…');
+    aggiungi('Chiedo al modello una proposta per gli esercenti mai visti\u2026');
     try {
-      const risposta = await fetch('/api/admin/proponi', { method: 'POST' });
-      const corpo = (await risposta.json()) as Record<string, unknown>;
-      if (!risposta.ok) {
-        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
-        setInCorso(false);
-        return;
+      for (let fetta = 1; ; fetta += 1) {
+        const risposta = await fetch('/api/admin/proponi', { method: 'POST' });
+        const corpo = await leggiRisposta(risposta);
+
+        if (!risposta.ok) {
+          aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+          return;
+        }
+
+        aggiungi(
+          `fetta ${fetta}: ${corpo['inviate']} inviate \u00b7 ${corpo['proposte']} proposte \u00b7 ` +
+            `${corpo['scartate']} scartate \u00b7 ${corpo['rimaste']} rimaste`,
+        );
+
+        const errori = corpo['errori'];
+        if (Array.isArray(errori)) for (const e of errori) aggiungi(`  \u26a0 ${String(e)}`);
+
+        if (corpo['progresso'] !== true) {
+          aggiungi(
+            Number(corpo['rimaste'] ?? 0) === 0
+              ? 'Finito: non resta niente da proporre.'
+              : 'Mi fermo: questa fetta non ha prodotto nessuna proposta valida.',
+          );
+          break;
+        }
+        if (Number(corpo['rimaste'] ?? 0) === 0) {
+          aggiungi('Finito: tutte le etichette inviabili hanno una proposta.');
+          break;
+        }
       }
+
       aggiungi(
-        `${corpo['esaminate']} etichette esaminate · ${corpo['proposte']} proposte · ` +
-          `${corpo['scartate']} risposte scartate perche' non valide · ` +
-          `${corpo['trattenute']} NON inviate al modello (nomi di persona, regola 8)`,
+        'Le proposte sono in /revisione, marcate come da confermare. ' +
+          'Quelle su cui il modello non era sicuro lo dichiarano nella motivazione.',
       );
-      const errori = corpo['errori'];
-      if (Array.isArray(errori)) for (const e of errori) aggiungi(`  ⚠ ${String(e)}`);
-      aggiungi('Le proposte sono in /revisione, marcate come da confermare.');
       router.refresh();
     } catch (errore) {
-      aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
+      aggiungi(`${errore instanceof Error ? errore.message : String(errore)}`);
     } finally {
       setInCorso(false);
     }

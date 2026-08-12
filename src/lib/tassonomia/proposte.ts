@@ -25,8 +25,19 @@ import type { CategoryRow, Context, Discretion } from '@/lib/db/types';
  * non su come è scritto il nome.
  */
 
-/** Quante etichette per chiamata. */
-const LOTTO = 40;
+/**
+ * Quante etichette per chiamata HTTP.
+ *
+ * **Una sola**, e non tutte: con 374 etichette servirebbero dieci chiamate al
+ * modello in sequenza dentro la stessa invocazione, e Vercel la interrompe a
+ * meta'. Il browser riceve un 504 con dentro dell'HTML, `response.json()`
+ * esplode, e l'utente legge "errore di rete" — che e' vero e non dice niente.
+ *
+ * Quindi lo stesso schema del backfill: il server fa una fetta e dice se ha
+ * finito, il browser richiama. E' gia' il modo in cui questa applicazione
+ * scarica due anni di movimenti; non c'era ragione di inventarne un altro.
+ */
+const LOTTO = 25;
 
 const SYSTEM = `Sei un classificatore di spese bancarie personali, in italiano.
 
@@ -50,10 +61,23 @@ Regole:
 Non inventare categorie. Non aggiungere campi.`;
 
 export type EsitoProposte = {
+  /** Etichette scoperte in tutto, non solo in questa fetta. */
   esaminate: number;
   trattenute: number;
+  /** Quante ne sono state mandate al modello in questa fetta. */
+  inviate: number;
   proposte: number;
   scartate: number;
+  /** Quante restano da proporre dopo questa fetta. */
+  rimaste: number;
+  /**
+   * `false` se questa fetta non ha prodotto nemmeno una proposta.
+   *
+   * E' il segnale di arresto del ciclo lato browser: senza, un lotto che
+   * fallisce sempre — modello irraggiungibile, risposte tutte invalide —
+   * verrebbe richiamato all'infinito sulle stesse etichette.
+   */
+  progresso: boolean;
   errori: readonly string[];
   categorizzazione: EsitoCategorizzazione | null;
 };
@@ -76,15 +100,15 @@ type Proposta = {
   sicuro: boolean;
 };
 
-export async function proponiClassificazioni(limite = 200): Promise<EsitoProposte> {
+/** Esegue **una fetta**. Va richiamata finche' `rimaste` non e' zero. */
+export async function proponiClassificazioni(): Promise<EsitoProposte> {
   const supabase = await createSupabaseServerClient();
 
   const [{ data: candidateGrezze }, { data: categorieGrezze }] = await Promise.all([
     supabase
       .from('v_da_classificare')
       .select('etichetta, movimenti, totale::text, solo_carta')
-      .order('totale', { ascending: true })
-      .limit(limite),
+      .order('totale', { ascending: true }),
     supabase.from('categories').select('*').eq('is_archived', false),
   ]);
 
@@ -101,8 +125,11 @@ export async function proponiClassificazioni(limite = 200): Promise<EsitoPropost
   const accettate: Proposta[] = [];
   let scartate = 0;
 
-  for (let i = 0; i < inviabili.length; i += LOTTO) {
-    const lotto = inviabili.slice(i, i + LOTTO);
+  // Le piu' costose per prime: se qualcosa va storto a meta', si e' comunque
+  // classificato cio' che pesa di piu'.
+  const lotto = inviabili.slice(0, LOTTO);
+
+  if (lotto.length > 0) {
     try {
       const grezze = await chiediLotto(lotto, categorie, perEtichetta);
       for (const p of grezze) {
@@ -120,8 +147,11 @@ export async function proponiClassificazioni(limite = 200): Promise<EsitoPropost
   return {
     esaminate: candidate.length,
     trattenute: trattenute.length,
+    inviate: lotto.length,
     proposte: accettate.length,
     scartate,
+    rimaste: Math.max(inviabili.length - accettate.length, 0),
+    progresso: accettate.length > 0,
     errori: errori.slice(0, 10),
     // Le proposte valgono subito per la categorizzazione: una classificazione
     // probabile e visibile e' piu' utile di nessuna classificazione, e resta
