@@ -108,6 +108,13 @@ qui, che è ciò che l'API fa davvero.
   2. la Fase 2-bis (import CSV) perde la sua giustificazione originale — servivano almeno 12 mesi
      per gli abbonamenti annuali, e l'API da sola ne dà 24. Resta utile come rete di sicurezza se
      la finestra viene mancata, e per Intesa.
+- **I 24 mesi dichiarati non sono i 24 mesi concessi.** Riautorizzando l'11 agosto 2026 e chiedendo
+  esplicitamente `date_from` a due anni prima, il movimento più vecchio restituito è del
+  **23 settembre 2025**: circa **10 mesi e mezzo**, senza che la banca rifiutasse la richiesta.
+  Quello che Data Insights dichiara è un massimo teorico del connettore, non un impegno dell'ASPSP.
+  Conseguenza diretta: **sotto i 12 mesi, un abbonamento annuale non si vede ripetere nemmeno una
+  volta**, quindi la Fase 5 non potrà rilevarlo dai soli dati API e la Fase 2-bis torna a essere
+  l'unica strada per il primo anno di storico.
 - I tipi TypeScript delle risposte descrivono ciò che l'API _dovrebbe_ restituire. Il codice che le
   legge non deve mai fidarsene: niente accessi diretti a `.length` o `.map` su valori che arrivano
   dalla rete, o un campo assente diventa un 500 al posto della pagina.
@@ -235,13 +242,26 @@ in una correzione riga per riga.
 Servono da riferimento per ogni verifica futura: se una modifica li sposta, o c'è una ragione
 esplicita, o è una regressione.
 
-| Grandezza                            | Valore       |
-| ------------------------------------ | ------------ |
-| Movimenti normalizzati (storico)     | 581          |
-| Giroconti riconosciuti (storico)     | 141          |
-| Uscite lorde di luglio               | −12.670,32 € |
-| Uscite di luglio al netto dei pocket | −10.670,32 € |
+I totali di storico sono quelli **dopo** la riautorizzazione dell'11 agosto e la riparazione dei
+conti duplicati. Fra parentesi i valori precedenti, su tre soli mesi di storico.
+
+| Grandezza                            | Valore          |
+| ------------------------------------ | --------------- |
+| Storico coperto                      | 23/09/2025 → 11/08/2026 |
+| Movimenti normalizzati (storico)     | 1.957 (prima 581) |
+| Giroconti riconosciuti (storico)     | 466 = 23,8% (prima 141 = 24,3%) |
+| Uscite lorde di luglio               | −12.670,32 €    |
+| Uscite di luglio al netto dei pocket | −10.670,32 €    |
 | **Spesa reale di luglio**            | **−3.640,32 €** |
+
+**Luglio non si è spostato di un centesimo** quadruplicando lo storico, ed è la verifica che conta:
+il backfill ha aggiunto solo passato più vecchio, quindi qualsiasi movimento su luglio sarebbe stato
+una regressione. La quota di giroconti è rimasta al 23,8% contro il 24,3% misurato sul campione
+piccolo — stabile, mentre con i conti sdoppiati era salita al 59%.
+
+Il vecchio scarico si è rivelato un sottoinsieme esatto del nuovo: tutte e 581 le righe grezze erano
+già presenti fra le 1.957, nessuna da spostare. È la conferma indipendente che l'abbinamento dei
+conti duplicati era quello giusto.
 
 Le uscite lorde coincidono **al centesimo** con l'app della banca: è la prova che segno, parsing e
 aritmetica in centesimi sono corretti. Ogni euro della differenza fino alla spesa reale è
