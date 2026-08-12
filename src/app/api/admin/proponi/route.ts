@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import { ConfigurazioneAiMancante } from '@/lib/ai/anthropic';
+import { ConfigurazioneAiMancante } from '@/lib/ai/modello';
 import { proponiClassificazioni } from '@/lib/tassonomia/proposte';
 
 export const dynamic = 'force-dynamic';

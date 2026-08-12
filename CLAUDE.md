@@ -92,7 +92,7 @@ Se una feature non contribuisce a quel numero o alla fiducia in quel numero, non
 - **Auth**: Supabase Auth, **email + password**, allowlist di una sola email
 - **Scheduling**: Vercel Cron
 - **Dati bancari**: Enable Banking API (AISP licenziato, `https://api.enablebanking.com`)
-- **AI**: Anthropic API, server-side
+- **AI**: OpenRouter, server-side (`OPENROUTER_API_KEY`, modello scelto con `OPENROUTER_MODEL`)
 - **Repo**: GitHub
 
 Non introdurre ORM pesanti, state manager, o librerie UI oltre a quelle strettamente necessarie.
@@ -428,6 +428,17 @@ lasciano 581 righe e nessun inserimento.
   5 minuti.
 - Migrations numerate progressivamente. Una migration già applicata non si modifica mai: se ne scrive
   una nuova.
+- **Una vista definita con `t.*` congela le colonne alla creazione.** Aggiungere una colonna alla
+  tabella non la fa comparire nella vista, e la query che la usa fallisce con
+  `column "x" does not exist` — che sembra un errore di battitura e non lo è. Ogni colonna nuova su
+  `transactions` che debba arrivare fino agli aggregati impone di ricreare `v_expenses` e tutto ciò
+  che ci sta sopra, in ordine di dipendenza e senza `cascade`: `cascade` porterebbe via anche viste
+  che la migration non ricrea, e il danno si scoprirebbe solo alla prima query che non trova più
+  niente.
+- **Una migration si prova prima di mandarla.** Postgres è disponibile in locale: `initdb` in una
+  cartella temporanea, gli stub delle tabelle che servono, e la si applica **due volte** — la
+  seconda dice se è rieseguibile. Le migration 0007 e 0014 sono fallite sull'ambiente vero per
+  difetti che questa prova avrebbe trovato in trenta secondi.
 - Se una decisione tecnica è ambigua, chiedi invece di scegliere in autonomia.
 
 ---

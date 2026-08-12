@@ -1,7 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { chiediAlModello, estraiArrayJson } from '@/lib/ai/anthropic';
+import { chiediAlModello, estraiArrayJson } from '@/lib/ai/modello';
 import { selezionaInviabili } from './persone';
 import { applicaTassonomia, type EsitoCategorizzazione } from './applica';
 import { DISCREZIONALITA, CONTESTI } from './assegna';
