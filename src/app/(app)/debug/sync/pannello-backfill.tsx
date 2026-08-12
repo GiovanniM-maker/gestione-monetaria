@@ -238,6 +238,28 @@ export function PannelloBackfill({
    * dice niente. Questo e' esattamente il modo in cui il primo tentativo di
    * proposta ha nascosto un timeout.
    */
+  /**
+   * `fetch` con un tetto di attesa esplicito.
+   *
+   * Senza, una richiesta che non torna muore con il messaggio del browser —
+   * su Safari «Load failed» — che non dice ne' quanto ha aspettato ne' cosa
+   * stava chiedendo. Con l'interruzione esplicita si sa almeno quello.
+   */
+  async function fetchConAttesa(url: string, secondi: number): Promise<Response> {
+    const interruttore = new AbortController();
+    const timer = setTimeout(() => interruttore.abort(), secondi * 1000);
+    try {
+      return await fetch(url, { method: 'POST', signal: interruttore.signal });
+    } catch (errore) {
+      if (interruttore.signal.aborted) {
+        throw new Error(`Nessuna risposta da ${url} dopo ${secondi} secondi.`);
+      }
+      throw errore;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function leggiRisposta(risposta: Response): Promise<Record<string, unknown>> {
     const testo = await risposta.text();
     try {
@@ -265,7 +287,7 @@ export function PannelloBackfill({
       let tokenTotali = 0;
       let ultimoModello: unknown = '';
       for (let fetta = 1; ; fetta += 1) {
-        const risposta = await fetch('/api/admin/proponi', { method: 'POST' });
+        const risposta = await fetchConAttesa('/api/admin/proponi', 90);
         const corpo = await leggiRisposta(risposta);
 
         if (!risposta.ok) {
@@ -312,6 +334,11 @@ export function PannelloBackfill({
             ` \u00b7 modello ${String(ultimoModello)}`,
         );
       }
+      // Una volta sola, qui: applicarla dopo ogni fetta rendeva ogni richiesta
+      // lenta quanto una categorizzazione completa.
+      aggiungi('Applico la tassonomia con le proposte nuove\u2026');
+      await categorizza();
+
       aggiungi(
         'Le proposte sono in /revisione, marcate come da confermare. ' +
           'Quelle su cui il modello non era sicuro lo dichiarano nella motivazione.',

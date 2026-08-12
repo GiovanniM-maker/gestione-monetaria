@@ -3,13 +3,22 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { chiediAlModello, estraiArrayJson, modelloInUso } from '@/lib/ai/modello';
 import { selezionaInviabili } from './persone';
-import { applicaTassonomia, type EsitoCategorizzazione } from './applica';
 import { DISCREZIONALITA, CONTESTI } from './assegna';
 import type { CategoryRow, Context, Discretion } from '@/lib/db/types';
 
 /**
  * Lo strato che mancava: il modello propone una classificazione per gli
  * esercenti mai visti prima.
+ *
+ * **Non applica la tassonomia.** La prima versione lo faceva a fine di ogni
+ * fetta, e rilanciare la categorizzazione su duemila movimenti dopo ogni lotto
+ * da venticinque nomi rendeva la richiesta lentissima — al punto che il browser
+ * mollava con un «Load failed» che sembrava un problema di rete. Il costo della
+ * richiesta non era il modello: era il lavoro che ci avevo attaccato dietro.
+ *
+ * Ora la fetta fa una cosa sola: chiedere e scrivere gli alias. La
+ * categorizzazione la lancia il chiamante, una volta, alla fine — ed e' un
+ * pulsante che esiste gia'.
  *
  * Sta **dopo** le regole deterministiche, mai prima. Un esercente già
  * conosciuto non viene chiesto di nuovo — la sua risposta è già scritta in
@@ -37,7 +46,7 @@ import type { CategoryRow, Context, Discretion } from '@/lib/db/types';
  * finito, il browser richiama. E' gia' il modo in cui questa applicazione
  * scarica due anni di movimenti; non c'era ragione di inventarne un altro.
  */
-const LOTTO = 25;
+const LOTTO = 15;
 
 const SYSTEM = `Sei un classificatore di spese bancarie personali, in italiano.
 
@@ -83,7 +92,6 @@ export type EsitoProposte = {
   costo: number | null;
   modello: string;
   errori: readonly string[];
-  categorizzazione: EsitoCategorizzazione | null;
 };
 
 type Candidata = {
@@ -164,10 +172,6 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
     costo,
     modello: modelloInUso(),
     errori: errori.slice(0, 10),
-    // Le proposte valgono subito per la categorizzazione: una classificazione
-    // probabile e visibile e' piu' utile di nessuna classificazione, e resta
-    // marcata come da confermare.
-    categorizzazione: accettate.length > 0 ? await applicaTassonomia() : null,
   };
 }
 
