@@ -40,26 +40,34 @@ type MerchantTotale = {
   ultima: string | null;
 };
 
+/**
+ * Quante etichette si mostrano. Il numero vero viaggia comunque accanto: un
+ * elenco tagliato che non dice di essere tagliato fa credere che il lavoro sia
+ * finito quando non lo e'.
+ */
+const MOSTRATE = 500;
+
 export default async function RevisionePage() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: daFare }, { data: esercenti }, { data: categorie }] = await Promise.all([
-    supabase
-      .from('v_da_classificare')
-      .select('etichetta, movimenti, totale::text, prima, ultima')
-      .order('totale', { ascending: true })
-      .limit(200),
-    // Colonne esplicite e non `*`: con `*` piu' un cast della stessa colonna
-    // si chiede due volte `totale`, e quale delle due vinca non e' scritto da
-    // nessuna parte.
-    supabase
-      .from('v_merchant_totals')
-      .select(
-        'id, canonical_name, category_id, discretion, context, is_subscription, movimenti, totale::text, ultima',
-      )
-      .order('totale', { ascending: true }),
-    supabase.from('categories').select('*').order('sort_order', { ascending: true }),
-  ]);
+  const [{ data: daFare, count: quanteInTutto }, { data: esercenti }, { data: categorie }] =
+    await Promise.all([
+      supabase
+        .from('v_da_classificare')
+        .select('etichetta, movimenti, totale::text, prima, ultima', { count: 'exact' })
+        .order('totale', { ascending: true })
+        .limit(MOSTRATE),
+      // Colonne esplicite e non `*`: con `*` piu' un cast della stessa colonna
+      // si chiede due volte `totale`, e quale delle due vinca non e' scritto da
+      // nessuna parte.
+      supabase
+        .from('v_merchant_totals')
+        .select(
+          'id, canonical_name, category_id, discretion, context, is_subscription, movimenti, totale::text, ultima',
+        )
+        .order('totale', { ascending: true }),
+      supabase.from('categories').select('*').order('sort_order', { ascending: true }),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -72,6 +80,7 @@ export default async function RevisionePage() {
       </div>
 
       <PannelloRevisione
+        quanteInTutto={quanteInTutto ?? 0}
         daClassificare={comeArray<DaClassificare>(daFare)}
         esercenti={comeArray<MerchantTotale>(esercenti)}
         categorie={comeArray<CategoryRow>(categorie)}

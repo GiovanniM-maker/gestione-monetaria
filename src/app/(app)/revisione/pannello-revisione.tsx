@@ -47,10 +47,12 @@ const bottone =
 
 export function PannelloRevisione({
   daClassificare,
+  quanteInTutto,
   esercenti,
   categorie,
 }: {
   daClassificare: readonly DaClassificare[];
+  quanteInTutto: number;
   esercenti: readonly MerchantTotale[];
   categorie: readonly CategoryRow[];
 }) {
@@ -100,7 +102,13 @@ export function PannelloRevisione({
 
       <section>
         <h2 className="mb-1 text-sm font-semibold">
-          Da classificare · {daClassificare.length} etichette
+          Da classificare · {quanteInTutto} etichette
+          {quanteInTutto > daClassificare.length && (
+            <span className="font-normal text-neutral-500">
+              {' '}
+              (ne vedi le {daClassificare.length} piu&rsquo; costose)
+            </span>
+          )}
         </h2>
         <p className="mb-3 text-xs text-neutral-500">
           In ordine di quanto costa lasciarle così. Assegna a un esercente esistente, oppure creane
