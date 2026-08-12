@@ -11,7 +11,7 @@
 | 0     | Fondamenta e segreti                      | **completata** |
 | 1     | Autenticazione Enable Banking, isolata    | **completata** |
 | 2     | Ingestion grezza + backfill riavviabile   | **completata** |
-| 2-bis | Import CSV                                | rimandata      |
+| 2-bis | Import CSV                                | **archiviata** |
 | 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
 | 4     | Tassonomia e categorizzazione a cascata   | non iniziata   |
 | 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
@@ -22,6 +22,13 @@
 | 10    | Chat copilot                              | non iniziata   |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
+
+**Perché la 2-bis è archiviata e non rimandata.** Esisteva per recuperare il primo anno di storico,
+necessario a vedere gli abbonamenti annuali. Quel primo anno **non esiste**: il conto è stato aperto
+il 23 settembre 2025, verificato sull'estratto CSV — fonte indipendente dall'API — dove il saldo
+implicito prima del primo movimento è 0,00. L'API ha già il 100% dello storico. Gli abbonamenti
+annuali diventano visibili da soli il 23 settembre 2026, e nessun import può anticipare quella data.
+Da riaprire **solo** se si collega Intesa e serve il suo storico pregresso.
 
 ---
 
@@ -126,8 +133,11 @@ qui, che è ciò che l'API fa davvero.
 - **Nel CSV la colonna `Costo` è un addebito separato, NON incluso in `Importo`.** Verificato:
   le 12 righe in cui la serie dei saldi non torna sono spiegate **tutte** ed esattamente dal `Costo`.
   Il caso che conta: il **canone Premium** ha `Importo` `0.00` e `Costo` `9.99` — un abbonamento
-  ricorrente il cui importo sta interamente in una colonna che non è l'importo. Da verificare come
-  lo espone l'API prima di fidarsi degli aggregati sui costi fissi.
+  ricorrente il cui importo sta interamente in una colonna che non è l'importo.
+  **L'API non ha questo difetto**: verificato, espone lo stesso canone come dieci movimenti regolari
+  da `−9,99` con causale `Premium Repricing 1 Copy plan fee`. Su questo punto i dati dell'API sono
+  più corretti dell'estratto ufficiale della banca, ed è il motivo per cui un eventuale import CSV
+  non potrebbe mai limitarsi a leggere la colonna `Importo`.
 - I tipi TypeScript delle risposte descrivono ciò che l'API _dovrebbe_ restituire. Il codice che le
   legge non deve mai fidarsene: niente accessi diretti a `.length` o `.map` su valori che arrivano
   dalla rete, o un campo assente diventa un 500 al posto della pagina.
