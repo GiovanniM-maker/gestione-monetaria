@@ -167,6 +167,44 @@ export function PannelloBackfill({
     }
   }
 
+  async function categorizza() {
+    setInCorso(true);
+    aggiungi('Applicazione della tassonomia…');
+    try {
+      const risposta = await fetch('/api/admin/categorize', { method: 'POST' });
+      const corpo = (await risposta.json()) as Record<string, unknown>;
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+        setInCorso(false);
+        return;
+      }
+
+      const esaminate = Number(corpo['esaminate'] ?? 0);
+      const abbinate = Number(corpo['abbinate'] ?? 0);
+      const quota = esaminate === 0 ? 0 : Math.round((abbinate / esaminate) * 1000) / 10;
+      aggiungi(
+        `${esaminate} esaminate · ${abbinate} abbinate (${quota}%) · ` +
+          `${corpo['nonAbbinate']} senza esercente · ${corpo['protette']} protette da correzione manuale`,
+      );
+
+      // L'elenco degli scoperti non e' un dettaglio diagnostico: e' la lista di
+      // lavoro, ordinata per quanto costa ignorarla.
+      const daGuardare = corpo['daGuardare'];
+      if (Array.isArray(daGuardare) && daGuardare.length > 0) {
+        aggiungi('  da assegnare a mano, per spesa decrescente:');
+        for (const v of daGuardare.slice(0, 15)) {
+          const r = v as { etichetta?: unknown; movimenti?: unknown; totale?: unknown };
+          aggiungi(`    ${String(r.totale)}  ${String(r.movimenti)}x  ${String(r.etichetta)}`);
+        }
+      }
+      router.refresh();
+    } catch (errore) {
+      aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   async function riprendi(id: string) {
     setInCorso(true);
     aggiungi(`Ripresa della corsa ${id.slice(0, 8)}…`);
@@ -226,6 +264,9 @@ export function PannelloBackfill({
         </button>
         <button type="button" onClick={normalizza} disabled={inCorso} className={stileBottone}>
           3 · Normalizza
+        </button>
+        <button type="button" onClick={categorizza} disabled={inCorso} className={stileBottone}>
+          4 · Categorizza
         </button>
       </div>
 

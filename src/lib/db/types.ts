@@ -76,3 +76,42 @@ export type BackfillCursor = {
   /** Conti gia' completati, per contabilita' e per il resoconto finale. */
   completed: readonly string[];
 };
+
+export type Discretion = 'essenziale' | 'investimento' | 'utile' | 'voluttuario';
+export type Context = 'personale' | 'business';
+export type MatchType = 'exact' | 'contains' | 'regex';
+
+export type CategoryRow = {
+  id: string;
+  parent_id: string | null;
+  name: string;
+  slug: string;
+  icon: string | null;
+  color: string | null;
+  default_discretion: Discretion | null;
+  is_archived: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type MerchantRow = {
+  id: string;
+  canonical_name: string;
+  category_id: string | null;
+  discretion: Discretion | null;
+  context: Context | null;
+  is_subscription: boolean;
+  website: string | null;
+  cancel_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type MerchantAliasRow = {
+  id: string;
+  merchant_id: string;
+  pattern: string;
+  match_type: MatchType;
+  priority: number;
+  created_at: string;
+};
