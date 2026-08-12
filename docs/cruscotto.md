@@ -77,17 +77,16 @@ Cinque superfici, ognuna con una domanda sola. Se una schermata risponde a due d
 schermate.
 
 ```
-Oggi          → cosa devo sapere adesso, e cosa devo confermare
-  Mese        → quanto ho speso, e in cosa
-    Categoria → dentro un ramo di spesa
-      Esercente → tutto quello che è passato da qui
-        Movimento → la singola riga, e la sua correzione
-  Ricorrente  → quanto torna ogni mese, e cosa si può disdire
-  Movimenti   → la lista completa, cercabile e filtrabile
-  Revisione   → cosa manca alla macchina per essere affidabile
+Mese          → quanto ho speso, e in cosa          ← la schermata di apertura
+  Categoria   → dentro un ramo di spesa
+    Esercente → tutto quello che è passato da qui
+      Movimento → la singola riga
+Ricorrente    → quanto torna ogni mese, e cosa si può disdire
+Movimenti     → la lista completa, cercabile e filtrabile
+Revisione     → cosa manca alla macchina per essere affidabile
 ```
 
-Le prime due righe di questo albero sono la navigazione principale; le altre si raggiungono
+Le quattro voci a sinistra sono la navigazione principale; le rientrate si raggiungono
 toccando. **Ogni aggregato deve essere toccabile e portare a ciò di cui è la somma.** È la regola
 che rende un cruscotto verificabile invece che decorativo.
 
@@ -95,34 +94,36 @@ che rende un cruscotto verificabile invece che decorativo.
 
 ## 4. Le superfici, una per una
 
-### 4.1 Oggi — la schermata di apertura
+### 4.1 La schermata di apertura resta il mese
 
-Oggi l'app si apre sul mese corrente. È la scelta sbagliata: il mese corrente è un numero parziale,
-e il primo del mese è quasi vuoto. Aprire su un numero parziale insegna a non fidarsi del numero.
+**Deciso**: l'app continua ad aprirsi sul cruscotto del mese corrente, non su una schermata *Oggi*
+separata. La domanda quotidiana è «quanto ho speso finora», e metterla dietro un tocco per
+guadagnare una schermata di riepilogo sarebbe un peggioramento.
 
-**Cosa deve mostrare, in ordine:**
+Le tre cose che una schermata *Oggi* avrebbe portato vanno quindi **in cima al cruscotto del mese**,
+sopra il totale:
 
-1. **La risposta.** Costo ricorrente mensile per classe: due righe, abbonamenti e abitudini, mai
-   sommate. È il numero per cui l'applicazione esiste e va per primo, non dopo tre grafici.
-2. **Cosa richiede un gesto.** I movimenti nuovi da confermare, gli esercenti mai visti, le
-   proposte del modello non ancora confermate. Con il conteggio, non con un pallino: «7 movimenti
-   di ieri da confermare» è un invito, un pallino rosso è un'ansia.
-3. **Lo stato del sistema.** *Vedi 5.4: è la cosa che oggi manca e che costa di più.*
-4. **Il mese in corso**, ma detto onestamente: non «−996,14 €» accanto a «−72,6% su luglio», bensì
-   «−996,14 € nei primi 11 giorni — nello stesso periodo dei tre mesi precedenti: −1.240, −890,
-   −1.510». Un confronto fra periodi omogenei è una misura; un confronto fra 11 giorni e 31 è un
-   errore di lettura garantito.
+1. **Lo stato del sistema.** Una riga sola quando va tutto bene, un avviso quando no.
+   *Vedi 5.4: è la cosa che oggi manca e che costa di più.*
+2. **Cosa richiede un gesto**, quando c'è: «7 movimenti di ieri da confermare». Con il conteggio e
+   non con un pallino — un numero è un invito, un pallino rosso è un'ansia.
+3. **Il costo ricorrente** resta dov'è, secondo blocco, perché risponde a una domanda diversa da
+   quella del mese e non va confuso con essa.
+
+Il mese in corso va marcato in **ogni numero che lo riguarda**, non solo nel titolo. Oggi
+`−996,14 €` sta accanto a `−72,6% su luglio`, e quel confronto si legge come «ho speso molto meno»,
+che è falso: sono undici giorni contro trentuno. Finché il confronto non è omogeneo (5.6), va tolto
+o riscritto.
 
 ### 4.2 Mese — il cruscotto attuale
 
-Quello costruito in Fase 6, con quattro correzioni:
+Quello costruito in Fase 6, con tre correzioni oltre a quelle di 4.1:
 
 - **Il confronto va fatto con la mediana degli ultimi sei mesi**, non col mese precedente. Un solo
   mese di riferimento è rumore: luglio contro giugno dice −8,7%, che non significa niente. Contro
   la mediana significa qualcosa.
 - **Le categorie devono essere toccabili.** Oggi l'albero è una fotografia; deve essere una porta.
 - **Gli esercenti anche**, e portano alla scheda esercente (4.5).
-- **Il mese in corso va marcato in ogni numero che lo riguarda**, non solo nel titolo.
 
 ### 4.3 Ricorrente
 
@@ -147,13 +148,13 @@ La superficie nuova più importante. Requisiti:
 - **Ogni riga mostra**: data, esercente, importo, categoria, classe, e un segno per `pending`,
   `manually_categorized`, `is_transfer`.
 
-**La riga si apre** su una scheda con: la causale grezza, il conto, il codice della banca, il
-riferimento, e le correzioni possibili — cambia categoria, cambia discrezionalità, cambia contesto,
-scrivi una nota, escludi dall'analisi, marca come giroconto o come rimborso.
+**La riga si apre** su una scheda che mostra ciò che l'aggregato nasconde: la causale grezza, il
+conto, il codice della banca (`CARD_PAYMENT`, `TRANSFER`, …), il riferimento, lo stato
+`pending`/`booked`, e come è stata classificata — per alias, dal modello, o a mano.
 
-Ogni correzione scrive `manually_categorized = true` e da lì la riga è intoccabile
-dall'automatismo. **È il patto**: le correzioni dell'utente sono sacre, e questa è la schermata dove
-si esercitano.
+La scheda nasce **in sola lettura** (decisione in 8). Quando le correzioni arriveranno, ognuna
+scriverà `manually_categorized = true` e da lì la riga sarà intoccabile dall'automatismo: è il
+patto già scritto nelle regole di correttezza, e questa sarà la schermata dove si esercita.
 
 ### 4.5 Le schede di dettaglio
 
@@ -213,7 +214,23 @@ Serve, in cima a *Oggi*:
 - scadenza del consenso, con un avviso quando mancano meno di trenta giorni;
 - l'ultima sincronizzazione fallita, se ce n'è una.
 
-### 5.5 Il confronto omogeneo
+### 5.5 Le entrate, come contesto
+
+**Deciso**: si tracciano, ma come **denominatore e non come oggetto**. Non cambiano la metrica
+principale — l'app continua a rispondere a «dove sto sprecando» e non a «quanto risparmio».
+
+Serve una riga sul cruscotto: entrate del mese, e la spesa come quota di esse. La ragione è che
+«606 €/mese di voluttuario ricorrente» significa cose molto diverse su entrate da 2.000 o da 6.000,
+e senza il denominatore quel numero non si sa se è tanto — che è la prima delle regole di
+presentazione qui sotto.
+
+Costa poco: i movimenti positivi sono già nel database, esclusi solo da `v_expenses`. Serve una
+vista compagna, `v_monthly_income`, con la stessa struttura e gli stessi filtri al contrario, e
+attenzione a un punto: **i giroconti in entrata non sono entrate.** Un rientro dal conto deposito
+sarebbe contato come reddito, e il denominatore diventerebbe falso proprio come lo era la classifica
+delle uscite prima di `is_transfer`.
+
+### 5.6 Il confronto omogeneo
 
 Non è una lista ma un modo di calcolare, e va scritto una volta in SQL: **i primi N giorni del mese
 in corso contro i primi N giorni dei mesi precedenti.** È una misura, non una proiezione, e risolve
@@ -264,43 +281,43 @@ Elencato perché il modo tipico di rovinare un cruscotto è aggiungerci cose rag
 
 ---
 
-## 8. Le domande aperte
+## 8. Le decisioni prese
 
-Non hanno una risposta ovvia e cambiano cosa si costruisce.
+Prese il 12 agosto 2026, dopo il primo inventario.
 
-**Le entrate.** Oggi l'applicazione vede solo le uscite: `v_expenses` filtra `amount < 0`. Senza le
-entrate non si può dire «ho risparmiato», si può solo dire «ho speso». Tracciarle apre a un
-rapporto spesa/entrate che è la domanda naturale successiva, ma allarga l'oggetto
-dell'applicazione.
+| Domanda | Decisione | Conseguenza |
+| --- | --- | --- |
+| **Entrate** | sì, ma **come contesto** | una riga sul cruscotto e una vista `v_monthly_income`; la metrica principale non cambia |
+| **Schermata di apertura** | resta **il mese corrente** | stato del sistema e cose da confermare vanno in cima al cruscotto, non su una schermata nuova |
+| **Budget** | **non ora** | `budgets` resta nello schema inutilizzata; da riprendere quando i numeri veri saranno noti da qualche mese |
+| **Correzione della singola transazione** | **da decidere sui dati** | la lista dei movimenti si costruisce lo stesso; la scheda nasce **in sola lettura**, e le correzioni si aggiungono quando il bisogno si vede |
 
-**I budget.** La tabella `budgets` è nello schema fin dall'inizio e non è mai stata usata. Una
-soglia per classe di discrezionalità — «voluttuario ricorrente sotto i 400 €/mese» — trasformerebbe
-la metrica da osservazione a obiettivo. Ma un budget sbagliato si ignora dopo due settimane, e
-diventa rumore.
+L'ultima riga merita una nota, perché è una decisione di metodo e non di prodotto. La scheda
+movimento in sola lettura serve già a due cose su tre — verificare un numero scomponendolo, e
+guardare la causale grezza di un movimento che non si riconosce. La terza, correggere, ha un costo
+di progettazione alto (quali campi, cosa blocca `manually_categorized`, come si annulla) e un
+bisogno ancora misurato a zero. Costruirla adesso significherebbe indovinare; costruirla dopo aver
+visto quante volte si vorrebbe usarla significa saperlo.
 
-**Il momento della conferma.** L'idea di fine giornata è registrata. Va decisa la forma: una
-schermata che si visita, oppure una notifica che arriva. La seconda richiede la Fase 7 e un
-service worker.
+**Resta aperta una sola domanda**, e non è per l'utente: il momento della conferma di fine giornata
+— una schermata che si visita, oppure una notifica che arriva. La seconda richiede la Fase 7 e un
+service worker, quindi si decide lì.
 
-**La granularità della correzione.** Correggere una singola transazione è previsto dallo schema. Ma
-quanto spesso serve davvero, rispetto a correggere l'esercente una volta per tutte? Se il caso vero
-è raro, la schermata movimento può restare essenziale.
-
----
-
-## 9. Ordine di costruzione proposto
+## 9. Ordine di costruzione
 
 Ogni riga è un passo che si chiude e si prova da solo.
 
 | # | Cosa | Perché in questa posizione |
 | --- | --- | --- |
-| 1 | **Stato del sistema** in cima a *Oggi* | costa poco e protegge da un guasto silenzioso |
-| 2 | **Lista movimenti** con filtri, ricerca e totale | è il pavimento; senza, niente sopra si verifica |
-| 3 | **Scheda movimento** con le correzioni | rende raggiungibile `manually_categorized` |
-| 4 | **Aggregati toccabili** — categoria ed esercente aprono | trasforma il cruscotto in qualcosa in cui si scende |
-| 5 | **Schede esercente e categoria** | rispondono alle domande che si fanno davvero |
-| 6 | **Confronto omogeneo** fra periodi | rende leggibile il mese in corso |
-| 7 | **Lista giroconti** | difesa contro il guasto peggiore già visto |
-| 8 | **Home *Oggi*** che riordina tutto | ha senso solo quando i pezzi esistono |
+| 1 | **Stato del sistema** in cima al cruscotto | costa poco e protegge dal guasto silenzioso peggiore |
+| 2 | **Entrate come contesto** — vista e riga sul cruscotto | costa poco e dà il denominatore che oggi manca a ogni cifra |
+| 3 | **Lista movimenti** con filtri, ricerca e totale | è il pavimento; senza, niente di ciò che sta sopra si verifica |
+| 4 | **Scheda movimento in sola lettura** | chiude la discesa fino alla riga singola |
+| 5 | **Aggregati toccabili** — categoria ed esercente aprono | trasforma il cruscotto da fotografia a porta |
+| 6 | **Schede esercente e categoria** | rispondono alle domande che ci si fa davvero |
+| 7 | **Confronto omogeneo** fra periodi | rende leggibile il mese in corso, e toglie il `−72,6%` che oggi inganna |
+| 8 | **Lista giroconti** | difesa contro il guasto che ha già cancellato metà della spesa una volta |
 
-I punti 1 e 2 valgono da soli più di tutti gli altri messi insieme.
+I punti 1, 2 e 3 sono piccoli e vanno insieme: sono un passo solo, e valgono più di tutti gli altri
+messi insieme. Le correzioni sulla scheda movimento restano fuori dalla lista finché non si sa se
+servono (vedi 8).

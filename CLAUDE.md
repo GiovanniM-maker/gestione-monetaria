@@ -16,12 +16,26 @@
 | 4     | Tassonomia e categorizzazione a cascata   | **completata** |
 | 5     | Detector abbonamenti (SQL puro)           | **completata** |
 | 6     | Dashboard                                 | **completata** |
+| 6-bis | Il pavimento: movimenti, stato, entrate   | non iniziata   |
 | 7     | Automazione                               | non iniziata   |
 | 8     | Motore alert (SQL)                        | non iniziata   |
 | 9     | Report periodico AI                       | non iniziata   |
 | 10    | Chat copilot                              | non iniziata   |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
+
+**La 6-bis nasce da un inventario, non da un piano.** Fatto a fine Fase 6 e scritto in
+`docs/cruscotto.md`, ha trovato che **nessuna schermata mostra una transazione**: ogni discesa
+finisce su un aggregato. Ne discendono tre impossibilità — verificare un numero scomponendolo,
+correggere una singola riga (`manually_categorized` è progettato e irraggiungibile), e fare la
+conferma di fine giornata, che è una lista di movimenti con dei bottoni sopra. Più una mancanza che
+costa pochissimo colmare e protegge dal guasto peggiore: `bank_connections.valid_until` non è
+mostrato da nessuna parte, e quando il consenso scade i dati smettono di arrivare **in silenzio**.
+
+Decisioni prese il 12 agosto 2026, nel dettaglio in `docs/cruscotto.md` §8:
+**entrate** sì ma solo come denominatore (i giroconti in entrata non sono entrate);
+**apertura** resta il mese corrente; **budget** non ora; **correzione della singola transazione**
+da decidere sui dati, quindi la scheda movimento nasce in sola lettura.
 
 **Perché la 2-bis è archiviata e non rimandata.** Esisteva per recuperare il primo anno di storico,
 necessario a vedere gli abbonamenti annuali. Quel primo anno **non esiste**: il conto è stato aperto
