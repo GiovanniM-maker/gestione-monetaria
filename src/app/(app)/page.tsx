@@ -11,6 +11,7 @@ import {
 } from '@/lib/cruscotto/mesi';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
+import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import type { RigaStato } from '@/lib/movimenti/cerca';
 
 export const dynamic = 'force-dynamic';
@@ -69,6 +70,8 @@ export default async function CruscottoPage({
     ricorrente,
     entrate,
     stato,
+    confronto,
+    giorniCoperti,
   } = dati;
 
   // Gli estremi del mese servono a mandare ogni aggregato alla lista movimenti
@@ -152,14 +155,60 @@ export default async function CruscottoPage({
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline gap-3">
           <p className="text-3xl font-semibold tabular-nums sm:text-4xl">{formattaEuro(speso)}</p>
-          {scostamento !== null && (
+          {/*
+            Un mese in corso NON si confronta con un mese intero: undici giorni
+            contro trentuno si leggono come «ho speso molto meno», che e' falso.
+            Finche' il mese e' incompleto si confronta la stessa finestra dei
+            mesi precedenti — una misura, non una proiezione.
+          */}
+          {confronto === null && scostamento !== null && (
             <p className="text-sm text-neutral-500">
               {scostamento > 0 ? '+' : ''}
               {scostamento.toFixed(1).replace('.', ',')}% su {etichettaMese(mesePrecedente ?? '')}
-              {inCorso && ', ma il mese non è finito'}
             </p>
           )}
         </div>
+
+        {confronto !== null && giorniCoperti !== null && (
+          <div className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
+            <p>
+              Nei <strong>primi {giorniCoperti} giorni</strong> del mese hai speso{' '}
+              <strong className="tabular-nums">{formattaEuro(confronto.corrente.spesa)}</strong>
+              {confronto.riferimento !== null && (
+                <>
+                  , contro{' '}
+                  <strong className="tabular-nums">{formattaEuro(confronto.riferimento)}</strong>{' '}
+                  negli stessi giorni dei mesi scorsi
+                  {confronto.scostamento !== null && (
+                    <>
+                      {' '}
+                      — {confronto.scostamento > 0 ? '+' : ''}
+                      {confronto.scostamento.toFixed(0)}%
+                    </>
+                  )}
+                </>
+              )}
+              .
+            </p>
+            {confronto.precedenti.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+                {confronto.precedenti.map((p) => (
+                  <li key={p.mese} className="tabular-nums">
+                    {etichettaBreve(p.mese)} {formattaEuro(p.spesa)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-xs text-neutral-500">
+              Finestre della stessa lunghezza, non una proiezione a fine mese: «a questo ritmo
+              spenderai X» sarebbe un&rsquo;estrapolazione travestita da informazione.
+            </p>
+          </div>
+        )}
+
+        <Link className={`${BOTTONE_MINORE} w-fit`} href={perMese()}>
+          vedi i {rigaMese?.movimenti ?? 0} movimenti del mese
+        </Link>
 
         {classi.length === 0 ? (
           <p className="text-sm text-neutral-500">Nessun movimento in questo mese.</p>
@@ -294,7 +343,7 @@ export default async function CruscottoPage({
             &egrave; fatta. Dove la cifra fra parentesi compare, &egrave; la parte finita
             direttamente su quel nodo invece che in un figlio.
           </p>
-          <Albero righe={categorie} totale={speso} perMese={perMese} />
+          <Albero righe={categorie} totale={speso} mese={mese} />
         </section>
       )}
 
@@ -330,7 +379,7 @@ export default async function CruscottoPage({
                     <span className="flex min-h-11 items-center justify-between gap-3">{riga}</span>
                   ) : (
                     <Link
-                      href={perMese({ esercente: e.merchant_id })}
+                      href={`/esercente/${e.merchant_id}`}
                       className="flex min-h-11 items-center justify-between gap-3"
                     >
                       {riga}
@@ -397,11 +446,11 @@ function Andamento({
 function Albero({
   righe,
   totale,
-  perMese,
+  mese,
 }: {
   righe: readonly RigaCategoria[];
   totale: bigint;
-  perMese: (extra?: Record<string, string>) => string;
+  mese: string;
 }) {
   const presenti = new Set(righe.map((r) => r.category_id));
   const figli = new Map<string | null, RigaCategoria[]>();
@@ -421,7 +470,7 @@ function Albero({
       return [
         <li key={r.category_id} className="space-y-1">
           <Link
-            href={perMese({ categoria: r.category_id })}
+            href={`/categoria/${r.category_id}?mese=${mese}`}
             className="flex min-h-11 items-center justify-between gap-3 text-sm"
             style={{ paddingLeft: `${livello * 12}px` }}
           >

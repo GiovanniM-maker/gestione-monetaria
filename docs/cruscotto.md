@@ -33,12 +33,18 @@ questa applicazione si costruisce, non dove si usa.
 
 | Superficie | Cosa risponde | Stato |
 | --- | --- | --- |
-| `/` cruscotto | quanto ho speso questo mese, in cosa, da chi | costruita in Fase 6 |
-| `/abbonamenti` | quanto costa al mese ciò che si ripete | costruita in Fase 5 |
-| `/revisione` | quali etichette ed esercenti mancano di classificazione | costruita in Fase 4 |
-| `/debug/sync` | la sequenza operativa: scarica, normalizza, categorizza, rileva | costruita in Fase 2–5 |
+| `/` cruscotto | quanto ho speso questo mese, in cosa, da chi | Fase 6, ampliata in 6-bis |
+| `/movimenti` | la lista completa, filtrabile e cercabile, col totale del filtro | **Fase 6-bis** |
+| `/movimenti/[id]` | la singola riga, in sola lettura | **Fase 6-bis** |
+| `/esercente/[id]` | quanto mi costa questo esercente, e da dove viene la sua classificazione | **Fase 6-bis** |
+| `/categoria/[id]` | cosa c'è dentro questo ramo, e come si muove | **Fase 6-bis** |
+| `/abbonamenti` | quanto costa al mese ciò che si ripete | Fase 5 |
+| `/revisione` | quali etichette ed esercenti mancano di classificazione | Fase 4 |
+| `/debug/sync` | la sequenza operativa: scarica, normalizza, categorizza, rileva | Fase 2–5 |
 
-Quattro superfici, e nessuna delle quattro mostra **una transazione**.
+**Il buco descritto nella sezione 2 è colmato.** Il testo resta perché la
+lezione vale oltre il caso: ogni aggregato deve poter essere sceso fino alla
+riga, o si può solo credere.
 
 ---
 
@@ -309,15 +315,29 @@ Ogni riga è un passo che si chiude e si prova da solo.
 
 | # | Cosa | Perché in questa posizione |
 | --- | --- | --- |
-| 1 | **Stato del sistema** in cima al cruscotto | costa poco e protegge dal guasto silenzioso peggiore |
-| 2 | **Entrate come contesto** — vista e riga sul cruscotto | costa poco e dà il denominatore che oggi manca a ogni cifra |
-| 3 | **Lista movimenti** con filtri, ricerca e totale | è il pavimento; senza, niente di ciò che sta sopra si verifica |
-| 4 | **Scheda movimento in sola lettura** | chiude la discesa fino alla riga singola |
-| 5 | **Aggregati toccabili** — categoria ed esercente aprono | trasforma il cruscotto da fotografia a porta |
-| 6 | **Schede esercente e categoria** | rispondono alle domande che ci si fa davvero |
-| 7 | **Confronto omogeneo** fra periodi | rende leggibile il mese in corso, e toglie il `−72,6%` che oggi inganna |
-| 8 | **Lista giroconti** | difesa contro il guasto che ha già cancellato metà della spesa una volta |
+| 1 | **Stato del sistema** in cima al cruscotto | ✅ 0020 |
+| 2 | **Entrate come contesto** — vista e riga sul cruscotto | ✅ 0020 |
+| 3 | **Lista movimenti** con filtri, ricerca e totale | ✅ 0020 |
+| 4 | **Scheda movimento in sola lettura** | ✅ 0020 |
+| 5 | **Aggregati toccabili** — categoria ed esercente aprono | ✅ |
+| 6 | **Schede esercente e categoria** | ✅ |
+| 7 | **Confronto omogeneo** fra periodi | ✅ 0021 |
+| 8 | **Lista giroconti** | ✅ come filtro: `/movimenti?tipo=giroconti` |
 
-I punti 1, 2 e 3 sono piccoli e vanno insieme: sono un passo solo, e valgono più di tutti gli altri
-messi insieme. Le correzioni sulla scheda movimento restano fuori dalla lista finché non si sa se
-servono (vedi 8).
+Le correzioni sulla scheda movimento restano fuori finché non si sa se servono (vedi 8).
+
+### Cosa resta, dopo la 6-bis
+
+Non è lavoro pianificato, è ciò che l'inventario ha lasciato indietro di proposito.
+
+- **Il motivo di ogni giroconto.** La lista esiste come filtro, ma non dice *perché* una riga è
+  marcata `is_transfer` — riferimento condiviso, causale `To`/`From`, controparte dichiarata, o
+  movimento speculare. Con quel motivo accanto, la revisione mensile dei giroconti diventa
+  verificabile invece che un atto di fede.
+- **`cancel_url` sugli abbonamenti.** È nello schema e non è mai usato: «non lo uso» dovrebbe
+  portare dove si disdice, o il giudizio resta un'annotazione senza conseguenze.
+- **La copertura della classificazione in cima a `/revisione`.** 94,0% in euro e 98,2% in
+  movimenti dicono quanto ci si può fidare di tutto il resto, e stanno in una riga di esito che
+  sparisce al primo ricaricamento.
+- **L'allineamento della Fase 5 su `amount_eur`.** Il detector somma `amount`; oggi coincidono
+  perché l'unico conto nei totali è in euro. Da fare prima di collegare Intesa.

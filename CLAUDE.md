@@ -16,7 +16,7 @@
 | 4     | Tassonomia e categorizzazione a cascata   | **completata** |
 | 5     | Detector abbonamenti (SQL puro)           | **completata** |
 | 6     | Dashboard                                 | **completata** |
-| 6-bis | Il pavimento: movimenti, stato, entrate   | non iniziata   |
+| 6-bis | Il pavimento: movimenti, stato, entrate   | **completata** |
 | 7     | Automazione                               | non iniziata   |
 | 8     | Motore alert (SQL)                        | non iniziata   |
 | 9     | Report periodico AI                       | non iniziata   |
@@ -669,6 +669,58 @@ bersaglio toccabile, su 360, 375 e 414 px. Con Chromium già presente in ambient
 
 Stato misurato a fine Fase 6: **nessun elemento sborda** a nessuna delle tre larghezze, e l'unico
 bersaglio sotto i 44 px è la casella di spunta, la cui etichetta è alta 44 e toccandola la commuta.
+
+### Le decisioni della Fase 6-bis
+
+#### Righe e totale devono uscire dalla stessa query
+
+`cerca_movimenti()` restituisce le righe **e** i totali dell'intero insieme filtrato, con
+`count(*) over ()` e `sum(...) over ()` — che si calcolano dopo il `where` e prima del `limit`.
+
+Due query separate sarebbero due copie della stessa condizione, e potrebbero divergere senza che
+niente lo segnali: il sintomo sarebbe una lista che mostra righe che il totale in cima non conta.
+È lo stesso ragionamento della colonna `nella_metrica` in Fase 5 — una regola scritta in un posto
+solo non può divergere da sé stessa.
+
+#### Ogni riga dice perché non è nella spesa
+
+`fuori_dalla_spesa` vale `giroconto`, `rimborso`, `conto fuori dai totali`, `escluso dall'analisi`,
+`entrata`, `importo zero`. È l'informazione che finora si è sempre dovuta cercare con una query
+scritta a mano, ed è ciò che rende la lista uno strumento di verifica invece che un elenco.
+
+#### Le RPC vanno dichiarate a `text` sugli importi
+
+PostgREST serializza `numeric` come **numero JSON**, quindi float. Sulle viste il problema si evita
+chiedendo `::text` nella select, ma da una funzione il chiamante non può: il cast va nella firma.
+Far passare un importo da un float esattamente nell'ultimo trasferimento vanificherebbe tutta la
+catena in centesimi.
+
+#### Un mese in corso non si confronta con un mese intero
+
+`−996,14 €` accanto a `−72,6% su luglio` si legge come «ho speso molto meno», ed è falso: sono
+undici giorni contro trentuno. La tentazione è proiettare — «a questo ritmo spenderai X» — ma è
+un'estrapolazione travestita da informazione, lo stesso errore che in Fase 5 dichiarava
+8.966 €/mese di spesa inesistente.
+
+La risposta è `spesa_nei_primi_giorni()`: **la stessa finestra** nei mesi precedenti. Due misure,
+non una previsione. Il termine di paragone è la mediana **scelta** (`percentile_disc`, e in
+TypeScript la selezione dell'elemento centrale), mai la media: su un numero pari di mesi la media
+produrrebbe un valore che non è mai stato speso in nessun mese, e come riferimento serve un numero
+vero.
+
+### Prova manuale della Fase 6-bis, sotto i 5 minuti
+
+1. `/` in cima: la riga di stato con i giorni al rinnovo del consenso. Se mancano meno di trenta
+   giorni diventa un riquadro arancione, se è scaduto rosso. **È la difesa contro il guasto che
+   non si vedrebbe.**
+2. Sotto il totale, le entrate e la spesa come loro quota. Se sembra troppo alto c'è un giroconto
+   in entrata non marcato: `/movimenti?tipo=giroconti` lo trova.
+3. `/movimenti` filtrato su luglio, tipo *spese reali*: **−3.640,32 €** su 132 movimenti, gli
+   stessi del cruscotto. Se i due percorsi divergono è una regressione.
+4. Toccare una categoria apre `/categoria/[id]` col mese conservato; toccare un esercente apre la
+   sua scheda con l'andamento mensile e l'origine della classificazione.
+5. Nel mese in corso, al posto della percentuale compare il confronto sugli stessi giorni dei mesi
+   precedenti.
 
 ### Prova manuale della Fase 6, sotto i 5 minuti
 

@@ -3,6 +3,14 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { meseDaData } from './mesi';
 import { leggiStatoSistema, type RigaStato } from '@/lib/movimenti/cerca';
+import {
+  confronta,
+  giornoDelMese,
+  leggiPeriodi,
+  type Confronto,
+  type RigaPeriodo,
+} from './confronto';
+import { estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaMetrica } from '@/lib/abbonamenti/formato';
 
 /**
@@ -76,6 +84,13 @@ export type Cruscotto = {
   /** Le entrate del mese, come denominatore. Non cambiano la metrica principale. */
   entrate: RigaEntrate | null;
   stato: readonly RigaStato[];
+  /**
+   * Il confronto sui giorni davvero coperti, presente solo quando il mese e'
+   * incompleto. Quando il mese e' finito non serve: si confronta per intero.
+   */
+  confronto: Confronto | null;
+  /** Fino a che giorno del mese arrivano i dati. `null` = mese vuoto. */
+  giorniCoperti: number | null;
 };
 
 /** Quanti esercenti si mostrano. Oltre, la lista smette di essere leggibile. */
@@ -125,6 +140,14 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
       leggiStatoSistema(),
     ]);
 
+  // Fino a che giorno arrivano i dati di questo mese. Serve a confrontare
+  // finestre della stessa lunghezza invece di undici giorni contro trentuno.
+  const giorniCoperti = giornoDelMese(await ultimoGiornoConDati(mese));
+  const confronto =
+    giorniCoperti === null || giorniCoperti >= 28
+      ? null
+      : await leggiConfronto(mese, giorniCoperti);
+
   return {
     mese,
     mesePrecedente,
@@ -137,7 +160,44 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     ricorrente,
     entrate,
     stato,
+    confronto,
+    giorniCoperti,
   };
+}
+
+/** L'ultimo giorno del mese in cui c'e' almeno una spesa. */
+async function ultimoGiornoConDati(mese: string): Promise<string | null> {
+  const estremi = estremiDelMese(mese);
+  if (estremi === null) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('v_expenses')
+    .select('booking_date')
+    .gte('booking_date', estremi.da)
+    .lte('booking_date', estremi.a)
+    .order('booking_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { booking_date: string } | null)?.booking_date ?? null;
+}
+
+/**
+ * I primi N giorni di questo mese contro i primi N dei precedenti.
+ *
+ * Non si proietta a fine mese: «a questo ritmo spenderai X» e'
+ * un'estrapolazione travestita da informazione, ed e' lo stesso errore che in
+ * Fase 5 dichiarava 8.966 EUR/mese di spesa inesistente. Due finestre della
+ * stessa lunghezza sono invece due misure, e si possono confrontare.
+ */
+async function leggiConfronto(mese: string, giorni: number): Promise<Confronto | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('spesa_nei_primi_giorni', {
+    p_giorni: giorni,
+    p_mesi: 7,
+  });
+  if (error !== null) return null;
+  return confronta(mese, leggiPeriodi(comeArray<RigaPeriodo>(data)));
 }
 
 /**
