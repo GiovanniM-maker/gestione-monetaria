@@ -291,6 +291,38 @@ aritmetica in centesimi sono corretti. Ogni euro della differenza fino alla spes
 riconducibile a un giroconto specifico — 2.000 € di pocket in valuta, 5.830 € verso il conto
 deposito, 1.200 € verso un proprio conto presso un altro istituto — non a un residuo non spiegato.
 
+#### Riconciliazione contro l'estratto CSV — luglio 2026
+
+Fatta il 12 agosto 2026 confrontando giorno per giorno il nostro database con l'export ufficiale di
+Revolut, che è una fonte indipendente dall'API. Differenza lorda **217,68 €**, interamente
+scomposta:
+
+| Voce                                    | Importo    | Chi ha ragione                                          |
+| --------------------------------------- | ---------- | ------------------------------------------------------- |
+| Movimento del 7–8 luglio                | ±53,00 €   | nessuno dei due: si annulla nel mese                    |
+| Movimento del 18–19 luglio              | ±11,99 €   | nessuno dei due: si annulla nel mese                    |
+| Canone Premium del 21 luglio            | 9,99 €     | **noi** — il CSV lo nasconde in `Costo`                 |
+| `Vercel` annullata del 21 luglio        | −0,44 €    | **noi** — il CSV elenca un'operazione annullata          |
+| `Byteplus` del 31 luglio                | 208,13 €   | **il CSV** — vedi sotto                                  |
+
+Le prime quattro voci confermano la pipeline. La quinta è l'unico difetto reale trovato.
+
+#### Il movimento dopo mezzanotte finisce nel mese sbagliato
+
+`Byteplus`, 208,13 €, fatto alle **00:11 del 1° agosto** ora di Roma. L'API lo restituisce con
+`booking_date` **31 luglio**: 00:11 a Roma sono le 22:11 UTC del giorno prima. È esattamente la
+conversione di fuso che le regole di correttezza vietano — solo che avviene **a monte, dentro
+l'ASPSP**, non nel nostro codice, che si limita a salvare la data ricevuta.
+
+Lo stesso scarto di un giorno si vede sui movimenti del 7–8 e del 18–19 luglio, sempre nella stessa
+direzione: il nostro `booking_date` è un giorno prima della data che Revolut mostra. Dentro il mese
+si annulla; sul confine di mese sposta l'importo nell'aggregato sbagliato.
+
+**Quanto vale**: su tutto lo storico solo **4 movimenti** cadono il primo del mese fra mezzanotte e
+le 02:00, per **243,95 €** netti. Su 71 movimenti notturni totali, gli altri 67 restano nel mese
+giusto. Non tocca il costo *ricorrente*, che è la metrica principale, quindi non giustifica la
+riapertura della Fase 3 — ma va saputo prima di stupirsi di uno scarto su un totale mensile.
+
 I tre meccanismi che producono quei 141 giroconti sono indipendenti e non sostituibili l'uno
 all'altro:
 
