@@ -22,8 +22,16 @@ import { parseCentesimiTollerante } from '@/lib/money';
  * modulo finirebbe nel bundle del browser.
  */
 
-/** Mesi civili distinti sotto i quali non si parla di ricorrenza. */
-export const MESI_MINIMI = 3;
+/**
+ * Il criterio «entra nel numero» **non e' scritto qui**: e' la colonna
+ * `nella_metrica` di `v_subscriptions`, calcolata in SQL.
+ *
+ * Duplicarlo in TypeScript significherebbe due definizioni che possono
+ * divergere in silenzio, e la schermata mostrerebbe righe che il totale non
+ * conta. Questa costante serve solo a spiegarlo a chi legge.
+ */
+export const CRITERIO_RICORRENZA =
+  'attivo, presente in almeno 3 mesi civili e su almeno 75 giorni coperti';
 
 export type RigaAbbonamento = {
   id: string;
@@ -38,6 +46,9 @@ export type RigaAbbonamento = {
   expected_amount: string | null;
   typical_amount: string | null;
   total_amount: string | null;
+  covered_days: string | null;
+  /** Deciso in SQL, non qui: e' il criterio della metrica, in un posto solo. */
+  nella_metrica: boolean;
   costo_mensile: string | null;
   first_seen: string | null;
   last_seen: string | null;

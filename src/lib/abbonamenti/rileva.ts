@@ -1,13 +1,12 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { MESI_MINIMI } from './formato';
 import type { RigaAbbonamento, RigaEsclusa, RigaMetrica } from './formato';
 
 // Rilette dal modulo puro e riesportate: chi legge queste query trova i tipi
 // dove se li aspetta, senza che la schermata debba importare questo file.
 export type { RigaAbbonamento, RigaEsclusa } from './formato';
-export { MESI_MINIMI } from './formato';
+export { CRITERIO_RICORRENZA } from './formato';
 
 /**
  * Il lato applicativo della Fase 5.
@@ -35,7 +34,8 @@ export { MESI_MINIMI } from './formato';
  */
 const COLONNE_ABBONAMENTO =
   'id, esercente, categoria, discrezionalita, contesto, tipo, cadence, cadence_days::text, ' +
-  'expected_amount::text, typical_amount::text, total_amount::text, costo_mensile::text, ' +
+  'expected_amount::text, typical_amount::text, total_amount::text, covered_days::text, ' +
+  'nella_metrica, costo_mensile::text, ' +
   'first_seen, last_seen, next_expected, occurrences, active_months, ' +
   'confidence::text, amount_stability::text, status, usage_verdict, notes';
 
@@ -89,8 +89,7 @@ export async function leggiRiepilogo(): Promise<{
       supabase
         .from('v_subscriptions')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('active_months', MESI_MINIMI),
+        .eq('nella_metrica', true),
     ]);
 
   return {

@@ -9,7 +9,6 @@ import {
   sommaCosti,
   totalePerTipo,
 } from '@/lib/abbonamenti/formato';
-import { MESI_MINIMI } from '@/lib/abbonamenti/formato';
 import type {
   RigaAbbonamento,
   RigaEsclusa,
@@ -86,9 +85,7 @@ export function PannelloAbbonamenti({
    * click di distanza — nasconderlo e basta farebbe credere che il numero
    * comprenda tutto.
    */
-  const visibili = mostraTutti
-    ? abbonamenti
-    : abbonamenti.filter((a) => a.status === 'active' && a.active_months >= MESI_MINIMI);
+  const visibili = mostraTutti ? abbonamenti : abbonamenti.filter((a) => a.nella_metrica);
 
   async function scrivi(id: string, corpo: Record<string, unknown>) {
     setInCorso(id);
@@ -172,9 +169,11 @@ export function PannelloAbbonamenti({
             ))}
           </ul>
           <p className="mt-2 text-amber-800 dark:text-amber-300">
-            Sotto {MESI_MINIMI} mesi di presenza non c&rsquo;&egrave; nessun costo mensile da
-            mostrare: dieci addebiti in due settimane sono una raffica, e dividerli per due
-            settimane produrrebbe una cifra inventata. Resta il totale, che &egrave; misurato.
+            Serve essere presenti in almeno tre mesi civili <em>e</em> su almeno 75 giorni
+            coperti. La seconda condizione non &egrave; ridondante: un intervallo di 63 giorni
+            attraversa sempre tre mesi civili, e senza di lei dieci addebiti concentrati in due
+            mesi diventavano un costo mensile che non &egrave; mai stato sostenuto per un mese.
+            Sotto la soglia resta il totale, che &egrave; misurato.
           </p>
         </div>
       )}
