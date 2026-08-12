@@ -209,9 +209,7 @@ export function PannelloBackfill({
 
       const nonLetti = Number(corpo['importiNonLetti'] ?? 0);
       if (nonLetti > 0) {
-        aggiungi(
-          `  ⚠ ${nonLetti} importi non letti: l’ordine della lista qui sotto e’ parziale.`,
-        );
+        aggiungi(`  ⚠ ${nonLetti} importi non letti: l’ordine della lista qui sotto e’ parziale.`);
       }
 
       // L'elenco degli scoperti non e' un dettaglio diagnostico: e' la lista di
@@ -224,6 +222,33 @@ export function PannelloBackfill({
           aggiungi(`    ${String(r.totale)}  ${String(r.movimenti)}x  ${String(r.etichetta)}`);
         }
       }
+      router.refresh();
+    } catch (errore) {
+      aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
+  async function proponi() {
+    setInCorso(true);
+    aggiungi('Chiedo al modello una proposta per gli esercenti mai visti…');
+    try {
+      const risposta = await fetch('/api/admin/proponi', { method: 'POST' });
+      const corpo = (await risposta.json()) as Record<string, unknown>;
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+        setInCorso(false);
+        return;
+      }
+      aggiungi(
+        `${corpo['esaminate']} etichette esaminate · ${corpo['proposte']} proposte · ` +
+          `${corpo['scartate']} risposte scartate perche' non valide · ` +
+          `${corpo['trattenute']} NON inviate al modello (nomi di persona, regola 8)`,
+      );
+      const errori = corpo['errori'];
+      if (Array.isArray(errori)) for (const e of errori) aggiungi(`  ⚠ ${String(e)}`);
+      aggiungi('Le proposte sono in /revisione, marcate come da confermare.');
       router.refresh();
     } catch (errore) {
       aggiungi(`Errore di rete: ${errore instanceof Error ? errore.message : String(errore)}`);
@@ -294,6 +319,9 @@ export function PannelloBackfill({
         </button>
         <button type="button" onClick={categorizza} disabled={inCorso} className={stileBottone}>
           4 · Categorizza
+        </button>
+        <button type="button" onClick={proponi} disabled={inCorso} className={stileBottone}>
+          5 · Proponi con l&rsquo;AI
         </button>
       </div>
 
