@@ -98,6 +98,24 @@ Se una feature non contribuisce a quel numero o alla fiducia in quel numero, non
 Non introdurre ORM pesanti, state manager, o librerie UI oltre a quelle strettamente necessarie.
 Preferisci SQL esplicito e query tipizzate.
 
+### Ogni operazione dev'essere raggiungibile dal copilot, non solo da un bottone
+
+La Fase 10 prevede di chiedere all'app *"quanto ho speso in ristoranti a marzo"*, ma anche
+*"sposta questa transazione in un'altra categoria"* e *"creane una nuova"*. Un copilot può fare
+solo ciò che esiste come **operazione nominata**: se la logica vive dentro un gestore di click, per
+lui non esiste.
+
+Conseguenza pratica, valida da subito e non dalla Fase 10:
+
+- le **aggregazioni** stanno in viste SQL, mai ricalcolate in TypeScript per una schermata;
+- il **rilevamento** (abbonamenti, ricorrenze, anomalie) sta in funzioni SQL, non in un ciclo
+  applicativo;
+- le **scritture** (assegna esercente, sposta transazione, crea categoria) stanno in funzioni
+  esportate con una firma esplicita, e la UI le chiama come le chiamerà il copilot.
+
+Non è anticipare la Fase 10: è non doverla riscrivere. Una vista e una funzione SQL sono già
+strumenti che un modello può usare; un `onClick` no.
+
 ### Perché password e non magic link
 
 Il piano iniziale prevedeva il magic link. È stato cambiato in Fase 0, dopo averlo visto fallire

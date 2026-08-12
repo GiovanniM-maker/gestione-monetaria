@@ -366,6 +366,65 @@ export function PannelloBackfill({
     }
   }
 
+  /**
+   * Ricalcola gli abbonamenti dai movimenti gia' categorizzati.
+   *
+   * Va dopo la categorizzazione e non prima: il rilevamento raggruppa per
+   * esercente, e un movimento senza esercente non entra in nessuna serie.
+   */
+  async function rilevaAbbonamenti() {
+    setInCorso(true);
+    aggiungi('Rilevamento delle ricorrenze…');
+    try {
+      const risposta = await fetchConAttesa('/api/admin/abbonamenti', 90);
+      const corpo = await leggiRisposta(risposta);
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+        return;
+      }
+
+      aggiungi(
+        `${corpo['scritte']} ricorrenze scritte · ${corpo['attivi']} attive su ` +
+          `${corpo['totali']} rilevate`,
+      );
+
+      // La metrica per cui l'app esiste, stampata qui e non solo nella
+      // schermata: e' il primo momento in cui il numero esiste davvero.
+      const metrica = corpo['metrica'];
+      if (Array.isArray(metrica) && metrica.length > 0) {
+        aggiungi('  COSTO RICORRENTE MENSILE:');
+        for (const v of metrica) {
+          const r = v as Record<string, unknown>;
+          aggiungi(
+            `    ${String(r['discrezionalita'])} / ${String(r['contesto'])}: ` +
+              `${String(r['costo_mensile'])} €/mese su ${String(r['abbonamenti'])} abbonamenti`,
+          );
+        }
+      } else {
+        aggiungi('  Nessuna ricorrenza entra nella metrica.');
+      }
+
+      const escluse = corpo['escluse'];
+      if (Array.isArray(escluse) && escluse.length > 0) {
+        aggiungi('  cosa resta fuori:');
+        for (const v of escluse) {
+          const r = v as Record<string, unknown>;
+          aggiungi(
+            `    ${String(r['motivo'])}: ${String(r['esercenti'])} esercenti, ` +
+              `${String(r['costo_mensile_potenziale'])} €/mese potenziali`,
+          );
+        }
+      }
+
+      aggiungi('Il dettaglio e’ in /abbonamenti.');
+      router.refresh();
+    } catch (errore) {
+      aggiungi(`${errore instanceof Error ? errore.message : String(errore)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   async function riprendi(id: string) {
     setInCorso(true);
     aggiungi(`Ripresa della corsa ${id.slice(0, 8)}…`);
@@ -431,6 +490,14 @@ export function PannelloBackfill({
         </button>
         <button type="button" onClick={proponi} disabled={inCorso} className={stileBottone}>
           5 · Proponi con l&rsquo;AI
+        </button>
+        <button
+          type="button"
+          onClick={rilevaAbbonamenti}
+          disabled={inCorso}
+          className={stileBottone}
+        >
+          6 · Rileva abbonamenti
         </button>
       </div>
 

@@ -1,0 +1,200 @@
+import 'server-only';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { comeArray } from '@/lib/enablebanking/redact';
+import type { RigaMetrica } from './formato';
+
+/**
+ * Il lato applicativo della Fase 5.
+ *
+ * Volutamente sottile: il rilevamento **non e' qui**, e' nella funzione SQL
+ * `rileva_abbonamenti()`. Questo modulo la chiama e legge le viste.
+ *
+ * La ragione non e' estetica. La Fase 10 prevede di chiedere all'app «quali
+ * abbonamenti sono cresciuti di prezzo» o «sposta questa transazione in un
+ * altro cluster»: un copilot puo' invocare una funzione SQL e interrogare una
+ * vista, non puo' entrare dentro un ciclo TypeScript scritto per un gestore di
+ * click. Ogni operazione che l'utente potra' chiedere a parole deve esistere
+ * come funzione con una firma esplicita — e la UI la chiama esattamente come la
+ * chiamera' il copilot.
+ */
+
+export type RigaAbbonamento = {
+  id: string;
+  esercente: string;
+  categoria: string | null;
+  discrezionalita: string | null;
+  contesto: string | null;
+  cadence: string;
+  cadence_days: string | null;
+  expected_amount: string | null;
+  costo_mensile: string | null;
+  first_seen: string | null;
+  last_seen: string | null;
+  next_expected: string | null;
+  occurrences: number;
+  confidence: string | null;
+  status: string;
+  usage_verdict: string | null;
+  notes: string | null;
+};
+
+export type RigaEsclusa = {
+  motivo: string;
+  esercenti: number;
+  costo_mensile_potenziale: string | null;
+};
+
+/**
+ * Le colonne `numeric` si chiedono **sempre** con `::text`.
+ *
+ * PostgREST serializza `numeric` come numero JSON, e un importo passato da un
+ * float e' un importo di cui non ci si puo' piu' fidare. E' gia' costato un
+ * errore in Fase 4.
+ */
+const COLONNE_ABBONAMENTO =
+  'id, esercente, categoria, discrezionalita, contesto, cadence, cadence_days::text, ' +
+  'expected_amount::text, costo_mensile::text, first_seen, last_seen, next_expected, ' +
+  'occurrences, confidence::text, status, usage_verdict, notes';
+
+export type EsitoRilevamento = {
+  scritte: number;
+  attivi: number;
+  totali: number;
+  metrica: readonly RigaMetrica[];
+  escluse: readonly RigaEsclusa[];
+};
+
+/**
+ * Ricalcola gli abbonamenti dai movimenti e restituisce cosa ne e' uscito.
+ *
+ * Rieseguibile senza effetti cumulativi: la funzione SQL ricalcola tutto da
+ * capo e non tocca mai i campi dell'utente (`usage_verdict`, `notes`, e lo
+ * stato `cancelled`, che e' una sua dichiarazione e non un'osservazione).
+ */
+export async function rilevaAbbonamenti(minimoOccorrenze = 3): Promise<EsitoRilevamento> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: scritte, error } = await supabase.rpc('rileva_abbonamenti', {
+    minimo_occorrenze: minimoOccorrenze,
+  });
+  if (error !== null) {
+    throw new Error(`Rilevamento fallito: ${error.message}`);
+  }
+
+  const { metrica, escluse, attivi, totali } = await leggiRiepilogo();
+  return { scritte: Number(scritte ?? 0), attivi, totali, metrica, escluse };
+}
+
+export async function leggiRiepilogo(): Promise<{
+  metrica: readonly RigaMetrica[];
+  escluse: readonly RigaEsclusa[];
+  attivi: number;
+  totali: number;
+}> {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: metrica }, { data: escluse }, { count: totali }, { count: attivi }] =
+    await Promise.all([
+      supabase
+        .from('v_recurring_monthly_cost_by_discretion')
+        .select('discrezionalita, contesto, abbonamenti, costo_mensile::text'),
+      supabase
+        .from('v_ricorrenze_escluse')
+        .select('motivo, esercenti, costo_mensile_potenziale::text'),
+      supabase.from('subscriptions').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active'),
+    ]);
+
+  return {
+    metrica: comeArray<RigaMetrica>(metrica),
+    escluse: comeArray<RigaEsclusa>(escluse),
+    attivi: attivi ?? 0,
+    totali: totali ?? 0,
+  };
+}
+
+/** Tutti gli abbonamenti, dal piu' caro al mese al meno caro. */
+export async function leggiAbbonamenti(): Promise<readonly RigaAbbonamento[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('v_subscriptions')
+    .select(COLONNE_ABBONAMENTO)
+    // Le uscite sono negative, quindi crescente = dal piu' caro.
+    .order('costo_mensile', { ascending: true, nullsFirst: false });
+  return comeArray<RigaAbbonamento>(data);
+}
+
+export const GIUDIZI = ['usato', 'non_usato', 'da_valutare'] as const;
+export type Giudizio = (typeof GIUDIZI)[number];
+
+export class GiudizioNonValido extends Error {}
+
+export type RichiestaGiudizio = {
+  id: string;
+  /** `null` cancella il giudizio, riportando la riga a «non ancora deciso». */
+  usageVerdict?: Giudizio | null;
+  /** L'utente dichiara di aver disdetto, oppure ritira la dichiarazione. */
+  disdetto?: boolean;
+  notes?: string | null;
+};
+
+/**
+ * Le scritture dell'utente su un abbonamento.
+ *
+ * Sono l'unica cosa che il rilevamento non ricalcola: `usage_verdict`, `notes`
+ * e lo stato `cancelled` sono affermazioni di una persona — «questo non lo uso»,
+ * «l'ho disdetto» — e nessuna osservazione sui movimenti le smentisce. Un
+ * abbonamento disdetto oggi continua a produrre addebiti per un mese, e se il
+ * rilevamento potesse riportarlo ad `active` il giudizio sarebbe inutile.
+ *
+ * Togliere la disdetta rimette `active` e lascia che sia il prossimo
+ * rilevamento a decidere se e' ancora vivo o e' ormai `lapsed`: e' la sola
+ * risposta onesta, perche' quel giudizio si legge dai movimenti e non da qui.
+ */
+export async function aggiornaGiudizio(richiesta: RichiestaGiudizio): Promise<RigaAbbonamento> {
+  if (typeof richiesta.id !== 'string' || richiesta.id.trim() === '') {
+    throw new GiudizioNonValido('Abbonamento non indicato.');
+  }
+
+  const modifiche: Record<string, unknown> = {};
+
+  if (richiesta.usageVerdict !== undefined) {
+    if (richiesta.usageVerdict !== null && !GIUDIZI.includes(richiesta.usageVerdict)) {
+      throw new GiudizioNonValido(`Giudizio non ammesso: ${String(richiesta.usageVerdict)}`);
+    }
+    modifiche['usage_verdict'] = richiesta.usageVerdict;
+    modifiche['verdict_updated_at'] = richiesta.usageVerdict === null ? null : new Date().toISOString();
+  }
+
+  if (richiesta.disdetto !== undefined) {
+    modifiche['status'] = richiesta.disdetto ? 'cancelled' : 'active';
+  }
+
+  if (richiesta.notes !== undefined) {
+    const testo = typeof richiesta.notes === 'string' ? richiesta.notes.trim() : null;
+    modifiche['notes'] = testo === '' ? null : testo;
+  }
+
+  if (Object.keys(modifiche).length === 0) {
+    throw new GiudizioNonValido('Niente da aggiornare.');
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('subscriptions').update(modifiche).eq('id', richiesta.id);
+  if (error !== null) throw new Error(`Aggiornamento fallito: ${error.message}`);
+
+  // Si rilegge dalla vista invece di ricostruire la riga in memoria: cosi' la
+  // schermata mostra quello che c'e' scritto davvero, non quello che credevamo
+  // di aver scritto.
+  const { data } = await supabase
+    .from('v_subscriptions')
+    .select(COLONNE_ABBONAMENTO)
+    .eq('id', richiesta.id)
+    .maybeSingle();
+
+  if (data === null) throw new GiudizioNonValido('Abbonamento inesistente.');
+  return data as unknown as RigaAbbonamento;
+}

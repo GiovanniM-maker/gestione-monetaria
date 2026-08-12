@@ -12,7 +12,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="mx-auto flex min-h-dvh max-w-5xl flex-col px-6">
       <header className="flex items-center justify-between border-b border-neutral-200 py-4 dark:border-neutral-800">
-        <span className="font-semibold tracking-tight">Gestione monetaria</span>
+        <div className="flex items-baseline gap-5">
+          <span className="font-semibold tracking-tight">Gestione monetaria</span>
+          <nav className="flex gap-4 text-sm text-neutral-600 dark:text-neutral-400">
+            <a href="/abbonamenti" className="hover:underline">
+              Abbonamenti
+            </a>
+            <a href="/revisione" className="hover:underline">
+              Revisione
+            </a>
+          </nav>
+        </div>
         <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
           <span>{user.email}</span>
           <SignOutButton />
