@@ -41,7 +41,8 @@ const euro = (valore: string): string =>
     Number(valore || '0'),
   );
 
-const bordo = 'rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900';
+const bordo =
+  'rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900';
 const bottone =
   'rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900';
 
@@ -60,6 +61,21 @@ export function PannelloRevisione({
   const [inCorso, setInCorso] = useState<string | null>(null);
   const [esito, setEsito] = useState<string | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
+  /**
+   * Predefinito acceso, e non e' una scorciatoia per far sembrare corta la
+   * lista. La metrica per cui l'app esiste e' il costo **ricorrente**: un
+   * negozio visitato una volta sola non ci entra, qualunque categoria gli si
+   * dia. Classificarlo e' lavoro che non cambia il numero.
+   *
+   * Quello che si nasconde viene comunque contato e scritto sotto: nascondere
+   * senza dire quanto si nasconde e' la stessa cosa che tagliare una lista
+   * fingendo che sia intera.
+   */
+  const [soloRicorrenti, setSoloRicorrenti] = useState(true);
+
+  const visibili = soloRicorrenti ? daClassificare.filter((v) => v.movimenti >= 2) : daClassificare;
+  const nascoste = daClassificare.filter((v) => v.movimenti < 2);
+  const importoNascosto = nascoste.reduce((somma, v) => somma + Number(v.totale || '0'), 0);
 
   async function chiama(metodo: 'POST' | 'PATCH', corpo: unknown, chiave: string) {
     setInCorso(chiave);
@@ -78,7 +94,9 @@ export function PannelloRevisione({
       const totale = Number(String(dati['speseTotale'] ?? '0'));
       const abbinato = Number(String(dati['speseTotaleAbbinato'] ?? '0'));
       const quota = totale === 0 ? 0 : Math.round((abbinato / totale) * 1000) / 10;
-      setEsito(`Copertura: ${quota}% della spesa · ${dati['speseAbbinate']} movimenti classificati`);
+      setEsito(
+        `Copertura: ${quota}% della spesa · ${dati['speseAbbinate']} movimenti classificati`,
+      );
       router.refresh();
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e));
@@ -110,12 +128,28 @@ export function PannelloRevisione({
             </span>
           )}
         </h2>
-        <p className="mb-3 text-xs text-neutral-500">
+        <p className="mb-2 text-xs text-neutral-500">
           In ordine di quanto costa lasciarle così. Assegna a un esercente esistente, oppure creane
           uno nuovo scrivendone il nome.
         </p>
+        <label className="mb-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+          <input
+            type="checkbox"
+            checked={soloRicorrenti}
+            onChange={(e) => setSoloRicorrenti(e.target.checked)}
+          />
+          Solo quelle che tornano almeno due volte
+          {soloRicorrenti && nascoste.length > 0 && (
+            <span>
+              — ne restano fuori <strong>{nascoste.length}</strong> viste una volta sola, per{' '}
+              <strong>{euro(String(importoNascosto))}</strong>. Sono spesa vera, ma non ricorrente:
+              non entrano nel costo mensile per discrezionalità, che è il numero per cui quest’app
+              esiste.
+            </span>
+          )}
+        </label>
         <div className="space-y-2">
-          {daClassificare.map((voce) => (
+          {visibili.map((voce) => (
             <RigaDaClassificare
               key={voce.etichetta}
               voce={voce}
@@ -126,9 +160,11 @@ export function PannelloRevisione({
               onAssegna={(corpo) => chiama('POST', corpo, voce.etichetta)}
             />
           ))}
-          {daClassificare.length === 0 && (
+          {visibili.length === 0 && (
             <p className="text-sm text-neutral-500">
-              Nessuna etichetta scoperta. Ogni spesa reale ha il suo esercente.
+              {daClassificare.length === 0
+                ? 'Nessuna etichetta scoperta. Ogni spesa reale ha il suo esercente.'
+                : 'Nessuna etichetta ricorrente da classificare: quel che resta compare una volta sola.'}
             </p>
           )}
         </div>
