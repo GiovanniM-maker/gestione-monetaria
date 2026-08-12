@@ -15,6 +15,7 @@ import type {
   RigaMetrica,
   VoceMetrica,
 } from '@/lib/abbonamenti/formato';
+import { BOTTONE_MINORE, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
 
 const GIUDIZI = [
   { valore: 'usato', etichetta: 'Lo uso' },
@@ -47,7 +48,7 @@ const TIPI = [
   {
     chiave: 'abitudine',
     titolo: 'Abitudini',
-    sottotitolo: 'Nessun contratto da disdire: si ripete perche\u2019 lo si rifa\u2019.',
+    sottotitolo: 'Nessun contratto da disdire: si ripete perche’ lo si rifa’.',
   },
 ] as const;
 
@@ -155,9 +156,8 @@ export function PannelloAbbonamenti({
           <ul className="mt-1 space-y-0.5 text-amber-800 dark:text-amber-300">
             {escluse.map((e) => (
               <li key={e.motivo}>
-                {e.motivo}: {e.esercenti}{' '}
-                {e.esercenti === 1 ? 'esercente' : 'esercenti'}, spesi in tutto{' '}
-                <span className="tabular-nums">{euro(e.totale_speso)}</span>
+                {e.motivo}: {e.esercenti} {e.esercenti === 1 ? 'esercente' : 'esercenti'}, spesi in
+                tutto <span className="tabular-nums">{euro(e.totale_speso)}</span>
                 {euro(e.costo_mensile_potenziale) !== '0,00 €' && (
                   <>
                     {' '}
@@ -169,11 +169,11 @@ export function PannelloAbbonamenti({
             ))}
           </ul>
           <p className="mt-2 text-amber-800 dark:text-amber-300">
-            Serve essere presenti in almeno tre mesi civili <em>e</em> su almeno 75 giorni
-            coperti. La seconda condizione non &egrave; ridondante: un intervallo di 63 giorni
-            attraversa sempre tre mesi civili, e senza di lei dieci addebiti concentrati in due
-            mesi diventavano un costo mensile che non &egrave; mai stato sostenuto per un mese.
-            Sotto la soglia resta il totale, che &egrave; misurato.
+            Serve essere presenti in almeno tre mesi civili <em>e</em> su almeno 75 giorni coperti.
+            La seconda condizione non &egrave; ridondante: un intervallo di 63 giorni attraversa
+            sempre tre mesi civili, e senza di lei dieci addebiti concentrati in due mesi
+            diventavano un costo mensile che non &egrave; mai stato sostenuto per un mese. Sotto la
+            soglia resta il totale, che &egrave; misurato.
           </p>
         </div>
       )}
@@ -181,14 +181,15 @@ export function PannelloAbbonamenti({
       {/* -------------------------------------------------------------- */}
       {/* IL DETTAGLIO                                                    */}
       {/* -------------------------------------------------------------- */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-medium">
             {visibili.length} {visibili.length === 1 ? 'ricorrenza' : 'ricorrenze'}
           </h2>
-          <label className="flex items-center gap-2 text-xs text-neutral-500">
+          <label className={ETICHETTA_CASELLA}>
             <input
               type="checkbox"
+              className={CASELLA}
               checked={mostraTutti}
               onChange={(e) => setMostraTutti(e.target.checked)}
             />
@@ -196,110 +197,26 @@ export function PannelloAbbonamenti({
           </label>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs text-neutral-500">
-              <tr>
-                <th className="py-1 pr-3">Esercente</th>
-                <th className="py-1 pr-3">Cadenza</th>
-                <th className="py-1 pr-3 text-right">Prezzo</th>
-                <th className="py-1 pr-3 text-right">Al mese</th>
-                <th className="py-1 pr-3">Prossimo</th>
-                <th className="py-1 pr-3 text-right" title="Movimenti / mesi in cui compare">
-                  N. / mesi
-                </th>
-                <th
-                  className="py-1 pr-3 text-right"
-                  title="Regolarita' nel tempo / stabilita' dell'importo"
-                >
-                  Reg. / stab.
-                </th>
-                <th className="py-1">Giudizio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibili.map((a) => {
-                const giorni =
-                  a.next_expected === null ? null : giorniDaOggi(a.next_expected, oggi);
-                const disdetto = a.status === 'cancelled';
-                const spento = disdetto || a.status === 'lapsed';
-                return (
-                  <tr
-                    key={a.id}
-                    className={`border-t border-neutral-200 align-top dark:border-neutral-800 ${
-                      spento ? 'text-neutral-400' : ''
-                    }`}
-                  >
-                    <td className="py-2 pr-3">
-                      <span className={disdetto ? 'line-through' : ''}>{a.esercente}</span>
-                      <span className="block text-xs text-neutral-500">
-                        {a.tipo} · {a.categoria ?? 'senza categoria'} ·{' '}
-                        {a.discrezionalita ?? 'non classificato'}
-                        {a.status !== 'active' &&
-                          ` · ${a.status === 'lapsed' ? 'fermo' : 'disdetto'}`}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3">{CADENZE[a.cadence] ?? a.cadence}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {euro(a.typical_amount)}
-                      <span className="block text-xs text-neutral-500">
-                        {euro(a.total_amount)} in tutto
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">{euro(a.costo_mensile)}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      {a.next_expected ?? '—'}
-                      {giorni !== null && (
-                        <span className="block text-xs text-neutral-500">
-                          {giorni < 0 ? `in ritardo di ${-giorni} g` : `fra ${giorni} g`}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {a.occurrences} / {a.active_months}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {a.confidence ?? '—'} / {a.amount_stability ?? '—'}
-                    </td>
-                    <td className="py-2">
-                      <div className="flex flex-wrap gap-1">
-                        {GIUDIZI.map((g) => (
-                          <button
-                            key={g.valore}
-                            type="button"
-                            disabled={inCorso !== null}
-                            onClick={() =>
-                              void scrivi(a.id, {
-                                usageVerdict: a.usage_verdict === g.valore ? null : g.valore,
-                              })
-                            }
-                            className={`rounded border px-2 py-0.5 text-xs disabled:opacity-40 ${
-                              a.usage_verdict === g.valore
-                                ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                                : 'border-neutral-300 dark:border-neutral-700'
-                            }`}
-                          >
-                            {g.etichetta}
-                          </button>
-                        ))}
-                        {a.tipo === 'abbonamento' && (
-                          <button
-                            type="button"
-                            disabled={inCorso !== null}
-                            onClick={() => void scrivi(a.id, { disdetto: !disdetto })}
-                            className="rounded border border-neutral-300 px-2 py-0.5 text-xs disabled:opacity-40 dark:border-neutral-700"
-                          >
-                            {disdetto ? 'Annulla disdetta' : 'Disdetto'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {/*
+          Schede e non una tabella.
+          La tabella aveva otto colonne, e otto colonne su un telefono
+          significano scorrimento laterale: si legge il nome oppure l'importo,
+          mai i due insieme, e il confronto fra due righe diventa impossibile.
+          La scheda tiene insieme le informazioni della stessa ricorrenza e si
+          allarga in griglia dove c'e' spazio, invece di chiedere allo schermo
+          di adattarsi a una forma pensata per un altro schermo.
+        */}
+        <ul className="grid gap-2 lg:grid-cols-2">
+          {visibili.map((a) => (
+            <Scheda
+              key={a.id}
+              riga={a}
+              oggi={oggi}
+              occupato={inCorso !== null}
+              onScrivi={(corpo) => void scrivi(a.id, corpo)}
+            />
+          ))}
+        </ul>
       </div>
 
       <div className="space-y-3 rounded-lg border border-neutral-200 p-3 text-xs text-neutral-500 dark:border-neutral-800">
@@ -323,11 +240,115 @@ export function PannelloAbbonamenti({
         <p>
           <strong>Un limite da sapere prima di stupirsi.</strong> Lo storico parte dal 23 settembre
           2025. Un canone <strong>annuale</strong> in undici mesi compare una volta sola, e una
-          volta non &egrave; una cadenza: gli abbonamenti annuali diventano visibili da s&eacute;
-          il 23 settembre 2026, quando il conto compie un anno. Non &egrave; un difetto del
+          volta non &egrave; una cadenza: gli abbonamenti annuali diventano visibili da s&eacute; il
+          23 settembre 2026, quando il conto compie un anno. Non &egrave; un difetto del
           rilevamento, &egrave; l&rsquo;et&agrave; dei dati.
         </p>
       </div>
+    </div>
+  );
+}
+
+function Scheda({
+  riga: a,
+  oggi,
+  occupato,
+  onScrivi,
+}: {
+  riga: RigaAbbonamento;
+  oggi: string;
+  occupato: boolean;
+  onScrivi: (corpo: Record<string, unknown>) => void;
+}) {
+  const giorni = a.next_expected === null ? null : giorniDaOggi(a.next_expected, oggi);
+  const disdetto = a.status === 'cancelled';
+  const spento = disdetto || a.status === 'lapsed';
+
+  return (
+    <li
+      className={`rounded-lg border border-neutral-200 p-3 dark:border-neutral-800 ${
+        spento ? 'opacity-60' : ''
+      }`}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <span className={`font-medium ${disdetto ? 'line-through' : ''}`}>{a.esercente}</span>
+        <span className="shrink-0 text-right tabular-nums">
+          {euro(a.costo_mensile)}
+          <span className="text-xs font-normal text-neutral-500">/mese</span>
+        </span>
+      </div>
+
+      <p className="mt-0.5 text-xs text-neutral-500">
+        {a.tipo} · {a.categoria ?? 'senza categoria'} · {a.discrezionalita ?? 'non classificato'}
+        {a.status !== 'active' && ` · ${a.status === 'lapsed' ? 'fermo' : 'disdetto'}`}
+      </p>
+
+      {/*
+        Due colonne di dati anche a 360 pixel: sono coppie etichetta-valore
+        corte, e impilarle in una sola colonna allungherebbe la scheda al punto
+        da non farne stare due sullo schermo.
+      */}
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+        <Dato voce="cadenza" valore={CADENZE[a.cadence] ?? a.cadence} />
+        <Dato voce="prezzo" valore={euro(a.typical_amount)} />
+        <Dato
+          voce="prossimo"
+          valore={
+            a.next_expected === null
+              ? '—'
+              : giorni === null
+                ? a.next_expected
+                : giorni < 0
+                  ? `in ritardo di ${-giorni} g`
+                  : `fra ${giorni} g`
+          }
+        />
+        <Dato voce="movimenti" valore={`${a.occurrences} in ${a.active_months} mesi`} />
+        <Dato voce="speso in tutto" valore={euro(a.total_amount)} />
+        <Dato
+          voce="regolarità / importo"
+          valore={`${a.confidence ?? '—'} / ${a.amount_stability ?? '—'}`}
+        />
+      </dl>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {GIUDIZI.map((g) => (
+          <button
+            key={g.valore}
+            type="button"
+            disabled={occupato}
+            onClick={() =>
+              onScrivi({ usageVerdict: a.usage_verdict === g.valore ? null : g.valore })
+            }
+            className={`${BOTTONE_MINORE} ${
+              a.usage_verdict === g.valore
+                ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
+                : ''
+            }`}
+          >
+            {g.etichetta}
+          </button>
+        ))}
+        {a.tipo === 'abbonamento' && (
+          <button
+            type="button"
+            disabled={occupato}
+            onClick={() => onScrivi({ disdetto: !disdetto })}
+            className={BOTTONE_MINORE}
+          >
+            {disdetto ? 'Annulla disdetta' : 'Disdetto'}
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function Dato({ voce, valore }: { voce: string; valore: string }) {
+  return (
+    <div>
+      <dt className="text-neutral-500">{voce}</dt>
+      <dd className="tabular-nums">{valore}</dd>
     </div>
   );
 }
@@ -345,7 +366,7 @@ function Blocco({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-baseline justify-between gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h2 className="font-medium">{titolo}</h2>
           <p className="text-xs text-neutral-500">{sottotitolo}</p>
@@ -355,16 +376,17 @@ function Blocco({
           <span className="text-xs font-normal text-neutral-500">/mese</span>
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {voci.map((v) => (
           <div
             key={`${v.discrezionalita}-${v.contesto}`}
             className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
           >
-            <p className="text-[11px] uppercase tracking-wide text-neutral-500">
-              {v.discrezionalita} · {v.contesto}
+            <p className="text-[11px] tracking-wide text-neutral-500 uppercase">
+              {v.discrezionalita}
+              <span className="block normal-case">{v.contesto}</span>
             </p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">
+            <p className="mt-1 text-lg font-semibold tabular-nums sm:text-xl">
               {formattaEuro(v.costoMensile)}
             </p>
             <p className="mt-0.5 text-[11px] text-neutral-500">

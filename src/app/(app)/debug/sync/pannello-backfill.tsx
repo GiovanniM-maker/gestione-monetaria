@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { BOTTONE } from '@/lib/ui/controlli';
 
 type EsitoFetta = {
   runId: string;
@@ -438,12 +439,14 @@ export function PannelloBackfill({
     }
   }
 
-  const stileBottone =
-    'rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900';
+  // I sei bottoni sono la sequenza operativa dell'applicazione, e si premono
+  // anche dal telefono: alti 44 px e su due colonne finche' lo schermo e'
+  // stretto, invece che sette bersagli da venti pixel in fila.
+  const stileBottone = `${BOTTONE} w-full sm:w-auto`;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <div>
           <label className="text-xs text-neutral-500">
             da

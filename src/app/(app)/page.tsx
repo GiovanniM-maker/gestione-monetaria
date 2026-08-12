@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { leggiCruscotto } from '@/lib/cruscotto/leggi';
 import type { RigaCategoria, RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
-import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale, variazione } from '@/lib/cruscotto/mesi';
+import {
+  etichettaBreve,
+  etichettaMese,
+  meseValido,
+  quotaPercentuale,
+  variazione,
+} from '@/lib/cruscotto/mesi';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
 
 export const dynamic = 'force-dynamic';
@@ -99,14 +106,20 @@ export default async function CruscottoPage({
         </h1>
         <nav className="flex gap-3 text-sm">
           {mesePrecedente !== null && (
-            <a className="text-neutral-600 hover:underline dark:text-neutral-400" href={`/?mese=${mesePrecedente}`}>
+            <Link
+              className="inline-flex min-h-11 items-center text-neutral-600 hover:underline sm:min-h-0 dark:text-neutral-400"
+              href={`/?mese=${mesePrecedente}`}
+            >
               ← {etichettaMese(mesePrecedente)}
-            </a>
+            </Link>
           )}
           {meseSuccessivo !== null && (
-            <a className="text-neutral-600 hover:underline dark:text-neutral-400" href={`/?mese=${meseSuccessivo}`}>
+            <Link
+              className="inline-flex min-h-11 items-center text-neutral-600 hover:underline sm:min-h-0 dark:text-neutral-400"
+              href={`/?mese=${meseSuccessivo}`}
+            >
               {etichettaMese(meseSuccessivo)} →
-            </a>
+            </Link>
           )}
         </nav>
       </div>
@@ -116,7 +129,7 @@ export default async function CruscottoPage({
       {/* ---------------------------------------------------------------- */}
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline gap-3">
-          <p className="text-4xl font-semibold tabular-nums">{formattaEuro(speso)}</p>
+          <p className="text-3xl font-semibold tabular-nums sm:text-4xl">{formattaEuro(speso)}</p>
           {scostamento !== null && (
             <p className="text-sm text-neutral-500">
               {scostamento > 0 ? '+' : ''}
@@ -135,8 +148,7 @@ export default async function CruscottoPage({
               const prima = classiPrecedenti.find(
                 (p) => p.discrezionalita === c.discrezionalita && p.contesto === c.contesto,
               );
-              const delta =
-                prima === undefined ? null : variazione(valore, centesimi(prima.spesa));
+              const delta = prima === undefined ? null : variazione(valore, centesimi(prima.spesa));
               return (
                 <li key={`${c.discrezionalita}-${c.contesto}`} className="space-y-1">
                   <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -180,9 +192,9 @@ export default async function CruscottoPage({
                 <strong>{rigaMese.senza_categoria}</strong> movimenti per{' '}
                 {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma non in
                 nessuna categoria.{' '}
-                <a className="underline" href="/revisione">
+                <Link className="underline" href="/revisione">
                   Assegnali
-                </a>
+                </Link>
                 .
               </>
             )}
@@ -196,11 +208,14 @@ export default async function CruscottoPage({
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h2 className="font-medium">Di questo, quanto torna ogni mese</h2>
-          <a className="text-xs text-neutral-500 hover:underline" href="/abbonamenti">
+          <Link
+            className="inline-flex min-h-11 items-center text-xs text-neutral-500 hover:underline sm:min-h-0"
+            href="/abbonamenti"
+          >
             dettaglio →
-          </a>
+          </Link>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
             <p className="text-xs uppercase tracking-wide text-neutral-500">Abbonamenti</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{formattaEuro(abbonamenti)}</p>
@@ -292,22 +307,31 @@ function Andamento({
 }) {
   const valore = centesimi(riga.spesa);
   return (
-    <li className="flex items-center gap-3 text-sm">
-      <a
+    <li>
+      {/* Tutta la riga e' il bersaglio, non la sola etichetta del mese: quattro
+          caratteri alti sedici pixel si sbagliano col pollice, una riga alta
+          quarantaquattro no. */}
+      <Link
         href={`/?mese=${riga.mese}`}
-        className={`w-16 shrink-0 text-xs hover:underline ${
-          corrente ? 'font-semibold' : 'text-neutral-500'
-        }`}
+        className="flex min-h-11 items-center gap-3 text-sm sm:min-h-0 sm:py-0.5"
       >
-        {etichettaBreve(riga.mese)}
-      </a>
-      <div className="h-3 flex-1 overflow-hidden rounded-sm bg-neutral-100 dark:bg-neutral-900">
-        <div
-          className={`h-full ${corrente ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-400 dark:bg-neutral-600'}`}
-          style={{ width: `${quotaPercentuale(valore, massimo)}%` }}
-        />
-      </div>
-      <span className="w-28 shrink-0 text-right text-xs tabular-nums">{formattaEuro(valore)}</span>
+        <span
+          className={`w-12 shrink-0 text-xs sm:w-16 ${
+            corrente ? 'font-semibold' : 'text-neutral-500'
+          }`}
+        >
+          {etichettaBreve(riga.mese)}
+        </span>
+        <span className="h-3 flex-1 overflow-hidden rounded-sm bg-neutral-100 dark:bg-neutral-900">
+          <span
+            className={`block h-full ${corrente ? 'bg-neutral-900 dark:bg-white' : 'bg-neutral-400 dark:bg-neutral-600'}`}
+            style={{ width: `${quotaPercentuale(valore, massimo)}%` }}
+          />
+        </span>
+        <span className="w-24 shrink-0 text-right text-xs tabular-nums sm:w-28">
+          {formattaEuro(valore)}
+        </span>
+      </Link>
     </li>
   );
 }
@@ -340,7 +364,7 @@ function Albero({ righe, totale }: { righe: readonly RigaCategoria[]; totale: bi
         <li key={r.category_id} className="space-y-1">
           <div
             className="flex items-baseline justify-between gap-3 text-sm"
-            style={{ paddingLeft: `${livello * 16}px` }}
+            style={{ paddingLeft: `${livello * 12}px` }}
           >
             <span>
               {r.categoria}
@@ -353,7 +377,7 @@ function Albero({ righe, totale }: { righe: readonly RigaCategoria[]; totale: bi
           </div>
           <div
             className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-900"
-            style={{ marginLeft: `${livello * 16}px` }}
+            style={{ marginLeft: `${livello * 12}px` }}
           >
             <div
               className="h-full bg-neutral-400 dark:bg-neutral-600"

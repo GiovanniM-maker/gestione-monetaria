@@ -15,7 +15,7 @@
 | 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
 | 4     | Tassonomia e categorizzazione a cascata   | **completata** |
 | 5     | Detector abbonamenti (SQL puro)           | **completata** |
-| 6     | Dashboard                                 | non iniziata   |
+| 6     | Dashboard                                 | **completata** |
 | 7     | Automazione                               | non iniziata   |
 | 8     | Motore alert (SQL)                        | non iniziata   |
 | 9     | Report periodico AI                       | non iniziata   |
@@ -588,6 +588,83 @@ guardare anche il merito: cinque pagamenti in undici mesi, mediana 500 € ma to
    canone si è rotto), e la casella «mostra anche le escluse» deve far comparire 42 righe.
 4. Dare un giudizio d'uso a una riga e marcarne una come disdetta, poi rilanciare il rilevamento:
    `usage_verdict`, `notes` e lo stato `cancelled` devono sopravvivere.
+
+### Le decisioni della Fase 6
+
+#### Gli aggregati usano `amount_eur`, non `amount`
+
+La valuta di riferimento è l'euro, e una somma che mescola valute è sbagliata comunque la si guardi.
+Oggi i due coincidono, perché l'unico conto con `include_in_totals` è in euro — ed è **proprio per
+questo** che va scritto adesso: il giorno in cui si collega Intesa, o un pocket in valuta entra nei
+totali, sommare `amount` produrrebbe un numero plausibile e falso, senza nessun errore.
+
+Dove `amount_eur` è nullo il movimento **non si somma**: sparirebbe dal totale in silenzio. Viene
+contato in `v_monthly_totals.senza_cambio` e il cruscotto lo mostra come avviso.
+
+**Resta disallineato il detector della Fase 5**, che somma `amount`. Oggi dà lo stesso numero. Da
+allineare, ma non insieme ad altro: sposterebbe i numeri di chiusura appena verificati.
+
+#### Il mese è testo `YYYY-MM`, mai un `Date`
+
+`new Date('2026-07-01')` è mezzanotte UTC, che in `Europe/Rome` d'estate sono le 02:00 del primo:
+sottrarre un mese con `setMonth` e rileggere il risultato in ora locale riporta al 30 giugno. È la
+stessa conversione che le regole di correttezza vietano su `booking_date`, per la stessa ragione.
+Con anno e mese come interi la domanda «qual è il mese prima di luglio 2026» ha una sola risposta.
+
+#### Il roll-up dell'albero ha un limite di profondità
+
+`categories.parent_id` è modificabile, e in Fase 10 lo modificherà un copilot. Un ciclo — anche
+creato per sbaglio — farebbe girare la CTE ricorsiva all'infinito. Dieci livelli sono molti più di
+quanti ne serva una tassonomia di spese, e il limite è stato provato in locale creando un ciclo
+vero.
+
+#### Il mese sta nell'indirizzo, non in uno stato del browser
+
+`/?mese=2026-07`. Così la pagina resta un componente server — nessun aggregato attraversa la rete
+per essere ricalcolato in JavaScript — e un mese si può mandare a sé stessi come collegamento.
+
+### Questa applicazione si guarda dal telefono
+
+Non è una preferenza estetica: il flusso previsto è «faccio il pagamento, mi arriva la notifica,
+tocco per vedere e confermare». Il desktop è il posto dove la si costruisce, non dove la si usa.
+
+Conseguenze vincolanti, da rispettare in ogni schermata nuova:
+
+- **44 pixel** è l'altezza minima di qualunque cosa si tocchi. È il minimo di iOS e Android, e i
+  controlli scritti guardando uno schermo grande finiscono naturalmente a venti: si cliccano
+  benissimo col mouse e si sbagliano col pollice. Le misure stanno in `src/lib/ui/controlli.ts`,
+  in un posto solo — quattro copie della stessa altezza divergono alla prima modifica, e la
+  schermata che resta indietro è sempre quella che si usa meno, cioè quella che nessuno prova.
+- **Niente tabelle larghe.** La tabella degli abbonamenti aveva otto colonne, e otto colonne su un
+  telefono significano scorrimento laterale: si legge il nome oppure l'importo, mai i due insieme.
+  È diventata una scheda che si allarga in griglia dove c'è spazio, invece di chiedere allo schermo
+  di adattarsi a una forma pensata per un altro schermo.
+- **`env(safe-area-inset-*)` nel layout.** Aggiunta alla schermata iniziale l'app si apre a schermo
+  pieno: senza quei margini l'intestazione finisce sotto l'orologio e l'ultima riga sotto la barra
+  dei gesti.
+- **`overflow-x-hidden` sul `body`.** Un nome lunghissimo non deve poter far scorrere lateralmente
+  l'intera pagina.
+
+#### Come si verifica, invece di guardare a occhio
+
+Uno screenshot headless taglia l'immagine e fa sembrare che il contenuto sbordi anche quando non è
+vero: è successo, e ha quasi portato a "correggere" un layout corretto. La misura che vale è
+`document.documentElement.scrollWidth` confrontato con `window.innerWidth`, più l'altezza di ogni
+bersaglio toccabile, su 360, 375 e 414 px. Con Chromium già presente in ambiente bastano
+`playwright-core` e venti righe di script.
+
+Stato misurato a fine Fase 6: **nessun elemento sborda** a nessuna delle tre larghezze, e l'unico
+bersaglio sotto i 44 px è la casella di spunta, la cui etichetta è alta 44 e toccandola la commuta.
+
+### Prova manuale della Fase 6, sotto i 5 minuti
+
+1. `/` si apre sull'**ultimo mese con dati**, non sul mese corrente: il primo del mese un cruscotto
+   vuoto sembra rotto.
+2. Luglio 2026 deve dire **−3.640,32 €**. È il numero verificato al centesimo contro l'app della
+   banca in Fase 3: se si sposta è una regressione.
+3. Nell'albero, una categoria padre vale la somma delle figlie più la propria spesa diretta.
+4. Dal telefono: nessuna schermata scorre lateralmente, e i tre giudizi d'uso su `/abbonamenti` si
+   premono col pollice senza sbagliare.
 
 ## Regole di sicurezza — NON NEGOZIABILI
 

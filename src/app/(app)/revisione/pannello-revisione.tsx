@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryRow } from '@/lib/db/types';
+import { BOTTONE, CAMPO_PIENO, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
 
 /**
  * Il pannello di revisione.
@@ -41,10 +42,11 @@ const euro = (valore: string): string =>
     Number(valore || '0'),
   );
 
-const bordo =
-  'rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900';
-const bottone =
-  'rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900';
+// I controlli vengono da `@/lib/ui/controlli`: 44 pixel sul telefono, compatti
+// da `sm` in su. Le misure stanno in un posto solo perche' quattro copie della
+// stessa altezza divergono alla prima modifica.
+const bordo = CAMPO_PIENO;
+const bottone = BOTTONE;
 
 export function PannelloRevisione({
   daClassificare,
@@ -132,9 +134,10 @@ export function PannelloRevisione({
           In ordine di quanto costa lasciarle così. Assegna a un esercente esistente, oppure creane
           uno nuovo scrivendone il nome.
         </p>
-        <label className="mb-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+        <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-xs text-neutral-500">
           <input
             type="checkbox"
+            className={CASELLA}
             checked={soloRicorrenti}
             onChange={(e) => setSoloRicorrenti(e.target.checked)}
           />
@@ -229,7 +232,7 @@ function RigaDaClassificare({
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-2 grid grid-cols-1 items-center gap-2 sm:flex sm:flex-wrap">
         <select
           value={merchantId}
           onChange={(e) => setMerchantId(e.target.value)}
@@ -291,9 +294,10 @@ function RigaDaClassificare({
                 </option>
               ))}
             </select>
-            <label className="flex items-center gap-1 text-xs text-neutral-500">
+            <label className={ETICHETTA_CASELLA}>
               <input
                 type="checkbox"
+                className={CASELLA}
                 checked={abbonamento}
                 onChange={(e) => setAbbonamento(e.target.checked)}
                 disabled={disabilitato}
@@ -303,9 +307,10 @@ function RigaDaClassificare({
           </>
         )}
 
-        <label className="flex items-center gap-1 text-xs text-neutral-500">
+        <label className={ETICHETTA_CASELLA}>
           <input
             type="checkbox"
+            className={CASELLA}
             checked={frammento}
             onChange={(e) => setFrammento(e.target.checked)}
             disabled={disabilitato}
@@ -363,80 +368,86 @@ function RigaMerchant({
   const [abbonamento, setAbbonamento] = useState(merchant.is_subscription);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-neutral-200 p-2 dark:border-neutral-800">
-      <span className="min-w-40 text-sm font-medium">{merchant.canonical_name}</span>
-      <span className="min-w-32 text-xs text-neutral-500">
-        {euro(merchant.totale)} · {merchant.movimenti}×
-      </span>
-
-      <select
-        value={categoria}
-        onChange={(e) => setCategoria(e.target.value)}
-        className={bordo}
-        disabled={disabilitato}
-      >
-        <option value="">— nessuna —</option>
-        {categorie.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.parent_id === null ? c.name : `· ${c.name}`}
-          </option>
-        ))}
-      </select>
-
-      <select
-        value={discrezionalita}
-        onChange={(e) => setDiscrezionalita(e.target.value)}
-        className={bordo}
-        disabled={disabilitato}
-      >
-        <option value="">— dalla categoria —</option>
-        {DISCREZIONALITA.map((d) => (
-          <option key={d} value={d}>
-            {d}
-          </option>
-        ))}
-      </select>
-
-      <select
-        value={contesto}
-        onChange={(e) => setContesto(e.target.value)}
-        className={bordo}
-        disabled={disabilitato}
-      >
-        <option value="">— nessuno —</option>
-        {CONTESTI.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-
-      <label className="flex items-center gap-1 text-xs text-neutral-500">
-        <input
-          type="checkbox"
-          checked={abbonamento}
-          onChange={(e) => setAbbonamento(e.target.checked)}
+    <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+      {/* Nome e importo su una riga propria: accanto ai controlli, su 360
+          pixel, finirebbero schiacciati a una parola per riga. */}
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3">
+        <span className="text-sm font-medium">{merchant.canonical_name}</span>
+        <span className="text-xs text-neutral-500 tabular-nums">
+          {euro(merchant.totale)} · {merchant.movimenti}×
+        </span>
+      </div>
+      <div className="grid grid-cols-1 items-center gap-2 sm:flex sm:flex-wrap">
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          className={bordo}
           disabled={disabilitato}
-        />
-        abbonamento
-      </label>
+        >
+          <option value="">— nessuna —</option>
+          {categorie.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.parent_id === null ? c.name : `· ${c.name}`}
+            </option>
+          ))}
+        </select>
 
-      <button
-        type="button"
-        className={bottone}
-        disabled={disabilitato}
-        onClick={() =>
-          onSalva({
-            id: merchant.id,
-            category_id: categoria === '' ? null : categoria,
-            discretion: discrezionalita === '' ? null : discrezionalita,
-            context: contesto === '' ? null : contesto,
-            is_subscription: abbonamento,
-          })
-        }
-      >
-        {inCorso ? 'Salvo…' : 'Salva'}
-      </button>
+        <select
+          value={discrezionalita}
+          onChange={(e) => setDiscrezionalita(e.target.value)}
+          className={bordo}
+          disabled={disabilitato}
+        >
+          <option value="">— dalla categoria —</option>
+          {DISCREZIONALITA.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={contesto}
+          onChange={(e) => setContesto(e.target.value)}
+          className={bordo}
+          disabled={disabilitato}
+        >
+          <option value="">— nessuno —</option>
+          {CONTESTI.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+
+        <label className={ETICHETTA_CASELLA}>
+          <input
+            type="checkbox"
+            className={CASELLA}
+            checked={abbonamento}
+            onChange={(e) => setAbbonamento(e.target.checked)}
+            disabled={disabilitato}
+          />
+          abbonamento
+        </label>
+
+        <button
+          type="button"
+          className={bottone}
+          disabled={disabilitato}
+          onClick={() =>
+            onSalva({
+              id: merchant.id,
+              category_id: categoria === '' ? null : categoria,
+              discretion: discrezionalita === '' ? null : discrezionalita,
+              context: contesto === '' ? null : contesto,
+              is_subscription: abbonamento,
+            })
+          }
+        >
+          {inCorso ? 'Salvo…' : 'Salva'}
+        </button>
+      </div>
     </div>
   );
 }
