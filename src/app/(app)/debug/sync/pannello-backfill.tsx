@@ -179,12 +179,23 @@ export function PannelloBackfill({
         return;
       }
 
-      const esaminate = Number(corpo['esaminate'] ?? 0);
-      const abbinate = Number(corpo['abbinate'] ?? 0);
-      const quota = esaminate === 0 ? 0 : Math.round((abbinate / esaminate) * 1000) / 10;
+      const quota = (parte: number, tutto: number) =>
+        tutto === 0 ? '0' : String(Math.round((parte / tutto) * 1000) / 10);
+
+      const speseEsaminate = Number(corpo['speseEsaminate'] ?? 0);
+      const speseAbbinate = Number(corpo['speseAbbinate'] ?? 0);
+
+      // La copertura sulle spese reali per prima: e' l'unica che dice qualcosa.
+      // Sul totale delle transazioni si misurerebbe anche quanto bene
+      // categorizziamo i giroconti, che non vanno categorizzati.
       aggiungi(
-        `${esaminate} esaminate · ${abbinate} abbinate (${quota}%) · ` +
-          `${corpo['nonAbbinate']} senza esercente · ${corpo['protette']} protette da correzione manuale`,
+        `SPESE REALI: ${speseAbbinate} su ${speseEsaminate} abbinate ` +
+          `(${quota(speseAbbinate, speseEsaminate)}%) · ` +
+          `${speseEsaminate - speseAbbinate} da assegnare a mano`,
+      );
+      aggiungi(
+        `In tutto: ${corpo['esaminate']} transazioni esaminate · ${corpo['abbinate']} abbinate · ` +
+          `${corpo['protette']} protette da correzione manuale`,
       );
 
       const nonLetti = Number(corpo['importiNonLetti'] ?? 0);

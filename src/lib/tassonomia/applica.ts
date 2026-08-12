@@ -32,6 +32,18 @@ export type EsitoCategorizzazione = {
   abbinate: number;
   nonAbbinate: number;
   protette: number;
+  /**
+   * Gli stessi due conteggi ristretti alle **spese reali**.
+   *
+   * Sono questi i numeri che dicono qualcosa. Sul totale delle transazioni la
+   * copertura risultava del 35%, e la lista di lavoro si apriva con
+   * `To Conto deposito senza vincoli` — 47 movimenti, 49.844 euro — che e' un
+   * giroconto gia' riconosciuto, non una spesa da classificare. Misurare li'
+   * significa misurare quanto bene categorizziamo cose che non vanno
+   * categorizzate.
+   */
+  speseEsaminate: number;
+  speseAbbinate: number;
   /** Le etichette non abbinate, per spesa decrescente: e' la lista di lavoro. */
   daGuardare: readonly { etichetta: string; movimenti: number; totale: string }[];
   /** Importi che non si sono lasciati leggere: se non e' zero, l'ordinamento sopra e' parziale. */
@@ -44,7 +56,37 @@ type RigaDaClassificare = {
   amount: unknown;
   counterparty_raw: string | null;
   raw_description: string | null;
+  is_transfer: boolean;
+  is_refund: boolean;
+  excluded_from_analysis: boolean;
+  /** Il conto, innestato. Forma non garantita: vedi `inclusoNeiTotali`. */
+  accounts: unknown;
 };
+
+/**
+ * `include_in_totals` del conto, senza dare per scontata la forma della
+ * risposta: su una relazione molti-a-uno il client puo' restituire l'oggetto o
+ * un array di uno, e questo codice non deve dipendere da quale dei due.
+ *
+ * In dubbio risponde `false`, cioe' "non e' una spesa": sovrastimare la
+ * copertura sarebbe peggio che sottostimarla.
+ */
+function inclusoNeiTotali(innestato: unknown): boolean {
+  const conto = Array.isArray(innestato) ? innestato[0] : innestato;
+  return (conto as { include_in_totals?: unknown } | null)?.include_in_totals === true;
+}
+
+/** Le stesse quattro esclusioni di `v_expenses`, applicate riga per riga. */
+function eSpesaReale(riga: RigaDaClassificare, centesimi: bigint | null): boolean {
+  return (
+    centesimi !== null &&
+    centesimi < 0n &&
+    !riga.is_transfer &&
+    !riga.is_refund &&
+    !riga.excluded_from_analysis &&
+    inclusoNeiTotali(riga.accounts)
+  );
+}
 
 /**
  * Cosa si scrive sulla transazione. Tutti i campi ammettono `null` perche' lo
@@ -114,6 +156,8 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
 
   let esaminate = 0;
   let abbinate = 0;
+  let speseEsaminate = 0;
+  let speseAbbinate = 0;
   let importiNonLetti = 0;
   const perAssegnazione = new Map<string, string[]>();
   const daSvuotare: string[] = [];
@@ -126,7 +170,10 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
       // numero JSON, quindi senza il cast l'importo arriverebbe qui come float
       // — proprio il tipo che CLAUDE.md vieta per il denaro. Chiedendo il testo
       // si parla a `parseCentesimi` nella lingua che si aspetta.
-      .select('id, amount::text, counterparty_raw, raw_description')
+      .select(
+        'id, amount::text, counterparty_raw, raw_description, is_transfer, is_refund, ' +
+          'excluded_from_analysis, accounts!inner(include_in_totals)',
+      )
       .eq('manually_categorized', false)
       .order('id', { ascending: true })
       .range(da, da + DIMENSIONE_BLOCCO - 1);
@@ -138,23 +185,31 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
 
     for (const riga of blocco) {
       esaminate += 1;
+      const centesimi = parseCentesimiTollerante(riga.amount);
+      if (centesimi === null) importiNonLetti += 1;
+
+      const spesa = eSpesaReale(riga, centesimi);
+      if (spesa) speseEsaminate += 1;
+
       const etichetta = etichettaDiRiferimento(riga);
       const trovato = etichetta === null ? null : abbinaMerchant(etichetta, alias);
 
       if (trovato === null) {
         daSvuotare.push(riga.id);
-        if (etichetta !== null) {
+        // La lista di lavoro contiene solo spese reali. Un giroconto senza
+        // esercente non e' un buco da riempire: e' un movimento che non deve
+        // avere un esercente.
+        if (etichetta !== null && spesa) {
           const corrente = scoperte.get(etichetta) ?? { movimenti: 0, centesimi: 0n };
           corrente.movimenti += 1;
-          const centesimi = parseCentesimiTollerante(riga.amount);
-          if (centesimi === null) importiNonLetti += 1;
-          else corrente.centesimi += centesimi;
+          if (centesimi !== null) corrente.centesimi += centesimi;
           scoperte.set(etichetta, corrente);
         }
         continue;
       }
 
       abbinate += 1;
+      if (spesa) speseAbbinate += 1;
       const gruppo = perAssegnazione.get(trovato.merchantId) ?? [];
       gruppo.push(riga.id);
       perAssegnazione.set(trovato.merchantId, gruppo);
@@ -187,6 +242,8 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
     esaminate,
     abbinate,
     nonAbbinate: esaminate - abbinate,
+    speseEsaminate,
+    speseAbbinate,
     protette: protette ?? 0,
     daGuardare,
     importiNonLetti,
