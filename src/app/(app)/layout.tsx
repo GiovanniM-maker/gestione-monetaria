@@ -13,7 +13,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="mx-auto flex min-h-dvh max-w-5xl flex-col px-6">
       <header className="flex items-center justify-between border-b border-neutral-200 py-4 dark:border-neutral-800">
         <div className="flex items-baseline gap-5">
-          <span className="font-semibold tracking-tight">Gestione monetaria</span>
+          <a href="/" className="font-semibold tracking-tight">
+            Gestione monetaria
+          </a>
           <nav className="flex gap-4 text-sm text-neutral-600 dark:text-neutral-400">
             <a href="/abbonamenti" className="hover:underline">
               Abbonamenti
