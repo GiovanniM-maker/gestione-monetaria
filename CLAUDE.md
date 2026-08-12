@@ -14,7 +14,7 @@
 | 2-bis | Import CSV                                | **archiviata** |
 | 3     | Normalizzazione, idempotenza, multivaluta | **completata** |
 | 4     | Tassonomia e categorizzazione a cascata   | **completata** |
-| 5     | Detector abbonamenti (SQL puro)           | non iniziata   |
+| 5     | Detector abbonamenti (SQL puro)           | **completata** |
 | 6     | Dashboard                                 | non iniziata   |
 | 7     | Automazione                               | non iniziata   |
 | 8     | Motore alert (SQL)                        | non iniziata   |
@@ -515,6 +515,79 @@ valore vero è circa 15. Sommando 45 esercenti così, la vista delle escluse dic
 Due lezioni: la mediana è robusta a un ritardo ma **cieca ai raggruppamenti**, e un tasso mensile
 per qualcosa che non copre mesi non esiste. Sotto tre mesi di presenza `costo_mensile` è `null`, e
 si mostra `total_amount`, che è misurato.
+
+#### Tre mesi civili possono essere ventinove giorni
+
+La regola «presente in almeno tre mesi civili» voleva dire *"deve aver attraversato tre mesi"*.
+Ma **i mesi civili non misurano il tempo**: il 31 gennaio, il 1° febbraio e il 1° marzo sono tre
+mesi civili e ventinove giorni.
+
+Sui dati veri `Byteplus` ci è passato attraverso: 10 addebiti, tre mesi civili, **64 giorni**
+coperti, e 455 € spesi diventavano 216 €/mese — il 42% di tutto il `utile/business`, proiettato da
+due mesi scarsi di osservazione. La regola era scritta nell'unità di misura sbagliata, ed è per
+questo che il difetto non si vedeva rileggendola.
+
+Ora servono anche **75 giorni coperti**. Non è una soglia in più: è la stessa, detta in modo che
+misuri ciò che intendeva.
+
+Il criterio completo vive in **una colonna sola**, `v_subscriptions.nella_metrica`. Prima era
+scritto in tre posti — le due viste e il filtro della schermata — e tre copie della stessa regola
+possono divergere senza che niente lo segnali: la schermata mostrerebbe righe che il totale non
+conta. La colonna è anche ciò che il copilot della Fase 10 leggerà, invece di reimplementare il
+criterio una quarta volta.
+
+### Numeri di chiusura della Fase 5
+
+Misurati il 12 agosto 2026 su tutto lo storico. Servono da riferimento: se una modifica li sposta,
+o c'è una ragione esplicita, o è una regressione.
+
+| Grandezza | Valore |
+| --------- | ------ |
+| Ricorrenze rilevate | 85 |
+| Entrano nella metrica | 43 |
+| **Abbonamenti** | **−425,96 €/mese** su 14 voci |
+| **Abitudini** | **−1.610,17 €/mese** su 29 voci |
+| Totale ricorrente | −2.036,13 €/mese |
+| Spesa reale media, mesi pieni feb–lug 2026 | −2.959,24 €/mese |
+| Quota ricorrente | **68,8%** della media, 51–56% di giugno e luglio |
+
+Escluse: 33 esercenti fermi da tempo (−4.889,66 € spesi in tutto), 7 sotto i tre mesi di presenza
+(−218,10 €), 2 sotto i 75 giorni coperti (−480,34 €, cioè Byteplus e un bar).
+
+**La verifica che conta** è l'ultima riga: il costo ricorrente sta dentro la spesa reale con
+margine. Il confronto va fatto con i mesi recenti e non con la media di tutto lo storico — un
+esercente comparso ad aprile contribuisce col suo tasso pieno anche se a febbraio non esisteva, ed
+è il motivo per cui il ricorrente (2.036) supera l'intera spesa di febbraio (1.407) senza che sia
+una contraddizione.
+
+#### Cosa dicono i numeri, che è il punto di tutto
+
+**Voluttuario ricorrente: 606,15 €/mese.** Di cui **71,43 in abbonamenti e 534,72 in abitudini**:
+sette volte tanto. Disdire tutti e cinque gli abbonamenti voluttuari libererebbe 71 € al mese.
+Lo spreco ricorrente non sta lì.
+
+Ma metà del voluttuario abituale sono **viaggi**: `Booking.com` da solo vale 266,50 €/mese, con 4
+prenotazioni in 3 mesi. Un viaggio non è un'abitudine, è una spesa episodica che capita di essere
+concentrata — e nessun criterio basato sul tempo può distinguerli. Va saputo prima di leggere quel
+numero come "spreco".
+
+Tolti i viaggi restano ~245 €/mese, e **metà è `Deliveroo`**: 129,76 €/mese, **59 ordini**,
+1.108 € in nove mesi. Quella è un'abitudine vera, ed è la risposta più azionabile che l'app abbia
+prodotto. Nessuna disdetta la tocca: è esattamente la ragione per cui i due numeri sono separati.
+
+`Affitto` risulta **abitudine** perché nessuno gli ha messo `is_subscription` — un affitto è il
+contratto ricorrente per eccellenza, e marcarlo sposta 358,22 €/mese fra gli abbonamenti. Da
+guardare anche il merito: cinque pagamenti in undici mesi, mediana 500 € ma totale 4.160 €.
+
+### Prova manuale della Fase 5, sotto i 5 minuti
+
+1. `/debug/sync` → **`6 · Rileva abbonamenti`**. Attesi 85 rilevate, 43 nella metrica, e i due
+   totali qui sopra.
+2. Rilanciare: gli stessi numeri. È idempotente — la funzione ricalcola tutto da capo.
+3. `/abbonamenti`: due blocchi separati, `Netflix` deve dire **6,99** (se dicesse 6,45 il ramo del
+   canone si è rotto), e la casella «mostra anche le escluse» deve far comparire 42 righe.
+4. Dare un giudizio d'uso a una riga e marcarne una come disdetta, poi rilanciare il rilevamento:
+   `usage_verdict`, `notes` e lo stato `cancelled` devono sopravvivere.
 
 ## Regole di sicurezza — NON NEGOZIABILI
 
