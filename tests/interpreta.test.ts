@@ -88,7 +88,7 @@ describe('interpretaProposta — rifiuta, e dice perché', () => {
 
   it('etichetta mai inviata', () => {
     expect(scarto({ ...valida, etichetta: 'Coop Canalina' })).toContain(
-      "non è fra le etichette inviate",
+      'non è fra le etichette inviate',
     );
   });
 
@@ -102,5 +102,57 @@ describe('interpretaProposta — rifiuta, e dice perché', () => {
     for (const v of [null, 'testo', 42, []]) {
       expect(scarto(v)).not.toBeNull();
     }
+  });
+});
+
+describe('interpretaProposta — il guasto vero del 12 agosto', () => {
+  const LOTTO_CANVA = ['Canva* I04731-63857386', 'Canva* I04762-65158760'];
+
+  const base = {
+    nome: 'Canva',
+    categoria: 'lavoro-software',
+    discrezionalita: 'utile',
+    contesto: 'business',
+  };
+
+  it('riconosce l’etichetta anche se il modello ricopia la riga intera', () => {
+    // Il prompt mandava `- Canva* I04731-63857386 · 1 volte · -12.00 EUR` e
+    // chiedeva di ricopiare "l'etichetta". Il modello ha ricopiato tutto, e
+    // aveva ragione: in una riga di testo non c'è niente che dica dove
+    // finisce il nome. Quindici risposte su quindici buttate per questo.
+    const esito = interpretaProposta(
+      { ...base, etichetta: 'Canva* I04731-63857386 · 1 volte · -12.00 EUR' },
+      new Set(['lavoro-software']),
+      LOTTO_CANVA,
+    );
+    expect('proposta' in esito && esito.proposta.etichetta).toBe('Canva* I04731-63857386');
+  });
+
+  it('accetta un frammento contenuto nell’etichetta e lo usa per il futuro', () => {
+    const esito = interpretaProposta(
+      { ...base, etichetta: 'Canva* I04731-63857386', frammento: 'Canva' },
+      new Set(['lavoro-software']),
+      LOTTO_CANVA,
+    );
+    expect('proposta' in esito && esito.proposta.frammento).toBe('Canva');
+  });
+
+  it('rifiuta un frammento che l’etichetta non contiene', () => {
+    // Genererebbe un alias che non abbina niente, o peggio abbina altro.
+    const esito = interpretaProposta(
+      { ...base, etichetta: 'Canva* I04731-63857386', frammento: 'Figma' },
+      new Set(['lavoro-software']),
+      LOTTO_CANVA,
+    );
+    expect('proposta' in esito && esito.proposta.frammento).toBeNull();
+  });
+
+  it('rifiuta un frammento troppo corto, che pescherebbe mezzo database', () => {
+    const esito = interpretaProposta(
+      { ...base, etichetta: 'Canva* I04731-63857386', frammento: 'ca' },
+      new Set(['lavoro-software']),
+      LOTTO_CANVA,
+    );
+    expect('proposta' in esito && esito.proposta.frammento).toBeNull();
   });
 });

@@ -38,12 +38,72 @@ export type Proposta = {
   categoria: string;
   discrezionalita: Discretion;
   contesto: Context;
+  /**
+   * La parte del nome che tornera' identica la prossima volta, quando c'e'.
+   *
+   * `Canva* I04731-63857386` ha un codice diverso a ogni addebito: un alias
+   * sull'etichetta intera vale per quell'unico movimento e non riconoscera' mai
+   * il prossimo. Con `canva` come frammento l'alias diventa `contains` e li
+   * prende tutti, anche quelli che non sono ancora arrivati — che e' il punto
+   * di avere una memoria delle risposte invece di una lista di eccezioni.
+   */
+  frammento: string | null;
   abbonamento: boolean;
   motivo: string;
   sicuro: boolean;
 };
 
 export type EsitoInterpretazione = { proposta: Proposta } | { scarto: string };
+
+/**
+ * Il frammento proposto, se è utilizzabile.
+ *
+ * Due condizioni, e servono entrambe. Deve essere **contenuto nell'etichetta**:
+ * un frammento inventato genererebbe un alias che non abbina niente, o peggio
+ * abbina altro. E deve essere **lungo almeno tre caratteri**: `contains` con
+ * una o due lettere pesca mezzo database, e un esercente sbagliato sparisce
+ * dentro un totale senza che nessuno se ne accorga.
+ *
+ * In dubbio restituisce `null`, e l'alias torna a essere sull'etichetta
+ * intera: copre meno, ma non copre cose sbagliate.
+ */
+function frammentoValido(proposto: string | null, etichetta: string): string | null {
+  if (proposto === null) return null;
+  const f = normalizzaEtichetta(proposto);
+  if (f.length < 3) return null;
+  return normalizzaEtichetta(etichetta).includes(f) ? proposto.trim() : null;
+}
+
+/**
+ * Ritrova quale etichetta inviata corrisponde a quella tornata dal modello.
+ *
+ * Due tentativi, in ordine di severità.
+ *
+ * 1. **Uguaglianza sulla forma normalizzata.** Copre il caso normale e le
+ *    differenze di spaziatura o maiuscole.
+ * 2. **Prefisso.** Copre il caso in cui il modello ricopi più del dovuto — è
+ *    successo davvero: mandavo `- Canva* I04731-63857386 · 1 volte · -12.00
+ *    EUR` chiedendo di ricopiare "l'etichetta", e ha ricopiato la riga intera.
+ *    Aveva ragione lui: in una riga di testo non c'è niente che dica dove
+ *    finisce il nome. Il prompt ora manda JSON, ma la difesa resta.
+ *
+ * A parità di prefisso vince il più lungo, che è il più specifico: fra
+ * `Canva` e `Canva* I04731` per una risposta che comincia con entrambi, il
+ * secondo identifica davvero il movimento.
+ */
+function ritrovaEtichetta(risposta: string, lotto: readonly string[]): string | undefined {
+  const bersaglio = normalizzaEtichetta(risposta);
+
+  const esatta = lotto.find((e) => normalizzaEtichetta(e) === bersaglio);
+  if (esatta !== undefined) return esatta;
+
+  return lotto
+    .filter((e) => {
+      const n = normalizzaEtichetta(e);
+      return n !== '' && bersaglio.startsWith(n);
+    })
+    .sort((a, b) => normalizzaEtichetta(b).length - normalizzaEtichetta(a).length)[0];
+}
 
 export function interpretaProposta(
   grezza: unknown,
@@ -74,7 +134,9 @@ export function interpretaProposta(
   const contesto = campo('contesto', 'context');
 
   if (etichettaGrezza === null) {
-    return { scarto: `manca "etichetta" — campi trovati: ${Object.keys(p).join(', ') || 'nessuno'}` };
+    return {
+      scarto: `manca "etichetta" — campi trovati: ${Object.keys(p).join(', ') || 'nessuno'}`,
+    };
   }
   if (nome === null) return { scarto: `«${etichettaGrezza}» senza "nome"` };
   if (categoria === null) return { scarto: `«${etichettaGrezza}» senza "categoria"` };
@@ -83,9 +145,7 @@ export function interpretaProposta(
   // alias per un testo che non compare in nessun movimento. Il confronto passa
   // però dalla forma normalizzata: un modello che restituisce `Sumup *bar Job`
   // invece di `Sumup  *bar Job` ha risposto bene, ha solo compattato uno spazio.
-  const originale = lotto.find(
-    (e) => normalizzaEtichetta(e) === normalizzaEtichetta(etichettaGrezza),
-  );
+  const originale = ritrovaEtichetta(etichettaGrezza, lotto);
   if (originale === undefined) {
     return { scarto: `«${etichettaGrezza}» non è fra le etichette inviate` };
   }
@@ -102,6 +162,7 @@ export function interpretaProposta(
   return {
     proposta: {
       etichetta: originale,
+      frammento: frammentoValido(campo('frammento', 'fragment'), originale),
       nome,
       categoria,
       discrezionalita: discrezionalita as Discretion,

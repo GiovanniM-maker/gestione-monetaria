@@ -61,6 +61,11 @@ Regole:
 - "contesto" è: personale oppure business.
 - "nome" è il nome commerciale pulito, senza numeri di negozio né sigle di
   incasso: "Lidl 1361" diventa "Lidl", "Sp Blueprint.bj-5353" diventa "Blueprint".
+- "frammento" è la parte più corta e distintiva del nome, quella che tornerà
+  identica la prossima volta: per "Canva* I04731-63857386" è "canva", per
+  "Google*cloud 3nmtdc" è "google cloud". Serve a riconoscere da solo i
+  prossimi addebiti dello stesso esercente, quando la banca ci attacca un
+  codice diverso ogni volta. Omettilo se il nome non ha parti variabili.
 - "abbonamento" è true solo per servizi che si pagano ricorrentemente a canone.
 - "motivo" è una frase brevissima che spiega la scelta.
 - "sicuro" è false quando il nome NON dice che attività sia (sigle, ragioni
@@ -183,17 +188,34 @@ async function chiediLotto(
     .map((c) => `- ${c.slug}: ${c.name}${c.default_discretion === null ? '' : ` (${c.default_discretion})`}`)
     .join('\n');
 
-  // Il payload: nome, quante volte, quanto. Nient'altro esce da qui.
-  const righe = etichette
-    .map((e) => {
+  // Il payload in JSON, e non in righe formattate.
+  //
+  // Prima mandavo `- Canva* I04731-63857386 · 1 volte · -12.00 EUR` chiedendo
+  // di ricopiare "l'etichetta": il modello ha ricopiato la riga intera, e
+  // aveva ragione — in una riga di testo non c'e' niente che dica dove
+  // finisce il nome. In JSON il campo ha un nome e un confine.
+  //
+  // Escono solo questi tre valori (regola 8): nome dell'esercente, quante
+  // volte compare, quanto e' stato speso.
+  const righe = JSON.stringify(
+    etichette.map((e) => {
       const c = perEtichetta.get(e);
-      return `- ${e} · ${c?.movimenti ?? 0} volte · ${c?.totale ?? '0'} EUR`;
-    })
-    .join('\n');
+      return { etichetta: e, volte: c?.movimenti ?? 0, totale: c?.totale ?? '0' };
+    }),
+    null,
+    1,
+  );
 
   const risposta = await chiediAlModello({
     system: SYSTEM,
-    prompt: `Categorie disponibili:\n${albero}\n\nEsercenti da classificare:\n${righe}\n\nRispondi con un array JSON di oggetti con i campi: etichetta, nome, categoria, discrezionalita, contesto, abbonamento, motivo, sicuro. Una voce per ogni esercente, con "etichetta" copiata esattamente come te l'ho data.`,
+    prompt:
+      `Categorie disponibili:\n${albero}\n\n` +
+      `Esercenti da classificare (array JSON):\n${righe}\n\n` +
+      'Rispondi con un array JSON di oggetti con i campi: etichetta, nome, ' +
+      'categoria, discrezionalita, contesto, frammento, abbonamento, motivo, sicuro. ' +
+      'Una voce per ogni esercente. Il campo "etichetta" va ricopiato ' +
+      'IDENTICO dal campo "etichetta" che ti ho dato, senza aggiungere volte, ' +
+      'importi o trattini.',
     maxTokens: 8192,
   });
 
@@ -234,12 +256,17 @@ async function scrivi(proposte: readonly Proposta[]): Promise<void> {
 
     if (error !== null || merchant === null) continue;
 
-    // `exact`: il pattern e' l'etichetta intera, quindi la proposta non puo'
-    // pescare movimenti che il modello non ha visto.
+    // Con un frammento l'alias e' `contains` e riconosce anche gli addebiti
+    // futuri dello stesso esercente — `Canva* <codice diverso ogni volta>`.
+    // Senza, resta `exact` sull'etichetta intera: copre solo quella, ma non
+    // puo' pescare movimenti che il modello non ha visto.
+    const [pattern, tipo] =
+      p.frammento === null ? [p.etichetta, 'exact' as const] : [p.frammento, 'contains' as const];
+
     await supabase
       .from('merchant_aliases')
       .upsert(
-        { merchant_id: merchant.id, pattern: p.etichetta, match_type: 'exact', priority: 0 },
+        { merchant_id: merchant.id, pattern, match_type: tipo, priority: 0 },
         { onConflict: 'pattern,match_type' },
       );
   }
