@@ -1,0 +1,125 @@
+import 'server-only';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { comeArray } from '@/lib/enablebanking/redact';
+import { PER_PAGINA, type Filtri } from './filtri';
+
+/**
+ * La lettura dei movimenti.
+ *
+ * Chiama `cerca_movimenti()`, che restituisce le righe **e i totali
+ * dell'intero insieme filtrato** nelle stesse righe. Non si sommano importi
+ * qui: sommare in TypeScript la pagina che si sta mostrando darebbe il totale
+ * di cinquanta righe spacciato per il totale di tutte — ed e' un errore che
+ * sembra un dato.
+ */
+
+export type RigaMovimento = {
+  id: string;
+  booking_date: string;
+  value_date: string | null;
+  amount: string;
+  amount_eur: string | null;
+  currency: string;
+  stato: string;
+  esercente: string | null;
+  merchant_id: string | null;
+  categoria: string | null;
+  category_id: string | null;
+  discrezionalita: string | null;
+  contesto: string | null;
+  conto: string | null;
+  raw_description: string | null;
+  counterparty_raw: string | null;
+  bank_code: string | null;
+  is_transfer: boolean;
+  is_refund: boolean;
+  excluded_from_analysis: boolean;
+  manually_categorized: boolean;
+  note: string | null;
+  /** `null` quando la riga E' nella spesa reale; altrimenti dice perche' non c'e'. */
+  fuori_dalla_spesa: string | null;
+  totale_righe: number;
+  totale_importo: string | null;
+};
+
+export type Esito = {
+  righe: readonly RigaMovimento[];
+  /** Righe dell'intero insieme filtrato, non della pagina. */
+  totaleRighe: number;
+  /** Somma dell'intero insieme filtrato, come stringa decimale. */
+  totaleImporto: string | null;
+  pagine: number;
+};
+
+export async function cercaMovimenti(filtri: Filtri): Promise<Esito> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.rpc('cerca_movimenti', {
+    p_id: null,
+    p_da: filtri.da,
+    p_a: filtri.a,
+    p_ricerca: filtri.ricerca === '' ? null : filtri.ricerca,
+    p_categoria: filtri.categoria,
+    p_merchant: filtri.merchant,
+    p_discrezionalita: filtri.discrezionalita,
+    p_contesto: filtri.contesto,
+    p_tipo: filtri.tipo,
+    p_ordine: filtri.ordine,
+    p_limite: PER_PAGINA,
+    p_scarto: (filtri.pagina - 1) * PER_PAGINA,
+  });
+
+  if (error !== null) throw new Error(`Ricerca movimenti fallita: ${error.message}`);
+
+  const righe = comeArray<RigaMovimento>(data);
+
+  // I totali stanno su ogni riga, uguali. Quando la pagina e' vuota non ci
+  // sono righe da cui leggerli, e zero e' la risposta giusta: e' un insieme
+  // filtrato vuoto, non un insieme di cui non si sa la somma.
+  const prima = righe[0];
+  const totaleRighe = prima === undefined ? 0 : Number(prima.totale_righe);
+
+  return {
+    righe,
+    totaleRighe,
+    totaleImporto: prima?.totale_importo ?? null,
+    pagine: Math.max(1, Math.ceil(totaleRighe / PER_PAGINA)),
+  };
+}
+
+/**
+ * Un movimento solo, per la sua scheda.
+ *
+ * Passa dalla stessa funzione invece di leggere `transactions` direttamente:
+ * cosi' la scheda mostra esattamente i campi che la lista mostra, calcolati
+ * allo stesso modo — compreso `fuori_dalla_spesa`, che e' la cosa per cui si
+ * apre una scheda quando un numero non torna.
+ */
+export async function leggiMovimento(id: string): Promise<RigaMovimento | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.rpc('cerca_movimenti', { p_id: id, p_limite: 1 });
+  if (error !== null) throw new Error(`Lettura movimento fallita: ${error.message}`);
+
+  return comeArray<RigaMovimento>(data)[0] ?? null;
+}
+
+export type RigaStato = {
+  connection_id: string;
+  banca: string;
+  stato_connessione: string;
+  valid_until: string | null;
+  giorni_al_rinnovo: number | null;
+  ultima_sync_riuscita: string | null;
+  ultima_sync_fallita: string | null;
+  ultimo_errore: string | null;
+  ultimo_movimento: string | null;
+  movimenti_provvisori: number;
+  conti_attivi: number;
+};
+
+export async function leggiStatoSistema(): Promise<readonly RigaStato[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from('v_stato_sistema').select('*');
+  return comeArray<RigaStato>(data);
+}

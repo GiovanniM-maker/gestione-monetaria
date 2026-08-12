@@ -2,6 +2,7 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { meseDaData } from './mesi';
+import { leggiStatoSistema, type RigaStato } from '@/lib/movimenti/cerca';
 import type { RigaMetrica } from '@/lib/abbonamenti/formato';
 
 /**
@@ -54,6 +55,13 @@ export type RigaEsercente = {
   movimenti: number;
 };
 
+export type RigaEntrate = {
+  mese: string;
+  entrate: string;
+  movimenti: number;
+  senza_cambio: number;
+};
+
 export type Cruscotto = {
   mese: string;
   mesePrecedente: string | null;
@@ -65,6 +73,9 @@ export type Cruscotto = {
   categorie: readonly RigaCategoria[];
   esercenti: readonly RigaEsercente[];
   ricorrente: readonly RigaMetrica[];
+  /** Le entrate del mese, come denominatore. Non cambiano la metrica principale. */
+  entrate: RigaEntrate | null;
+  stato: readonly RigaStato[];
 };
 
 /** Quanti esercenti si mostrano. Oltre, la lista smette di essere leggibile. */
@@ -103,13 +114,16 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
   const indice = mesiDisponibili.indexOf(mese);
   const mesePrecedente = indice > 0 ? (mesiDisponibili[indice - 1] ?? null) : null;
 
-  const [classi, classiPrecedenti, categorie, esercenti, ricorrente] = await Promise.all([
-    leggiClassi(mese),
-    mesePrecedente === null ? Promise.resolve([]) : leggiClassi(mesePrecedente),
-    leggiCategorie(mese),
-    leggiEsercenti(mese),
-    leggiRicorrente(),
-  ]);
+  const [classi, classiPrecedenti, categorie, esercenti, ricorrente, entrate, stato] =
+    await Promise.all([
+      leggiClassi(mese),
+      mesePrecedente === null ? Promise.resolve([]) : leggiClassi(mesePrecedente),
+      leggiCategorie(mese),
+      leggiEsercenti(mese),
+      leggiRicorrente(),
+      leggiEntrate(mese),
+      leggiStatoSistema(),
+    ]);
 
   return {
     mese,
@@ -121,7 +135,26 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     categorie,
     esercenti,
     ricorrente,
+    entrate,
+    stato,
   };
+}
+
+/**
+ * Le entrate del mese.
+ *
+ * Servono come **denominatore**, non come oggetto: «606 €/mese di voluttuario
+ * ricorrente» significa cose molto diverse su entrate da 2.000 o da 6.000, e
+ * senza il denominatore quel numero non si sa se e' tanto.
+ */
+async function leggiEntrate(mese: string): Promise<RigaEntrate | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('v_monthly_income')
+    .select('mese, entrate::text, movimenti, senza_cambio')
+    .eq('mese', primoGiorno(mese))
+    .maybeSingle();
+  return (data as RigaEntrate | null) ?? null;
 }
 
 /** Il primo giorno del mese, che e' come la vista lo espone. */

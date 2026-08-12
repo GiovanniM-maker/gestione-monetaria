@@ -10,6 +10,8 @@ import {
   variazione,
 } from '@/lib/cruscotto/mesi';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
+import { estremiDelMese } from '@/lib/movimenti/filtri';
+import type { RigaStato } from '@/lib/movimenti/cerca';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -65,7 +67,20 @@ export default async function CruscottoPage({
     categorie,
     esercenti,
     ricorrente,
+    entrate,
+    stato,
   } = dati;
+
+  // Gli estremi del mese servono a mandare ogni aggregato alla lista movimenti
+  // gia' filtrata: e' cio' che trasforma il cruscotto da fotografia a porta.
+  const periodo = estremiDelMese(mese);
+  const perMese = (extra: Record<string, string> = {}): string => {
+    const p = new URLSearchParams(periodo === null ? {} : { da: periodo.da, a: periodo.a });
+    for (const [k, v] of Object.entries(extra)) p.set(k, v);
+    return `/movimenti?${p.toString()}`;
+  };
+
+  const incassato = entrate === null ? null : centesimi(entrate.entrate);
 
   const indice = mesiDisponibili.indexOf(mese);
   const meseSuccessivo = indice >= 0 ? (mesiDisponibili[indice + 1] ?? null) : null;
@@ -92,6 +107,13 @@ export default async function CruscottoPage({
 
   return (
     <div className="space-y-10">
+      {/* ---------------------------------------------------------------- */}
+      {/* LO STATO DEL SISTEMA                                              */}
+      {/* ---------------------------------------------------------------- */}
+      {stato.map((s) => (
+        <StatoSistema key={s.connection_id} riga={s} />
+      ))}
+
       {/* ---------------------------------------------------------------- */}
       {/* IL MESE                                                          */}
       {/* ---------------------------------------------------------------- */}
@@ -178,6 +200,17 @@ export default async function CruscottoPage({
           </ul>
         )}
 
+        {incassato !== null && incassato !== 0n && (
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Entrate del mese <strong className="tabular-nums">{formattaEuro(incassato)}</strong> —
+            la spesa ne &egrave; <strong>{quotaPercentuale(speso, incassato).toFixed(0)}%</strong>.{' '}
+            <span className="text-neutral-500">
+              Escluse le entrate che sono giroconti: un rientro dal conto deposito non &egrave;
+              reddito.
+            </span>
+          </p>
+        )}
+
         {rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0) && (
           <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
             {rigaMese.senza_cambio > 0 && (
@@ -257,10 +290,11 @@ export default async function CruscottoPage({
         <section className="space-y-2">
           <h2 className="font-medium">In cosa</h2>
           <p className="text-xs text-neutral-500">
-            Ogni categoria porta la somma delle sue sottocategorie. Dove la cifra fra parentesi
-            compare, è la parte finita direttamente su quel nodo invece che in un figlio.
+            Ogni categoria porta la somma delle sue sottocategorie, e si tocca per vedere di cosa
+            &egrave; fatta. Dove la cifra fra parentesi compare, &egrave; la parte finita
+            direttamente su quel nodo invece che in un figlio.
           </p>
-          <Albero righe={categorie} totale={speso} />
+          <Albero righe={categorie} totale={speso} perMese={perMese} />
         </section>
       )}
 
@@ -273,19 +307,35 @@ export default async function CruscottoPage({
           <ul className="space-y-1 text-sm">
             {esercenti.map((e, i) => {
               const valore = centesimi(e.spesa);
-              return (
-                <li
-                  key={`${e.merchant_id ?? 'nessuno'}-${e.discrezionalita}-${i}`}
-                  className="flex items-baseline justify-between gap-3 border-b border-neutral-100 py-1 dark:border-neutral-900"
-                >
-                  <span>
-                    {e.esercente}
-                    <span className="ml-2 text-xs text-neutral-500">
+              const riga = (
+                <>
+                  <span className="min-w-0">
+                    <span className="block truncate">{e.esercente}</span>
+                    <span className="text-xs text-neutral-500">
                       {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'} ·{' '}
                       {e.discrezionalita}
                     </span>
                   </span>
-                  <span className="tabular-nums whitespace-nowrap">{formattaEuro(valore)}</span>
+                  <span className="shrink-0 tabular-nums whitespace-nowrap">
+                    {formattaEuro(valore)}
+                  </span>
+                </>
+              );
+              return (
+                <li
+                  key={`${e.merchant_id ?? 'nessuno'}-${e.discrezionalita}-${i}`}
+                  className="border-b border-neutral-100 dark:border-neutral-900"
+                >
+                  {e.merchant_id === null ? (
+                    <span className="flex min-h-11 items-center justify-between gap-3">{riga}</span>
+                  ) : (
+                    <Link
+                      href={perMese({ esercente: e.merchant_id })}
+                      className="flex min-h-11 items-center justify-between gap-3"
+                    >
+                      {riga}
+                    </Link>
+                  )}
                 </li>
               );
             })}
@@ -344,7 +394,15 @@ function Andamento({
  * righe, e appesa a un livello che non esiste sparirebbe dal totale visibile
  * pur essendo nella somma. Qui invece risale come radice.
  */
-function Albero({ righe, totale }: { righe: readonly RigaCategoria[]; totale: bigint }) {
+function Albero({
+  righe,
+  totale,
+  perMese,
+}: {
+  righe: readonly RigaCategoria[];
+  totale: bigint;
+  perMese: (extra?: Record<string, string>) => string;
+}) {
   const presenti = new Set(righe.map((r) => r.category_id));
   const figli = new Map<string | null, RigaCategoria[]>();
 
@@ -362,19 +420,20 @@ function Albero({ righe, totale }: { righe: readonly RigaCategoria[]; totale: bi
       const diretta = centesimi(r.spesa_diretta);
       return [
         <li key={r.category_id} className="space-y-1">
-          <div
-            className="flex items-baseline justify-between gap-3 text-sm"
+          <Link
+            href={perMese({ categoria: r.category_id })}
+            className="flex min-h-11 items-center justify-between gap-3 text-sm"
             style={{ paddingLeft: `${livello * 12}px` }}
           >
-            <span>
-              {r.categoria}
-              <span className="ml-2 text-xs text-neutral-500">
+            <span className="min-w-0">
+              <span className="block truncate">{r.categoria}</span>
+              <span className="text-xs text-neutral-500">
                 {r.movimenti} mov.
                 {diretta !== valore && diretta !== 0n && ` · ${formattaEuro(diretta)} qui`}
               </span>
             </span>
-            <span className="tabular-nums whitespace-nowrap">{formattaEuro(valore)}</span>
-          </div>
+            <span className="shrink-0 tabular-nums whitespace-nowrap">{formattaEuro(valore)}</span>
+          </Link>
           <div
             className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-900"
             style={{ marginLeft: `${livello * 12}px` }}
@@ -391,4 +450,66 @@ function Albero({ righe, totale }: { righe: readonly RigaCategoria[]; totale: bi
   }
 
   return <ul className="space-y-2">{rami(null, 0)}</ul>;
+}
+
+/**
+ * Lo stato della connessione bancaria.
+ *
+ * Sta in cima a tutto e non in una pagina di diagnostica, per una ragione
+ * sola: `valid_until` non era mostrato da nessuna parte, e il consenso Enable
+ * Banking scade. Quando scade **i dati smettono di arrivare in silenzio** — il
+ * cruscotto continuerebbe a mostrare numeri, sempre piu' vecchi, senza dire
+ * niente. Per un'applicazione che esiste per essere creduta e' il guasto
+ * peggiore possibile.
+ *
+ * Quando va tutto bene e' una riga grigia di una frase. Compare in evidenza
+ * solo quando c'e' qualcosa da fare, perche' un avviso che c'e' sempre non e'
+ * piu' un avviso.
+ */
+function StatoSistema({ riga }: { riga: RigaStato }) {
+  const giorni = riga.giorni_al_rinnovo;
+  const scaduto = giorni !== null && giorni < 0;
+  const inScadenza = giorni !== null && giorni >= 0 && giorni <= 30;
+  const grave = scaduto || riga.stato_connessione === 'error';
+
+  if (!grave && !inScadenza) {
+    return (
+      <p className="text-xs text-neutral-500">
+        {riga.banca}: ultimo movimento {riga.ultimo_movimento ?? '—'}
+        {giorni !== null && ` · consenso valido ancora ${giorni} giorni`}
+        {riga.movimenti_provvisori > 0 &&
+          ` · ${riga.movimenti_provvisori} movimenti provvisori, l’importo può ancora cambiare`}
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-lg border p-3 text-sm ${
+        grave
+          ? 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200'
+          : 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
+      }`}
+    >
+      <p className="font-medium">
+        {scaduto
+          ? `Il consenso ${riga.banca} è scaduto da ${-(giorni ?? 0)} giorni.`
+          : `Il consenso ${riga.banca} scade fra ${giorni} giorni.`}
+      </p>
+      <p className="mt-1">
+        {scaduto
+          ? 'I movimenti nuovi non arrivano più, e i numeri qui sotto smettono di aggiornarsi senza che nulla lo segnali. Va rinnovato dal '
+          : 'Va rinnovato prima della scadenza, altrimenti i dati smettono di arrivare in silenzio. Si rinnova dal '}
+        <Link className="underline" href="/debug/eb">
+          pannello Enable Banking
+        </Link>
+        .
+      </p>
+      <p className="mt-1 text-xs">
+        Ultimo movimento {riga.ultimo_movimento ?? '—'} · ultima sincronizzazione riuscita{' '}
+        {riga.ultima_sync_riuscita?.slice(0, 10) ?? 'mai'}
+        {riga.ultimo_errore !== null && ` · ultimo errore: ${riga.ultimo_errore}`}
+      </p>
+    </div>
+  );
 }
