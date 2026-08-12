@@ -12,6 +12,54 @@
 
 import { parseCentesimiTollerante } from '@/lib/money';
 
+/**
+ * Le forme delle righe stanno qui e non accanto alle query.
+ *
+ * Non e' pignoleria: il modulo che interroga il database e' `server-only`, e
+ * la schermata che disegna quelle righe gira nel browser. Tenerle li' obbliga
+ * un componente client a importare un modulo server, e la compilazione si
+ * ferma — giustamente, perche' un solo valore esportato per sbaglio da quel
+ * modulo finirebbe nel bundle del browser.
+ */
+
+/** Mesi civili distinti sotto i quali non si parla di ricorrenza. */
+export const MESI_MINIMI = 3;
+
+export type RigaAbbonamento = {
+  id: string;
+  esercente: string;
+  categoria: string | null;
+  discrezionalita: string | null;
+  contesto: string | null;
+  /** `abbonamento` (si disdice) oppure `abitudine` (si cambia). */
+  tipo: string;
+  cadence: string;
+  cadence_days: string | null;
+  expected_amount: string | null;
+  typical_amount: string | null;
+  total_amount: string | null;
+  costo_mensile: string | null;
+  first_seen: string | null;
+  last_seen: string | null;
+  next_expected: string | null;
+  occurrences: number;
+  active_months: number;
+  /** Regolarita' nel tempo, 0..1. Non filtra: descrive. */
+  confidence: string | null;
+  /** Stabilita' dell'importo, 0..1. Bassa su un servizio a consumo. */
+  amount_stability: string | null;
+  status: string;
+  usage_verdict: string | null;
+  notes: string | null;
+};
+
+export type RigaEsclusa = {
+  motivo: string;
+  esercenti: number;
+  costo_mensile_potenziale: string | null;
+  totale_speso: string | null;
+};
+
 export type Somma = {
   totale: bigint;
   /**
@@ -85,27 +133,40 @@ function giorno(valore: string): number | null {
  * — quello che pesa di piu'.
  */
 export type RigaMetrica = {
+  /** `abbonamento` si disdice, `abitudine` si cambia. Non si sommano. */
+  tipo: string;
   discrezionalita: string;
   contesto: string;
-  abbonamenti: number;
+  ricorrenze: number;
   costo_mensile: string | null;
 };
 
 export type VoceMetrica = {
+  tipo: string;
   discrezionalita: string;
   contesto: string;
-  abbonamenti: number;
+  ricorrenze: number;
   costoMensile: bigint;
 };
 
 export function ordinaPerPeso(righe: readonly RigaMetrica[]): readonly VoceMetrica[] {
   return righe
     .map((r) => ({
+      tipo: r.tipo,
       discrezionalita: r.discrezionalita,
       contesto: r.contesto,
-      abbonamenti: r.abbonamenti,
+      ricorrenze: r.ricorrenze,
       costoMensile: parseCentesimiTollerante(r.costo_mensile) ?? 0n,
     }))
     // Le uscite sono negative: la voce piu' pesante e' la piu' piccola.
     .sort((a, b) => (a.costoMensile < b.costoMensile ? -1 : a.costoMensile > b.costoMensile ? 1 : 0));
+}
+
+/**
+ * Il totale di un tipo. Somma solo dentro `abbonamento` o dentro `abitudine`,
+ * mai fra i due: sono due numeri distinti proprio perche' l'azione che
+ * suggeriscono e' diversa, e un totale unico la nasconderebbe.
+ */
+export function totalePerTipo(voci: readonly VoceMetrica[], tipo: string): bigint {
+  return voci.reduce((somma, v) => (v.tipo === tipo ? somma + v.costoMensile : somma), 0n);
 }

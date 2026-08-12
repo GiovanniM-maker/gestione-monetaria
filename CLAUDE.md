@@ -464,6 +464,58 @@ all'altro:
 L'idempotenza è verificata nel modo che conta: due normalizzazioni consecutive sull'intero storico
 lasciano 581 righe e nessun inserimento.
 
+### Le decisioni della Fase 5
+
+#### Due numeri, non uno: abbonamenti e abitudini
+
+La metrica principale è divisa in due righe per classe di discrezionalità, e **non si sommano mai**.
+Non è una scelta grafica: rispondono a due azioni diverse. Un abbonamento si disdice — è un gesto,
+si fa una volta, il risparmio è certo. Un'abitudine si cambia, e cambiare un'abitudine non è un
+gesto. Un totale unico nasconderebbe quale delle due è possibile.
+
+Il confine **non lo indovina una statistica**: sta in `merchants.is_subscription`, dichiarato in
+Fase 4 e correggibile da `/revisione`. Nessun numero distingue un contratto da una consuetudine —
+`Bar Fucsia` e `Netflix` possono avere le stesse identiche statistiche. Un abbonamento nuovo che
+nessuno ha ancora marcato finisce fra le abitudini: visibile e contato, non perso.
+
+#### Regolarità nel tempo e stabilità dell'importo sono due domande diverse
+
+La prima versione le moltiplicava in un solo coefficiente e richiedeva entrambe sopra 0,5. Il
+risultato è stato che **la metrica escludeva proprio gli abbonamenti più cari**: Anthropic (0,28),
+Google Workspace (0,18), OpenRouter (0,11), Google Cloud, Byteplus. Sono servizi a consumo —
+fatturati ogni mese, importo variabile — e passavano la prima domanda per essere bocciati dalla
+seconda. Anthropic da solo valeva la metà della metrica intera e restava fuori.
+
+Ora sono due colonne (`confidence` = tempo, `amount_stability` = importo), **nessuna delle due
+filtra niente**, ed entrambe restano visibili come indicatori di qualità. Quello che filtra è la
+presenza: tre mesi civili distinti.
+
+#### Il costo mensile: un'osservazione, non un'estrapolazione
+
+Due formule, e quale si applica dipende da quanto la serie è regolare davvero:
+
+- **canone fisso** (`is_subscription`, cadenza riconosciuta, regolarità ≥ 0,9 e stabilità ≥ 0,95) →
+  `importo_tipico × 30,44 / giorni_cadenza`. Netflix deve dire **6,99**: un numero che non si
+  riconosce non si crede.
+- **tutto il resto** → `totale realmente speso × 30,44 / giorni coperti`. Nessuna cadenza da
+  assumere, quindi non si estrapola.
+
+`importo_tipico` è la **mediana**, non l'ultimo importo: un rinnovo con un credito applicato non
+deve diventare il prezzo. `expected_amount` resta l'ultimo importo perché risponde a un'altra
+domanda — quanto arriverà la prossima volta — ed è il riferimento della Fase 8 per gli aumenti.
+
+#### Estrapolare da un intervallo mediano produce cifre assurde
+
+Il difetto più grave della prima versione, e vale la pena ricordarlo perché è generale.
+`Bar Fucsia`: 5 movimenti in 7 mesi, quattro ravvicinati e uno lontano. L'intervallo **mediano** è
+7 giorni, quindi la cadenza risultava settimanale e il costo `21,60 × 4,35 = 93,93 €/mese`. Il
+valore vero è circa 15. Sommando 45 esercenti così, la vista delle escluse dichiarava
+**8.966 €/mese** — più di tutta la spesa mensile reale, che è 3.640.
+
+Due lezioni: la mediana è robusta a un ritardo ma **cieca ai raggruppamenti**, e un tasso mensile
+per qualcosa che non copre mesi non esiste. Sotto tre mesi di presenza `costo_mensile` è `null`, e
+si mostra `total_amount`, che è misurato.
+
 ## Regole di sicurezza — NON NEGOZIABILI
 
 1. La chiave privata Enable Banking (`.pem`) **non entra mai nel repository**. `.gitignore` la esclude

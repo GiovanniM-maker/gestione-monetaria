@@ -4,6 +4,7 @@ import {
   giorniDaOggi,
   ordinaPerPeso,
   sommaCosti,
+  totalePerTipo,
 } from '@/lib/abbonamenti/formato';
 
 describe('sommaCosti', () => {
@@ -68,11 +69,18 @@ describe('giorniDaOggi', () => {
 describe('ordinaPerPeso', () => {
   it('mette per prima la classe che costa di piu’', () => {
     const righe = ordinaPerPeso([
-      { discrezionalita: 'utile', contesto: 'business', abbonamenti: 4, costo_mensile: '-18.24' },
       {
+        tipo: 'abbonamento',
+        discrezionalita: 'utile',
+        contesto: 'business',
+        ricorrenze: 4,
+        costo_mensile: '-18.24',
+      },
+      {
+        tipo: 'abbonamento',
         discrezionalita: 'voluttuario',
         contesto: 'personale',
-        abbonamenti: 2,
+        ricorrenze: 2,
         costo_mensile: '-187.00',
       },
     ]);
@@ -82,9 +90,56 @@ describe('ordinaPerPeso', () => {
 
   it('una riga senza costo vale zero e non rompe l’ordinamento', () => {
     const righe = ordinaPerPeso([
-      { discrezionalita: 'essenziale', contesto: 'personale', abbonamenti: 1, costo_mensile: null },
-      { discrezionalita: 'utile', contesto: 'business', abbonamenti: 1, costo_mensile: '-5.00' },
+      {
+        tipo: 'abitudine',
+        discrezionalita: 'essenziale',
+        contesto: 'personale',
+        ricorrenze: 1,
+        costo_mensile: null,
+      },
+      {
+        tipo: 'abbonamento',
+        discrezionalita: 'utile',
+        contesto: 'business',
+        ricorrenze: 1,
+        costo_mensile: '-5.00',
+      },
     ]);
     expect(righe.map((r) => r.discrezionalita)).toEqual(['utile', 'essenziale']);
+  });
+});
+
+describe('totalePerTipo — i due numeri non si sommano fra loro', () => {
+  const voci = ordinaPerPeso([
+    {
+      tipo: 'abbonamento',
+      discrezionalita: 'utile',
+      contesto: 'business',
+      ricorrenze: 2,
+      costo_mensile: '-110.76',
+    },
+    {
+      tipo: 'abbonamento',
+      discrezionalita: 'voluttuario',
+      contesto: 'personale',
+      ricorrenze: 1,
+      costo_mensile: '-6.99',
+    },
+    {
+      tipo: 'abitudine',
+      discrezionalita: 'essenziale',
+      contesto: 'personale',
+      ricorrenze: 1,
+      costo_mensile: '-47.08',
+    },
+  ]);
+
+  it('somma solo dentro il proprio tipo', () => {
+    expect(totalePerTipo(voci, 'abbonamento')).toBe(-11775n);
+    expect(totalePerTipo(voci, 'abitudine')).toBe(-4708n);
+  });
+
+  it('un tipo che non c’e’ vale zero, non NaN', () => {
+    expect(totalePerTipo(voci, 'inesistente')).toBe(0n);
   });
 });

@@ -384,7 +384,7 @@ export function PannelloBackfill({
       }
 
       aggiungi(
-        `${corpo['scritte']} ricorrenze scritte · ${corpo['attivi']} attive su ` +
+        `${corpo['scritte']} ricorrenze scritte · ${corpo['nellaMetrica']} nel numero su ` +
           `${corpo['totali']} rilevate`,
       );
 
@@ -396,8 +396,9 @@ export function PannelloBackfill({
         for (const v of metrica) {
           const r = v as Record<string, unknown>;
           aggiungi(
-            `    ${String(r['discrezionalita'])} / ${String(r['contesto'])}: ` +
-              `${String(r['costo_mensile'])} €/mese su ${String(r['abbonamenti'])} abbonamenti`,
+            `    [${String(r['tipo'])}] ${String(r['discrezionalita'])} / ` +
+              `${String(r['contesto'])}: ${String(r['costo_mensile'])} €/mese su ` +
+              `${String(r['ricorrenze'])} voci`,
           );
         }
       } else {
@@ -411,7 +412,7 @@ export function PannelloBackfill({
           const r = v as Record<string, unknown>;
           aggiungi(
             `    ${String(r['motivo'])}: ${String(r['esercenti'])} esercenti, ` +
-              `${String(r['costo_mensile_potenziale'])} €/mese potenziali`,
+              `${String(r['totale_speso'])} € spesi in tutto`,
           );
         }
       }

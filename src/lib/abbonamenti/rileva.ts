@@ -1,7 +1,13 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import type { RigaMetrica } from './formato';
+import { MESI_MINIMI } from './formato';
+import type { RigaAbbonamento, RigaEsclusa, RigaMetrica } from './formato';
+
+// Rilette dal modulo puro e riesportate: chi legge queste query trova i tipi
+// dove se li aspetta, senza che la schermata debba importare questo file.
+export type { RigaAbbonamento, RigaEsclusa } from './formato';
+export { MESI_MINIMI } from './formato';
 
 /**
  * Il lato applicativo della Fase 5.
@@ -18,31 +24,7 @@ import type { RigaMetrica } from './formato';
  * chiamera' il copilot.
  */
 
-export type RigaAbbonamento = {
-  id: string;
-  esercente: string;
-  categoria: string | null;
-  discrezionalita: string | null;
-  contesto: string | null;
-  cadence: string;
-  cadence_days: string | null;
-  expected_amount: string | null;
-  costo_mensile: string | null;
-  first_seen: string | null;
-  last_seen: string | null;
-  next_expected: string | null;
-  occurrences: number;
-  confidence: string | null;
-  status: string;
-  usage_verdict: string | null;
-  notes: string | null;
-};
 
-export type RigaEsclusa = {
-  motivo: string;
-  esercenti: number;
-  costo_mensile_potenziale: string | null;
-};
 
 /**
  * Le colonne `numeric` si chiedono **sempre** con `::text`.
@@ -52,13 +34,15 @@ export type RigaEsclusa = {
  * errore in Fase 4.
  */
 const COLONNE_ABBONAMENTO =
-  'id, esercente, categoria, discrezionalita, contesto, cadence, cadence_days::text, ' +
-  'expected_amount::text, costo_mensile::text, first_seen, last_seen, next_expected, ' +
-  'occurrences, confidence::text, status, usage_verdict, notes';
+  'id, esercente, categoria, discrezionalita, contesto, tipo, cadence, cadence_days::text, ' +
+  'expected_amount::text, typical_amount::text, total_amount::text, costo_mensile::text, ' +
+  'first_seen, last_seen, next_expected, occurrences, active_months, ' +
+  'confidence::text, amount_stability::text, status, usage_verdict, notes';
 
 export type EsitoRilevamento = {
   scritte: number;
-  attivi: number;
+  /** Quante righe entrano davvero nel numero, non quante ne esistono. */
+  nellaMetrica: number;
   totali: number;
   metrica: readonly RigaMetrica[];
   escluse: readonly RigaEsclusa[];
@@ -81,37 +65,38 @@ export async function rilevaAbbonamenti(minimoOccorrenze = 3): Promise<EsitoRile
     throw new Error(`Rilevamento fallito: ${error.message}`);
   }
 
-  const { metrica, escluse, attivi, totali } = await leggiRiepilogo();
-  return { scritte: Number(scritte ?? 0), attivi, totali, metrica, escluse };
+  const { metrica, escluse, nellaMetrica, totali } = await leggiRiepilogo();
+  return { scritte: Number(scritte ?? 0), nellaMetrica, totali, metrica, escluse };
 }
 
 export async function leggiRiepilogo(): Promise<{
   metrica: readonly RigaMetrica[];
   escluse: readonly RigaEsclusa[];
-  attivi: number;
+  nellaMetrica: number;
   totali: number;
 }> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: metrica }, { data: escluse }, { count: totali }, { count: attivi }] =
+  const [{ data: metrica }, { data: escluse }, { count: totali }, { count: nellaMetrica }] =
     await Promise.all([
       supabase
         .from('v_recurring_monthly_cost_by_discretion')
-        .select('discrezionalita, contesto, abbonamenti, costo_mensile::text'),
+        .select('tipo, discrezionalita, contesto, ricorrenze, costo_mensile::text'),
       supabase
         .from('v_ricorrenze_escluse')
-        .select('motivo, esercenti, costo_mensile_potenziale::text'),
+        .select('motivo, esercenti, costo_mensile_potenziale::text, totale_speso::text'),
       supabase.from('subscriptions').select('id', { count: 'exact', head: true }),
       supabase
-        .from('subscriptions')
+        .from('v_subscriptions')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'active'),
+        .eq('status', 'active')
+        .gte('active_months', MESI_MINIMI),
     ]);
 
   return {
     metrica: comeArray<RigaMetrica>(metrica),
     escluse: comeArray<RigaEsclusa>(escluse),
-    attivi: attivi ?? 0,
+    nellaMetrica: nellaMetrica ?? 0,
     totali: totali ?? 0,
   };
 }

@@ -28,8 +28,9 @@ export default async function AbbonamentiPage() {
         <h1 className="text-xl font-semibold tracking-tight">Costo ricorrente</h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
           Quanto costa al mese ci&ograve; che si ripete, diviso per classe di discrezionalit&agrave;.
-          Un canone settimanale e uno annuale sono riportati alla stessa unit&agrave; di misura, il
-          mese da 30,44 giorni.
+          In due numeri e non in uno: gli <strong>abbonamenti</strong> si disdicono, le{' '}
+          <strong>abitudini</strong> si cambiano, e sommarli nasconderebbe quale delle due azioni
+          &egrave; possibile.
         </p>
       </div>
 
@@ -37,7 +38,7 @@ export default async function AbbonamentiPage() {
         abbonamenti={abbonamenti}
         metrica={riepilogo.metrica}
         escluse={riepilogo.escluse}
-        attivi={riepilogo.attivi}
+        nellaMetrica={riepilogo.nellaMetrica}
         totali={riepilogo.totali}
         oggi={oggi}
       />
