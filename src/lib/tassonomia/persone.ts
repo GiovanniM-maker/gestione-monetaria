@@ -214,6 +214,23 @@ export function sembraAttivita(etichetta: string): boolean {
   return p.length === 1;
 }
 
+/**
+ * La chiave con cui si confrontano due nomi di esercente.
+ *
+ * Minuscole e senza spazi ai bordi, e nient'altro: in Fase 4 si è misurato che
+ * una normalizzazione aggressiva unisce esercenti distinti — `Comet Spa` e
+ * `Bruno Spa-modica` — e **fondere due esercenti è peggio che tenerne uno
+ * diviso in due**, perché il secondo si vede e si corregge mentre il primo
+ * produce un totale plausibile e sbagliato.
+ *
+ * Il vincolo `canonical_norm` garantisce che due esercenti non possano
+ * differire solo per maiuscole, quindi questa chiave non può far collidere due
+ * nomi diversi.
+ */
+export function chiaveNome(nome: string): string {
+  return nome.trim().toLowerCase();
+}
+
 export type EtichettaCandidata = {
   etichetta: string;
   /**

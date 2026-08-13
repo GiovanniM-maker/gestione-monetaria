@@ -2,6 +2,7 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { chiediAlModello, modelloInUso } from '@/lib/ai/modello';
+import { esercentiDaCarta } from '@/lib/tassonomia/garanzie';
 import { sanificaMetriche } from './sanifica';
 
 /**
@@ -30,8 +31,9 @@ REGOLE ASSOLUTE:
    disponibile.
 2. NON sommare, sottrarre, dividere o convertire. Nemmeno percentuali: se una percentuale non è
    nei dati, non scriverla.
-3. Dove compare "un privato" al posto di un nome, lascialo così: è una controparte che non va
-   nominata.
+3. "un privato" NON significa che il nome sia sconosciuto: significa che un filtro di riservatezza
+   l'ha tolto prima che tu lo vedessi. Lascialo così e non ipotizzare perché manchi — non è un
+   pagamento in contanti né un dato mancante: è nascosto apposta.
 4. Non inventare spiegazioni. Se non sai perché una spesa è salita, scrivi che è salita e basta.
    Una causa plausibile ma inventata è peggio di nessuna causa.
 5. Chiama il numero con il suo nome. "spesa_tipica" è una MEDIANA — un mese realmente osservato — e
@@ -75,7 +77,10 @@ export async function generaReport(primoDelMese: string): Promise<EsitoReport> {
   if (error !== null) throw new Error(`Metriche non calcolabili: ${error.message}`);
 
   // La regola 8 gira **prima** della chiamata. Dopo, il dato e' uscito.
-  const { metriche, anonimizzati } = sanificaMetriche(metricheGrezze);
+  // La garanzia della carta e' il primo termine del filtro della Fase 4, e
+  // senza di essa un ristorante con un nome di due parole diventava «un
+  // privato» anche nel report.
+  const { metriche, anonimizzati } = sanificaMetriche(metricheGrezze, await esercentiDaCarta());
 
   const risposta = await chiediAlModello({
     system: SISTEMA,

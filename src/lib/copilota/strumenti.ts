@@ -2,6 +2,7 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { sanificaMetriche } from '@/lib/report/sanifica';
+import { esercentiDaCarta } from '@/lib/tassonomia/garanzie';
 import type { StrumentoDichiarato } from '@/lib/ai/modello';
 import type { Proposta } from './messaggi';
 
@@ -129,9 +130,17 @@ function fraQuesti<T extends string>(
   return t as T;
 }
 
-/** Ultimo passaggio prima che i dati lascino il server: la regola 8. */
-function fuori(dati: unknown): EsitoStrumento {
-  return { dati: sanificaMetriche(dati).metriche };
+/**
+ * Ultimo passaggio prima che i dati lascino il server: la regola 8.
+ *
+ * La garanzia della carta si rilegge a ogni chiamata invece di tenerla in
+ * memoria. È una query su un centinaio di righe contro una chiamata a un
+ * modello: il costo non si misura. Una cache la renderebbe invece **stantia**
+ * proprio quando serve — l'esercente creato dieci secondi fa da una proposta
+ * appena applicata è esattamente quello di cui si sta parlando.
+ */
+async function fuori(dati: unknown): Promise<EsitoStrumento> {
+  return { dati: sanificaMetriche(dati, await esercentiDaCarta()).metriche };
 }
 
 // ---------------------------------------------------------------------------

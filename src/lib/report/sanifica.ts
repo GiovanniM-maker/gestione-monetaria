@@ -32,9 +32,27 @@
  * Chi non passa non viene **tolto**: viene sostituito con «un privato». Il
  * numero resta, il racconto resta possibile — «un bonifico a un privato di
  * 500 €» — e sparisce solo ciò che non deve uscire.
+ *
+ * ---------------------------------------------------------------------------
+ * L'altra metà della regola, che qui mancava
+ * ---------------------------------------------------------------------------
+ * Il filtro della Fase 4 è `soloCarta || sembraAttivita`, e questo modulo
+ * applicava solo il secondo termine — perché gli aggregati non portano il
+ * metodo di pagamento. Il risultato, misurato in uso: cinque ristoranti su sei
+ * anonimizzati, e la domanda «dove ho speso 179 €?» senza risposta.
+ *
+ * `sembraAttivita` è un'inferenza sulla forma del nome, e `Bella Napoli` non la supera: due parole, nessuna cifra, nessuna forma societaria.
+ * La garanzia della carta non è un'inferenza — con la carta si paga in un
+ * negozio, non a un amico — ed è per questo che nel filtro originale viene
+ * prima.
+ *
+ * Ora chi chiama può passarla: `garantiti` è l'insieme dei nomi (in forma
+ * `chiaveNome`) per cui **ogni** movimento è un pagamento con carta, letto da
+ * `v_esercenti_da_carta`. Omesso, resta solo `sembraAttivita`, che trattiene di
+ * più: l'assenza di evidenza non diventa mai un permesso.
  */
 
-import { sembraAttivita } from '@/lib/tassonomia/persone';
+import { chiaveNome, sembraAttivita } from '@/lib/tassonomia/persone';
 
 /** Come compare nel report un esercente che non può essere nominato. */
 export const ANONIMO = 'un privato';
@@ -53,7 +71,18 @@ export type Sanificazione = {
  * di percorsi da ripulire andrebbe aggiornato a mano — e il giorno in cui
  * qualcuno se ne dimentica è il giorno della fuga.
  */
-export function sanificaMetriche(metriche: unknown): Sanificazione {
+export function sanificaMetriche(
+  metriche: unknown,
+  /**
+   * I nomi che i dati garantiscono essere esercenti, in forma `chiaveNome`.
+   *
+   * Omesso di proposito nel valore predefinito: senza evidenza si applica solo
+   * `sembraAttivita`, che trattiene di più. Una firma che *richiedesse*
+   * l'insieme costringerebbe ogni chiamante a procurarselo, e il primo che non
+   * potesse sarebbe tentato di passarne uno finto.
+   */
+  garantiti: ReadonlySet<string> = new Set(),
+): Sanificazione {
   let anonimizzati = 0;
 
   const cammina = (valore: unknown): unknown => {
@@ -63,7 +92,9 @@ export function sanificaMetriche(metriche: unknown): Sanificazione {
     const risultato: Record<string, unknown> = {};
     for (const [chiave, contenuto] of Object.entries(valore as Record<string, unknown>)) {
       if (CHIAVI_CON_NOMI.includes(chiave) && typeof contenuto === 'string') {
-        if (sembraAttivita(contenuto)) {
+        // L'ordine è quello del filtro originale: prima la garanzia che viene
+        // dai dati, poi l'inferenza sul nome.
+        if (garantiti.has(chiaveNome(contenuto)) || sembraAttivita(contenuto)) {
           risultato[chiave] = contenuto;
         } else {
           risultato[chiave] = ANONIMO;

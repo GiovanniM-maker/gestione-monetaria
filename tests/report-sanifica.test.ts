@@ -75,3 +75,57 @@ describe('sanificaMetriche', () => {
     expect(metriche).toEqual({ a: { b: { c: [{ esercente: ANONIMO }] } } });
   });
 });
+
+describe('la garanzia della carta, secondo termine del filtro', () => {
+  /**
+   * `soloCarta || sembraAttivita`. Il primo termine si era perso a valle, e il
+   * copilot rispondeva «un privato» su cinque ristoranti su sei — in una
+   * categoria dove dall'altra parte c'è un esercente per costruzione.
+   */
+  const garantiti = new Set(['bella napoli']);
+
+  it('lascia passare un nome che sembra una persona ma è garantito dai dati', () => {
+    const { metriche, anonimizzati } = sanificaMetriche(
+      { esercenti: [{ esercente: 'Bella Napoli', spesa: '-179.09' }] },
+      garantiti,
+    );
+    expect(metriche).toEqual({
+      esercenti: [{ esercente: 'Bella Napoli', spesa: '-179.09' }],
+    });
+    expect(anonimizzati).toBe(0);
+  });
+
+  it('senza la garanzia lo stesso nome resta dentro', () => {
+    // È il comportamento di prima, ed è quello giusto quando l'evidenza manca:
+    // l'assenza di prova non diventa un permesso.
+    const { metriche, anonimizzati } = sanificaMetriche({
+      esercenti: [{ esercente: 'Bella Napoli', spesa: '-179.09' }],
+    });
+    expect(metriche).toEqual({ esercenti: [{ esercente: ANONIMO, spesa: '-179.09' }] });
+    expect(anonimizzati).toBe(1);
+  });
+
+  it('la garanzia vale per quel nome e non per gli altri', () => {
+    const { metriche, anonimizzati } = sanificaMetriche(
+      {
+        esercenti: [
+          { esercente: 'Bella Napoli' },
+          { esercente: 'Massimiliano De Jesus Sarta Naccarata' },
+        ],
+      },
+      garantiti,
+    );
+    expect(metriche).toEqual({
+      esercenti: [{ esercente: 'Bella Napoli' }, { esercente: ANONIMO }],
+    });
+    expect(anonimizzati).toBe(1);
+  });
+
+  it('confronta senza badare alle maiuscole né agli spazi ai bordi', () => {
+    const { anonimizzati } = sanificaMetriche(
+      { esercenti: [{ esercente: '  BELLA Napoli ' }] },
+      garantiti,
+    );
+    expect(anonimizzati).toBe(0);
+  });
+});
