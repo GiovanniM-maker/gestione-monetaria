@@ -844,6 +844,27 @@ che nessun mese ha mai avuto.
 Due caffè uguali nello stesso giorno sono normali, due addebiti da 40 € no. Senza i 15 € di soglia
 questo avviso sarebbe solo rumore.
 
+#### «Nuovo per noi» non vuol dire «nuovo nel mondo»
+
+Il difetto peggiore della 0023, trovato al primo giro vero: **53 avvisi in una volta.**
+
+`new_subscription` scattava su `subscriptions.created_at`, cioè su quando la *nostra tabella* ha
+imparato che quella ricorrenza esiste. Ma la tabella era nata due giorni prima: ogni abbonamento
+risultava nuovo, Netflix compreso, che si paga da undici mesi.
+
+Non è un caso limite, è una confusione fra due date: quella in cui un costo è comparso **nel
+mondo** (`first_seen`) e quella in cui l'applicazione **se n'è accorta** (`created_at`). Servono
+entrambe in congiunzione. Da sola, la seconda trasforma la prima esecuzione di qualunque rilevatore
+in un'inondazione — e un'inondazione al primo giro insegna nella prima sessione che quel canale si
+ignora, che è esattamente ciò che la 0023 dichiarava di voler evitare.
+
+Vale come regola generale: **ogni rilevatore che guarda "da quando lo sappiamo" va provato
+immaginando la sua prima esecuzione.**
+
+Stessa correzione sul doppio addebito, per la stessa ragione: la finestra è scesa da 60 a 14 giorni.
+Un addebito doppio si contesta alla banca entro pochi giorni, e sessanta giorni di storico al primo
+giro escono tutti insieme.
+
 #### Consenso e sync non si mostrano due volte
 
 Il cruscotto ha già la riga di stato del sistema. Gli stessi due tipi restano avvisi a tutti gli

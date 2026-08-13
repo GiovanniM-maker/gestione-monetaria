@@ -20,6 +20,16 @@ import type { AccountRow } from '@/lib/db/types';
 
 export type EsitoNormalizzazione = {
   esaminate: number;
+  /**
+   * Movimenti distinti ottenuti dalle righe grezze esaminate.
+   *
+   * Puo' essere minore di `esaminate` senza che niente sia andato perso: la
+   * stessa transazione viene riletta quando passa da `pending` a `booked`, e
+   * le due righe grezze collassano su un movimento solo. Senza questo numero
+   * la differenza sembra una perdita — e' successo, e mi ha portato a
+   * dichiarare "quattro righe scartate" quando le scartate erano zero.
+   */
+  distinti: number;
   girocontiStrutturali: number;
   inserite: number;
   aggiornate: number;
@@ -243,6 +253,7 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
 
   return {
     esaminate,
+    distinti: migliori.size,
     girocontiStrutturali,
     inserite,
     aggiornate,

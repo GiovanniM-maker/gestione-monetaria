@@ -465,7 +465,8 @@ export function PannelloBackfill({
         // diventa un movimento e sparisce senza dirlo e' esattamente il tipo
         // di perdita silenziosa che le regole di questo progetto vietano.
         aggiungi(
-          `Normalizzazione: ${String(n['esaminate'])} esaminate \u00b7 ${String(n['inserite'])} inserite \u00b7 ` +
+          `Normalizzazione: ${String(n['esaminate'])} righe grezze \u2192 ${String(n['distinti'])} movimenti distinti \u00b7 ` +
+            `${String(n['inserite'])} inserite \u00b7 ` +
             `${String(n['aggiornate'])} aggiornate \u00b7 ${String(n['protette'])} protette \u00b7 ` +
             `${String(n['scartate'])} scartate \u00b7 ${String(n['girocontiSpeculari'])} giroconti speculari`,
         );
@@ -487,9 +488,14 @@ export function PannelloBackfill({
             `${scoperte} scoperte`,
         );
         if (scoperte > 0) {
+          // Il messaggio precedente diceva che il cron non chiama il modello.
+          // Da quando lo chiama e' diventato falso, e un resoconto che spiega
+          // male e' peggio di uno che tace: manda a cercare la causa nel posto
+          // sbagliato.
           aggiungi(
-            `  \u26a0 Le spese scoperte non si classificano da sole: il cron non chiama il ` +
-              `modello. Servono il bottone 5 o un'assegnazione da /revisione.`,
+            `  \u26a0 Cosa resta scoperto lo dice la riga sotto: se le "trattenute" sono la ` +
+              `maggioranza, sono nomi di persona che la regola 8 non manda a un modello, e si ` +
+              `assegnano solo a mano da /revisione.`,
           );
         }
       }
