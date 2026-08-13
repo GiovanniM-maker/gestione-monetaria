@@ -648,6 +648,14 @@ export function PannelloBackfill({
         );
       }
 
+      const ric = corpo['ricerca'] as Record<string, unknown> | null;
+      if (ric !== null && ric !== undefined) {
+        aggiungi(
+          `Ricerca sul mondo: ${String(ric['esaminati'])} esaminati \u00b7 ` +
+            `${String(ric['trovati'])} trovati \u00b7 ${String(ric['rimasti'])} rimasti`,
+        );
+      }
+
       const r = corpo['ricorrenze'] as Record<string, unknown> | null;
       if (r !== null && r !== undefined) {
         aggiungi(

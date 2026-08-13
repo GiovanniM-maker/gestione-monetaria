@@ -63,19 +63,33 @@ const LIMITE_TESTO = 600;
 const PAUSA_MS = 1_100;
 
 /**
- * Quanto puo' durare una fetta.
+ * Quanto puo' durare una fetta chiamata da un browser.
  *
- * Non e' il tetto della funzione, e' molto piu' corto: **la risposta deve
- * tornare al browser**. Con 90 secondi di budget il primo giro vero ha cercato
- * e salvato 56 esercenti, poi la risposta non e' arrivata e il browser ha detto
- * «Load failed» — il lavoro c'era, il resoconto no. E un'operazione di cui non
- * si vede l'esito e' un'operazione di cui non ci si fida.
+ * Misurato due volte sul campo, e la lezione e' la stessa: **una richiesta che
+ * resta muta per decine di secondi non torna.** Con 90 secondi di budget sono
+ * stati cercati e salvati 56 esercenti e poi «Load failed»; con 40 ne sono
+ * stati salvati altri 23, ultimo alle 16:18:55, di nuovo «Load failed». La
+ * fetta si fermava quando doveva — il budget funzionava — ma qualcuno fra il
+ * browser e la funzione chiudeva la connessione prima della risposta.
  *
- * Quaranta secondi sono una fetta che torna sempre. A cicliare e' il browser,
- * come gia' fa col backfill: e' lo stesso schema, e non c'era ragione di
- * inventarne un altro.
+ * Il lavoro non si perdeva mai, perche' ogni esercente si salva appena trovato.
+ * Si perdeva il resoconto, e un'operazione di cui non si vede l'esito e'
+ * un'operazione di cui non ci si fida.
+ *
+ * Quindici secondi sono una fetta che torna. A ciclare e' il browser, e paga
+ * qualche viaggio in piu' per non perdere piu' nessuna risposta.
  */
-const BUDGET_MS = 40_000;
+const BUDGET_MS = 15_000;
+
+/**
+ * Quanto puo' durare quando la chiama il cron.
+ *
+ * Nessun browser da tenere in linea: il limite e' la durata della funzione, e
+ * il ciclo puo' essere lungo quanto serve. E' la stessa distinzione della
+ * Fase 7 — «un cron non ha un browser: il ciclo sta nel server e si ferma da
+ * solo per budget».
+ */
+const BUDGET_CRON_MS = 120_000;
 
 /** Quante volte riprovare dopo un 429 prima di arrendersi. */
 const RITENTATIVI = 2;
@@ -224,7 +238,10 @@ export type EsitoArricchimento = {
  * rilancia finché `rimasti` è zero — lo stesso schema del backfill e delle
  * proposte, che è già il modo in cui questa applicazione fa le cose lunghe.
  */
-export async function arricchisciEsercenti(limite = 80): Promise<EsitoArricchimento> {
+export async function arricchisciEsercenti(
+  limite = 80,
+  budgetMs: number = BUDGET_MS,
+): Promise<EsitoArricchimento> {
   const supabase = await createSupabaseServerClient();
   const esito: EsitoArricchimento = {
     esaminati: 0,
@@ -235,7 +252,7 @@ export async function arricchisciEsercenti(limite = 80): Promise<EsitoArricchime
     errore: null,
   };
 
-  const scadenza = Date.now() + BUDGET_MS;
+  const scadenza = Date.now() + budgetMs;
 
   const { data, error } = await supabase
     .from('v_esercenti_da_cercare')
@@ -315,3 +332,6 @@ async function conRitentativi<T>(azione: () => Promise<T>): Promise<T> {
     }
   }
 }
+
+/** Il budget lungo, per chi non ha un browser che aspetta. */
+export const BUDGET_SENZA_BROWSER = BUDGET_CRON_MS;

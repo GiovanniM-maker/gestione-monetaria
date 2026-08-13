@@ -5,6 +5,12 @@ import { creaBackfill, eseguiFettaBackfill } from './backfill';
 import { normalizzaTutto, type EsitoNormalizzazione } from '@/lib/normalize/run';
 import { applicaTassonomia } from '@/lib/tassonomia/applica';
 import { proponiClassificazioni } from '@/lib/tassonomia/proposte';
+import {
+  arricchisciEsercenti,
+  ricercaConfigurata,
+  BUDGET_SENZA_BROWSER,
+  type EsitoArricchimento,
+} from '@/lib/tassonomia/ricerca';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
 import { generaAvvisi } from '@/lib/avvisi/leggi';
 import type { AccountRow, BankConnectionRow } from '@/lib/db/types';
@@ -71,6 +77,7 @@ export type EsitoQuotidiano = {
   avvisi: readonly string[];
   normalizzazione: EsitoNormalizzazione | null;
   categorizzazione: { speseAbbinate: number; speseEsaminate: number } | null;
+  ricerca: EsitoArricchimento | null;
   proposte: {
     inviate: number;
     proposte: number;
@@ -97,6 +104,7 @@ function vuoto(): EsitoQuotidiano {
     avvisi: [],
     normalizzazione: null,
     categorizzazione: null,
+    ricerca: null,
     proposte: null,
     ricorrenze: null,
     avvisiCreati: null,
@@ -232,6 +240,28 @@ export async function eseguiSincronizzazioneQuotidiana(): Promise<EsitoQuotidian
   try {
     esito.normalizzazione = await normalizzaTutto();
     await applicaTassonomia();
+
+    // Prima di chiedere al modello di indovinare, si va a vedere cosa dice il
+    // mondo. E' l'ordine che conta: la ricerca serve ad arricchire il contesto
+    // della proposta, non a correggerla dopo.
+    //
+    // Qui il ciclo puo' essere lungo — nessun browser da tenere in linea — ed
+    // e' il posto naturale per smaltire un arretrato: a un secondo per
+    // esercente, duecento nomi sono qualche notte, senza che nessuno guardi.
+    // Se la chiave non c'e', si salta in silenzio: la classificazione continua
+    // a funzionare, solo peggio.
+    if (ricercaConfigurata()) {
+      try {
+        esito.ricerca = await arricchisciEsercenti(200, BUDGET_SENZA_BROWSER);
+      } catch (errore) {
+        // Una ricerca fallita non deve fermare la sequenza: e' un
+        // miglioramento della classificazione, non un suo presupposto.
+        esito.avvisi = [
+          ...esito.avvisi,
+          `Ricerca sul mondo fallita: ${errore instanceof Error ? errore.message : String(errore)}`,
+        ];
+      }
+    }
 
     // Le proposte del modello per gli esercenti mai visti.
     //
