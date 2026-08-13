@@ -433,6 +433,54 @@ export function PannelloBackfill({
     }
   }
 
+  async function riclassifica() {
+    setInCorso(true);
+    aggiungi('Riclassificazione con le descrizioni trovate\u2026');
+    try {
+      const risposta = await fetchConAttesa('/api/admin/riclassifica', 120);
+      const corpo = await leggiRisposta(risposta);
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+        return;
+      }
+
+      aggiungi(
+        `${String(corpo['inviati'])} inviati \u00b7 ${String(corpo['cambiati'])} cambiati \u00b7 ` +
+          `${String(corpo['invariati'])} confermati \u00b7 ${String(corpo['scartati'])} scartati \u00b7 ` +
+          `${String(corpo['rimasti'])} rimasti`,
+      );
+
+      // Cosa e' cambiato davvero, con il perche'. Un conteggio senza le righe
+      // non permette di capire se la riclassificazione ha migliorato o rovinato
+      // — ed e' il momento in cui va guardato, non dopo.
+      const cambi = corpo['cambi'];
+      if (Array.isArray(cambi) && cambi.length > 0) {
+        aggiungi('  COSA E’ CAMBIATO:');
+        for (const v of cambi) {
+          const c = v as Record<string, unknown>;
+          aggiungi(`    ${String(c['esercente'])}: ${String(c['da'])} \u2192 ${String(c['a'])}`);
+          if (String(c['motivo'] ?? '') !== '') aggiungi(`      ${String(c['motivo'])}`);
+        }
+      }
+
+      if (Number(corpo['saltati'] ?? 0) > 0) {
+        aggiungi(
+          `  ${String(corpo['saltati'])} saltati: confermati da te mentre chiedevo, e non si toccano.`,
+        );
+      }
+
+      const errori = corpo['errori'];
+      if (Array.isArray(errori) && errori.length > 0) {
+        for (const e of errori) aggiungi(`  ${String(e)}`);
+      }
+      if (Number(corpo['rimasti'] ?? 0) > 0) aggiungi('  Rilancia per la fetta successiva.');
+    } catch (e) {
+      aggiungi(`Errore: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   async function rilevaAbbonamenti() {
     setInCorso(true);
     aggiungi('Rilevamento delle ricorrenze…');
@@ -662,6 +710,9 @@ export function PannelloBackfill({
         </button>
         <button type="button" onClick={cercaSulMondo} disabled={inCorso} className={stileBottone}>
           5 · Cerca sul mondo
+        </button>
+        <button type="button" onClick={riclassifica} disabled={inCorso} className={stileBottone}>
+          5-bis · Riclassifica
         </button>
         <button type="button" onClick={proponi} disabled={inCorso} className={stileBottone}>
           6 · Proponi con l&rsquo;AI
