@@ -544,17 +544,45 @@ Nessuna di queste blocca l'inizio, ma tutte cambiano il risultato.
 Ogni riga è indipendente dalle successive e lascia l'app in uno stato migliore. Il criterio non è la
 difficoltà: è **quanta della prossima cosa dipende da questa**.
 
-| #   | Cosa                                                                             | Perché prima                                            |
-| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 1   | **Accesso al DB in sviluppo**                                                    | Ogni verifica successiva costa un quarto                |
-| 2   | **Ricerca del mondo reale** nella classificazione                                | La qualità di tutto il resto dipende da qui             |
-| 3   | **Le variazioni in SQL** (per classe, categoria, esercente, a finestra omogenea) | Il cruscotto nuovo non esiste senza                     |
-| 4   | **Il cruscotto**: numerone, barra, ciambella, discesa, correzione a ogni livello | È la schermata che si apre                              |
-| 5   | **Notifiche e 4 sincronizzazioni**                                               | Chiude il ciclo di conferma                             |
-| 6   | **Spiegazioni** e avvisi di buon senso                                           | Rende comprensibile il passato                          |
-| 7   | **Consigli ricercati** nel copilota                                              | Il più rischioso: per ultimo, quando le difese esistono |
-| 8   | **Chat multiple, scadenza, segnalibro**                                          | Indipendente, si può infilare ovunque                   |
+| #   | Cosa                                                                             | Perché prima                                            | Stato       |
+| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------- |
+| 1   | **Accesso al DB in sviluppo**                                                    | Ogni verifica successiva costa un quarto                | **fatto**   |
+| 2   | **Ricerca del mondo reale** nella classificazione                                | La qualità di tutto il resto dipende da qui             | **fatto**   |
+| 3   | **Le variazioni in SQL** (per classe, categoria, esercente, a finestra omogenea) | Il cruscotto nuovo non esiste senza                     | **fatto**   |
+| 4   | **Il cruscotto**: numerone, barra, ciambella, discesa, correzione a ogni livello | È la schermata che si apre                              | il prossimo |
+| 5   | **Notifiche e 4 sincronizzazioni**                                               | Chiude il ciclo di conferma                             |             |
+| 6   | **Spiegazioni** e avvisi di buon senso                                           | Rende comprensibile il passato                          |             |
+| 7   | **Consigli ricercati** nel copilota                                              | Il più rischioso: per ultimo, quando le difese esistono |             |
+| 8   | **Chat multiple, scadenza, segnalibro**                                          | Indipendente, si può infilare ovunque                   |             |
 
 **Il punto 2 prima del 4** è la scelta che conta. Un cruscotto bellissimo su una classificazione che
 mette un negozio di elettronica in `casa/essenziale` è un modo elegante di guardare un numero
 sbagliato — e questa applicazione esiste per il motivo opposto.
+
+### Cosa ha prodotto il punto 3
+
+`0035_le_variazioni.sql`: `variazioni_per_classe`, `variazioni_per_categoria`,
+`variazioni_per_esercente`, più `v_albero_categorie` — la ricorsione sull'albero estratta dal corpo
+di `v_monthly_by_category`, che ora la consuma invece di tenerne una copia propria.
+
+Tre regole, incise nelle funzioni e non nelle schermate che le useranno:
+
+1. **il mese in corso si confronta sugli stessi giorni** — il 13 del mese, i primi 13 giorni contro i
+   primi 13 dei mesi prima. Provato sui dati finti: un addebito del giorno 20 nei mesi precedenti
+   non entra nel termine di paragone quando si chiede il mese in corso, e ci rientra quando si
+   chiede un mese chiuso;
+2. **il riferimento è la mediana scelta**, `percentile_disc` — un mese realmente osservato. Si chiama
+   «il mese tipico», mai «la media»: è la parola che in Fase 9 ha reso falsa una frase con un numero
+   giusto;
+3. **il segno è sulla spesa**, quindi si confrontano i valori assoluti. Le uscite sono negative:
+   spendere 600 dove il tipico è 500 dà una differenza fra i due numeri *negativa* ed è un
+   **aumento**. Sbagliarlo produce frecce rovesciate, cioè il guasto più imbarazzante possibile su
+   un cruscotto — ed è per questo che il caso `+20% / su` è la prima cosa che il collaudo verifica.
+
+Due scelte minori che si vedranno nella schermata: sotto il ±5% l'andamento è `stabile`, perché una
+freccia che si muove sempre smette di significare qualcosa; e `nuovo` non è `su`, perché una
+categoria che il mese prima non esisteva non è aumentata dell'infinito per cento.
+
+Classe e categoria usano una **full join** fra il mese corrente e i precedenti — una classe sparita è
+informazione, e compare a `0 €` con `−100%`. Gli esercenti no: uno che questo mese non c'è, fra
+centosessanta, è rumore.
