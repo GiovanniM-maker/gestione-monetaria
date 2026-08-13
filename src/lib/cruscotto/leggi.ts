@@ -11,6 +11,7 @@ import {
   type RigaPeriodo,
 } from './confronto';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
+import { quanteDaConfermare } from '@/lib/conferma/leggi';
 import type { RigaMetrica } from '@/lib/abbonamenti/formato';
 
 /**
@@ -84,6 +85,8 @@ export type Cruscotto = {
   /** Le entrate del mese, come denominatore. Non cambiano la metrica principale. */
   entrate: RigaEntrate | null;
   stato: readonly RigaStato[];
+  /** Quanti movimenti aspettano una conferma. Zero = niente da fare. */
+  daConfermare: number;
   /**
    * Il confronto sui giorni davvero coperti, presente solo quando il mese e'
    * incompleto. Quando il mese e' finito non serve: si confronta per intero.
@@ -140,6 +143,8 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
       leggiStatoSistema(),
     ]);
 
+  const daConfermare = await quanteDaConfermare();
+
   // Fino a che giorno arrivano i dati di questo mese. Serve a confrontare
   // finestre della stessa lunghezza invece di undici giorni contro trentuno.
   const giorniCoperti = giornoDelMese(await ultimoGiornoConDati(mese));
@@ -160,6 +165,7 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     ricorrente,
     entrate,
     stato,
+    daConfermare,
     confronto,
     giorniCoperti,
   };

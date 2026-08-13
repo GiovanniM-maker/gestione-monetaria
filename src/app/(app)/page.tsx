@@ -70,6 +70,7 @@ export default async function CruscottoPage({
     ricorrente,
     entrate,
     stato,
+    daConfermare,
     confronto,
     giorniCoperti,
   } = dati;
@@ -116,6 +117,21 @@ export default async function CruscottoPage({
       {stato.map((s) => (
         <StatoSistema key={s.connection_id} riga={s} />
       ))}
+
+      {/* Cosa richiede un gesto. Con il conteggio e non con un pallino: un
+          numero e' un invito, un pallino rosso e' un'ansia. */}
+      {daConfermare > 0 && (
+        <Link
+          href="/da-confermare"
+          className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700"
+        >
+          <span>
+            <strong>{daConfermare}</strong>{' '}
+            {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da confermare
+          </span>
+          <span className="shrink-0 text-neutral-500">→</span>
+        </Link>
+      )}
 
       {/* ---------------------------------------------------------------- */}
       {/* IL MESE                                                          */}

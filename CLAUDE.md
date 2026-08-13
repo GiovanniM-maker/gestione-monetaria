@@ -51,6 +51,32 @@ Da riaprire **solo** se si collega Intesa e serve il suo storico pregresso.
 Non sono lavoro pianificato. Stanno qui perché il momento in cui vengono in mente non è il
 momento in cui vanno fatte, e perché dimenticarle costa più che scriverle.
 
+### ~~L'intento dell'acquisto non sta sull'esercente~~ — **fatta**, `/da-confermare`
+
+Realizzata dopo la Fase 7, quando esistevano tutti i presupposti: la lista movimenti, il lavoro
+schedulato che li raccoglie, e le proposte del modello. Il testo sotto resta perché spiega
+*perché* la schermata è fatta così.
+
+**Le due azioni non sono la stessa cosa con un parametro diverso.** «Va bene» lascia la riga
+agganciata al suo esercente e **non** marca `manually_categorized`: l'utente ha approvato una
+regola, non inciso un valore, e se domani la classificazione dell'esercente cambia questa la segue.
+«Correggi» dice che questa riga fa eccezione, e lì `manually_categorized` va messo — è il computer
+da Euronics, ed è esattamente ciò che protegge la riga da ogni sovrascrittura automatica.
+
+**Lo storico nasce confermato.** Senza quell'`update` nella 0022 la schermata si sarebbe aperta su
+1.323 arretrati, e una lista di arretrati non si smaltisce: si chiude.
+
+**Le `pending` non compaiono.** Possono cambiare importo o sparire: confermarle adesso vorrebbe
+dire riconfermarle dopo, o lasciare una conferma su un dato che non esiste più.
+
+**Notifica push: non fatta, e non per dimenticanza.** Si è scelta la schermata, da usare per
+qualche settimana. Se il problema si rivelerà «me ne dimentico», allora la notifica risolverà un
+bisogno misurato invece che ipotizzato — lo stesso criterio con cui sono state rimandate le
+correzioni sulla scheda movimento.
+
+<details>
+<summary>Il ragionamento originale, scritto prima di costruirla</summary>
+
 ### L'intento dell'acquisto non sta sull'esercente — chiedere a fine giornata
 
 `discretion` vive sul merchant e si propaga a tutte le sue transazioni. È la scelta che rende
@@ -80,6 +106,8 @@ Da collocare fra la Fase 6 (dashboard) e la Fase 7 (automazione): serve una sche
 e un lavoro schedulato che li raccolga. Se la proposta la scrive un LLM, vale la regola 8: nome
 merchant normalizzato, importo, data, categoria — mai la descrizione grezza, mai le controparti dei
 bonifici privati.
+
+</details>
 
 ---
 
@@ -747,6 +775,21 @@ ai dati grezzi già presenti: un disallineamento gratuito, e per giunta invisibi
 Lo scheduler non sa reagire a un 500 se non ritentando, e ritentare uno scarico fatto a metà non
 aiuta — il cursore è salvato e il giro dopo riprende da solo. Il resoconto dice *quanto* è stato
 fatto prima di fermarsi, che è l'informazione utile; lo stato duraturo sta comunque in `sync_runs`.
+
+#### Il cron chiama il modello, ma solo per gli esercenti mai visti
+
+Senza, la copertura scende ogni notte in silenzio: i movimenti nuovi arrivano, un esercente
+sconosciuto non ha nessun alias che lo abbini, e resta scoperto. **Il numero delle classificate
+resta identico mentre il totale cresce** — misurato al primo giro vero: 1.294 su 1.318 è diventato
+1.294 su 1.323, e 1.294 sembra un numero stabile. Il resoconto ora stampa la percentuale.
+
+Dopo le proposte la tassonomia si riapplica: gli esercenti e gli alias appena creati resterebbero
+altrimenti scritti e inutilizzati fino al giorno dopo.
+
+Il ciclo si ferma quando non resta niente, quando il modello **non fa progressi** — senza quel
+freno un lotto che fallisce sempre verrebbe richiamato all'infinito sulle stesse etichette, pagando
+ogni volta — o dopo quattro fette. L'ultimo non è un tetto di spesa deciso al posto dell'utente: è
+la protezione contro un ciclo a vuoto, e quante etichette restano viene riportato.
 
 #### Il bottone 7 non è un doppione della schedulazione
 

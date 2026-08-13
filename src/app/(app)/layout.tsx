@@ -28,7 +28,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                  sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
     >
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-neutral-200 py-3 dark:border-neutral-800 sm:py-4">
-        <Link href="/" className="inline-flex min-h-11 items-center font-semibold tracking-tight sm:min-h-0">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center font-semibold tracking-tight sm:min-h-0"
+        >
           Gestione monetaria
         </Link>
 
@@ -37,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             al suo posto, fra il titolo e l'utente. */}
         <nav className="order-last -ml-2 flex w-full gap-1 overflow-x-auto text-sm sm:order-none sm:ml-0 sm:w-auto sm:gap-4">
           <Voce href="/">Cruscotto</Voce>
+          <Voce href="/da-confermare">Da confermare</Voce>
           <Voce href="/movimenti">Movimenti</Voce>
           <Voce href="/abbonamenti">Ricorrente</Voce>
           <Voce href="/revisione">Revisione</Voce>

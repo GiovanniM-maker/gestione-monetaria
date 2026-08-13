@@ -4,6 +4,7 @@ import { comeArray } from '@/lib/enablebanking/redact';
 import { creaBackfill, eseguiFettaBackfill } from './backfill';
 import { normalizzaTutto, type EsitoNormalizzazione } from '@/lib/normalize/run';
 import { applicaTassonomia } from '@/lib/tassonomia/applica';
+import { proponiClassificazioni } from '@/lib/tassonomia/proposte';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
 import type { AccountRow, BankConnectionRow } from '@/lib/db/types';
 
@@ -45,6 +46,18 @@ const BUDGET_CICLO_MS = 150_000;
 /** Budget di una singola fetta dentro il ciclo. */
 const BUDGET_FETTA_MS = 60_000;
 
+/**
+ * Quante fette di proposte AI al massimo per giro.
+ *
+ * Non e' un tetto di spesa deciso al posto dell'utente: e' la protezione
+ * contro un ciclo che gira a vuoto. Con 15 etichette per fetta sono 60
+ * esercenti nuovi a notte, molti piu' di quanti ne arrivino davvero — e se una
+ * volta ne arrivassero di piu' (un conto nuovo collegato, un import), il resto
+ * aspetta il giro dopo invece che moltiplicare le chiamate in una notte sola.
+ * Quante ne restano viene riportato, non ingoiato.
+ */
+const FETTE_AI_MASSIME = 4;
+
 export type EsitoQuotidiano = {
   /** Valorizzato quando non si e' fatto niente, con il motivo. */
   saltata: string | null;
@@ -57,6 +70,14 @@ export type EsitoQuotidiano = {
   avvisi: readonly string[];
   normalizzazione: EsitoNormalizzazione | null;
   categorizzazione: { speseAbbinate: number; speseEsaminate: number } | null;
+  proposte: {
+    inviate: number;
+    proposte: number;
+    scartate: number;
+    trattenute: number;
+    rimaste: number;
+    costo: number;
+  } | null;
   ricorrenze: EsitoRilevamento | null;
   errore: string | null;
   durataMs: number;
@@ -74,6 +95,7 @@ function vuoto(): EsitoQuotidiano {
     avvisi: [],
     normalizzazione: null,
     categorizzazione: null,
+    proposte: null,
     ricorrenze: null,
     errore: null,
     durataMs: 0,
@@ -206,7 +228,24 @@ export async function eseguiSincronizzazioneQuotidiana(): Promise<EsitoQuotidian
   // disallineamento gratuito — e per giunta invisibile.
   try {
     esito.normalizzazione = await normalizzaTutto();
+    await applicaTassonomia();
 
+    // Le proposte del modello per gli esercenti mai visti.
+    //
+    // Senza questo passo la copertura scende ogni notte: i movimenti nuovi
+    // arrivano, ma un esercente sconosciuto non ha nessun alias che lo
+    // abbini, e resta scoperto finche' qualcuno non se ne accorge. Nessuno se
+    // ne accorge, perche' il numero delle classificate resta identico mentre
+    // il totale cresce.
+    //
+    // La regola 8 continua a valere e non e' riimplementata qui: e'
+    // `selezionaInviabili` dentro `proponiClassificazioni` a decidere cosa
+    // puo' uscire, e le controparti dei bonifici privati restano dentro.
+    esito.proposte = await proponiFinche(esito);
+
+    // Seconda passata: le proposte hanno creato esercenti e alias, e senza
+    // riapplicare la tassonomia resterebbero scritte e inutilizzate fino al
+    // giorno dopo.
     const tassonomia = await applicaTassonomia();
     esito.categorizzazione = {
       speseAbbinate: tassonomia.speseAbbinate,
@@ -221,4 +260,42 @@ export async function eseguiSincronizzazioneQuotidiana(): Promise<EsitoQuotidian
 
   esito.durataMs = Date.now() - avvio;
   return esito;
+}
+
+/**
+ * Chiede al modello finche' non resta niente, il modello smette di fare
+ * progressi, o si esauriscono le fette concesse.
+ *
+ * `progresso === false` e' il freno che conta: senza, un lotto che fallisce
+ * sempre — modello irraggiungibile, risposte tutte invalide — verrebbe
+ * richiamato all'infinito sulle stesse etichette, pagando ogni volta.
+ */
+async function proponiFinche(esito: EsitoQuotidiano): Promise<EsitoQuotidiano['proposte']> {
+  const somma = { inviate: 0, proposte: 0, scartate: 0, trattenute: 0, rimaste: 0, costo: 0 };
+  const avvisi = [...esito.avvisi];
+
+  for (let fetta = 0; fetta < FETTE_AI_MASSIME; fetta += 1) {
+    const p = await proponiClassificazioni();
+    somma.inviate += p.inviate;
+    somma.proposte += p.proposte;
+    somma.scartate += p.scartate;
+    somma.trattenute = p.trattenute;
+    somma.rimaste = p.rimaste;
+    somma.costo += p.costo ?? 0;
+
+    if (p.rimaste === 0) break;
+    if (!p.progresso) {
+      avvisi.push(
+        'Il modello non ha prodotto nessuna proposta valida in questa fetta: mi fermo ' +
+          'invece di richiamarlo sulle stesse etichette.',
+      );
+      break;
+    }
+    if (fetta === FETTE_AI_MASSIME - 1 && p.rimaste > 0) {
+      avvisi.push(`${p.rimaste} etichette restano da proporre: le prende il giro di domani.`);
+    }
+  }
+
+  esito.avvisi = avvisi;
+  return somma;
 }

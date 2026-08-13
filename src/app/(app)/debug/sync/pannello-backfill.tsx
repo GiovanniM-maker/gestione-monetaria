@@ -494,6 +494,15 @@ export function PannelloBackfill({
         }
       }
 
+      const pr = corpo['proposte'] as Record<string, unknown> | null;
+      if (pr !== null && pr !== undefined) {
+        aggiungi(
+          `Proposte AI: ${String(pr['inviate'])} etichette inviate \u00b7 ${String(pr['proposte'])} proposte \u00b7 ` +
+            `${String(pr['scartate'])} scartate \u00b7 ${String(pr['trattenute'])} trattenute dalla regola 8 \u00b7 ` +
+            `${String(pr['rimaste'])} rimaste \u00b7 costo ${Number(pr['costo'] ?? 0).toFixed(4)} $`,
+        );
+      }
+
       const r = corpo['ricorrenze'] as Record<string, unknown> | null;
       if (r !== null && r !== undefined) {
         aggiungi(
