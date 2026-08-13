@@ -13,6 +13,13 @@ import {
 } from '@/lib/cruscotto/mesi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
+import {
+  finestraDiConfronto,
+  leggiVariazioniCategorie,
+  leggiVariazioniEsercenti,
+} from '@/lib/cruscotto/variazioni';
+import { comeSiConfronta, type Variazione } from '@/lib/cruscotto/andamento';
+import { Freccia } from '../../grafici';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Categoria' };
@@ -31,6 +38,9 @@ export const metadata: Metadata = { title: 'Categoria' };
  * esattamente il tipo di dettaglio che fa perdere fiducia. Il collegamento ai
  * movimenti porta invece all'insieme completo, discendenti comprese.
  */
+
+/** Quanti esercenti si mostrano su una scheda di categoria. */
+const ESERCENTI_MOSTRATI = 30;
 
 type RigaCat = {
   category_id: string;
@@ -112,8 +122,23 @@ export default async function CategoriaPage({
             .eq('mese', `${mese}-01`)
             .eq('category_id', id)
             .order('spesa', { ascending: true })
-            .limit(30),
+            .limit(ESERCENTI_MOSTRATI),
         ]);
+
+  // Le variazioni arrivano con la **stessa finestra** del cruscotto: scendere
+  // da un numero non deve cambiare il termine di paragone, o la stessa spesa
+  // mostrerebbe due percentuali diverse a due livelli di distanza.
+  const finestra = mese === null ? null : (await finestraDiConfronto(mese)).finestra;
+  const [variazioniCat, variazioniMerc] =
+    mese === null
+      ? [[], []]
+      : await Promise.all([
+          leggiVariazioniCategorie(mese, finestra),
+          leggiVariazioniEsercenti(mese, finestra, ESERCENTI_MOSTRATI, id),
+        ]);
+  const perCategoria = new Map(variazioniCat.map((v) => [v.category_id, v as Variazione]));
+  const perEsercente = new Map(variazioniMerc.map((v) => [v.merchant_id, v as Variazione]));
+  const spiegaIlConfronto = comeSiConfronta(perCategoria.get(id) ?? variazioniCat[0]);
 
   const estremi = mese === null ? null : estremiDelMese(mese);
   const versoMovimenti =
@@ -135,10 +160,14 @@ export default async function CategoriaPage({
         {mese !== null && <p className="mt-1 text-sm text-neutral-500">{etichettaMese(mese)}</p>}
         <p className="mt-2 text-3xl font-semibold tabular-nums">
           {formattaEuro(centesimi(delMese?.spesa ?? null))}
+          <Freccia riga={perCategoria.get(id)} />
         </p>
         <p className="text-xs text-neutral-500">
           {delMese?.movimenti ?? 0} movimenti, sottocategorie comprese
         </p>
+        {spiegaIlConfronto !== null && (
+          <p className="mt-1 text-xs text-neutral-500">{spiegaIlConfronto}</p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -158,7 +187,10 @@ export default async function CategoriaPage({
                   className="flex min-h-11 items-center justify-between gap-3 text-sm"
                 >
                   <span className="min-w-0 truncate">{f.categoria}</span>
-                  <span className="shrink-0 tabular-nums">{formattaEuro(centesimi(f.spesa))}</span>
+                  <span className="shrink-0 tabular-nums whitespace-nowrap">
+                    {formattaEuro(centesimi(f.spesa))}
+                    <Freccia riga={perCategoria.get(f.category_id)} />
+                  </span>
                 </Link>
               </li>
             ))}
@@ -179,8 +211,11 @@ export default async function CategoriaPage({
                 {e.merchant_id === null ? (
                   <span className="flex min-h-11 items-center justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate">{e.esercente}</span>
-                    <span className="shrink-0 tabular-nums">
+                    <span className="shrink-0 tabular-nums whitespace-nowrap">
                       {formattaEuro(centesimi(e.spesa))}
+                      <Freccia
+                        riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
+                      />
                     </span>
                   </span>
                 ) : (
@@ -189,8 +224,11 @@ export default async function CategoriaPage({
                     className="flex min-h-11 items-center justify-between gap-3 text-sm"
                   >
                     <span className="min-w-0 truncate">{e.esercente}</span>
-                    <span className="shrink-0 tabular-nums">
+                    <span className="shrink-0 tabular-nums whitespace-nowrap">
                       {formattaEuro(centesimi(e.spesa))}
+                      <Freccia
+                        riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
+                      />
                     </span>
                   </Link>
                 )}

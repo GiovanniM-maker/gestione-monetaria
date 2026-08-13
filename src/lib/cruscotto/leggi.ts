@@ -3,17 +3,21 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { meseDaData } from './mesi';
 import { leggiStatoSistema, type RigaStato } from '@/lib/movimenti/cerca';
-import {
-  confronta,
-  giornoDelMese,
-  leggiPeriodi,
-  type Confronto,
-  type RigaPeriodo,
-} from './confronto';
-import { estremiDelMese } from '@/lib/movimenti/filtri';
+import { confronta, leggiPeriodi, type Confronto, type RigaPeriodo } from './confronto';
 import { quanteDaConfermare } from '@/lib/conferma/leggi';
 import { GIA_SUL_CRUSCOTTO, leggiAvvisi, type RigaAvviso } from '@/lib/avvisi/leggi';
 import type { RigaMetrica } from '@/lib/abbonamenti/formato';
+import {
+  finestraDiConfronto,
+  leggiVariazioniCategorie,
+  leggiVariazioniClassi,
+  leggiVariazioniEsercenti,
+} from './variazioni';
+import type {
+  VariazioneCategoria,
+  VariazioneClasse,
+  VariazioneEsercente,
+} from './andamento';
 
 /**
  * Le letture del cruscotto.
@@ -35,13 +39,6 @@ export type RigaTotaleMese = {
   senza_cambio: number;
   senza_categoria: number;
   spesa_senza_categoria: string;
-};
-
-export type RigaClasse = {
-  discrezionalita: string;
-  contesto: string;
-  spesa: string;
-  movimenti: number;
 };
 
 export type RigaCategoria = {
@@ -78,10 +75,21 @@ export type Cruscotto = {
   /** Tutti i mesi con almeno un movimento, dal piu' vecchio. */
   mesiDisponibili: readonly string[];
   totali: readonly RigaTotaleMese[];
-  classi: readonly RigaClasse[];
-  classiPrecedenti: readonly RigaClasse[];
+  /**
+   * Le classi del mese **con la loro variazione**, che arriva calcolata da SQL.
+   *
+   * Ha sostituito la coppia «classi del mese + classi del mese prima» e la
+   * sottrazione fatta qui: il mese prima non e' il termine di paragone giusto —
+   * puo' essere stato un mese strano — e la sottrazione era aritmetica in
+   * TypeScript su una cosa che le regole vogliono in SQL.
+   */
+  classi: readonly VariazioneClasse[];
   categorie: readonly RigaCategoria[];
+  /** Le variazioni per categoria, da agganciare all'albero per `category_id`. */
+  variazioniCategorie: readonly VariazioneCategoria[];
   esercenti: readonly RigaEsercente[];
+  /** Le variazioni per esercente, da agganciare all'elenco per `merchant_id`. */
+  variazioniEsercenti: readonly VariazioneEsercente[];
   ricorrente: readonly RigaMetrica[];
   /** Le entrate del mese, come denominatore. Non cambiano la metrica principale. */
   entrate: RigaEntrate | null;
@@ -138,27 +146,36 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
   const indice = mesiDisponibili.indexOf(mese);
   const mesePrecedente = indice > 0 ? (mesiDisponibili[indice - 1] ?? null) : null;
 
-  const [classi, classiPrecedenti, categorie, esercenti, ricorrente, entrate, stato] =
-    await Promise.all([
-      leggiClassi(mese),
-      mesePrecedente === null ? Promise.resolve([]) : leggiClassi(mesePrecedente),
-      leggiCategorie(mese),
-      leggiEsercenti(mese),
-      leggiRicorrente(),
-      leggiEntrate(mese),
-      leggiStatoSistema(),
-    ]);
+  // Fino a che giorno arrivano i dati di questo mese. Si legge **prima** di
+  // tutto il resto, perche' e' cio' che decide la finestra: ogni confronto
+  // della schermata deve parlare degli stessi giorni, o le frecce e il totale
+  // in cima raccontano due mesi diversi.
+  const { giorniCoperti, finestra } = await finestraDiConfronto(mese);
+
+  const [
+    classi,
+    categorie,
+    variazioniCategorie,
+    esercenti,
+    variazioniEsercenti,
+    ricorrente,
+    entrate,
+    stato,
+  ] = await Promise.all([
+    leggiVariazioniClassi(mese, finestra),
+    leggiCategorie(mese),
+    leggiVariazioniCategorie(mese, finestra),
+    leggiEsercenti(mese),
+    leggiVariazioniEsercenti(mese, finestra, ESERCENTI_MOSTRATI),
+    leggiRicorrente(),
+    leggiEntrate(mese),
+    leggiStatoSistema(),
+  ]);
 
   const [daConfermare, avvisiNuovi] = await Promise.all([quanteDaConfermare(), leggiAvvisi(true)]);
   const avvisi = avvisiNuovi.filter((a) => !GIA_SUL_CRUSCOTTO.includes(a.type));
 
-  // Fino a che giorno arrivano i dati di questo mese. Serve a confrontare
-  // finestre della stessa lunghezza invece di undici giorni contro trentuno.
-  const giorniCoperti = giornoDelMese(await ultimoGiornoConDati(mese));
-  const confronto =
-    giorniCoperti === null || giorniCoperti >= 28
-      ? null
-      : await leggiConfronto(mese, giorniCoperti);
+  const confronto = finestra === null ? null : await leggiConfronto(mese, finestra);
 
   return {
     mese,
@@ -166,9 +183,10 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     mesiDisponibili,
     totali,
     classi,
-    classiPrecedenti,
     categorie,
+    variazioniCategorie,
     esercenti,
+    variazioniEsercenti,
     ricorrente,
     entrate,
     stato,
@@ -177,23 +195,6 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     confronto,
     giorniCoperti,
   };
-}
-
-/** L'ultimo giorno del mese in cui c'e' almeno una spesa. */
-async function ultimoGiornoConDati(mese: string): Promise<string | null> {
-  const estremi = estremiDelMese(mese);
-  if (estremi === null) return null;
-
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('v_expenses')
-    .select('booking_date')
-    .gte('booking_date', estremi.da)
-    .lte('booking_date', estremi.a)
-    .order('booking_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data as { booking_date: string } | null)?.booking_date ?? null;
 }
 
 /**
@@ -234,16 +235,6 @@ async function leggiEntrate(mese: string): Promise<RigaEntrate | null> {
 /** Il primo giorno del mese, che e' come la vista lo espone. */
 function primoGiorno(mese: string): string {
   return `${mese}-01`;
-}
-
-async function leggiClassi(mese: string): Promise<readonly RigaClasse[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('v_monthly_by_discretion')
-    .select('discrezionalita, contesto, spesa::text, movimenti')
-    .eq('mese', primoGiorno(mese))
-    .order('spesa', { ascending: true });
-  return comeArray<RigaClasse>(data);
 }
 
 async function leggiCategorie(mese: string): Promise<readonly RigaCategoria[]> {

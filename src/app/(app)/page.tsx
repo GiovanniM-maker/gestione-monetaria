@@ -1,18 +1,23 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { leggiCruscotto } from '@/lib/cruscotto/leggi';
-import type { RigaCategoria, RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
-import {
-  etichettaBreve,
-  etichettaMese,
-  meseValido,
-  quotaPercentuale,
-  variazione,
-} from '@/lib/cruscotto/mesi';
+import type { RigaCategoria, RigaTotaleMese } from '@/lib/cruscotto/leggi';
+import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale } from '@/lib/cruscotto/mesi';
+import { comeSiConfronta } from '@/lib/cruscotto/andamento';
+import type { Variazione, VariazioneClasse } from '@/lib/cruscotto/andamento';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import type { RigaStato } from '@/lib/movimenti/cerca';
+import {
+  BarraClassi,
+  Ciambella,
+  COLORE_CLASSE,
+  fetteDellaCiambella,
+  Freccia,
+  ORDINE_CLASSI,
+  type FettaCategoria,
+} from './grafici';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -34,20 +39,35 @@ export const metadata: Metadata = { title: 'Cruscotto' };
 /** Quanti mesi mostra l'andamento. Un anno e' il minimo per vedere una stagione. */
 const MESI_ANDAMENTO = 12;
 
-const COLORI: Record<string, string> = {
-  essenziale: 'bg-sky-500',
-  investimento: 'bg-emerald-500',
-  utile: 'bg-amber-500',
-  voluttuario: 'bg-rose-500',
-};
-
 function centesimi(valore: string | null): bigint {
   const { totale, nonLetti } = sommaCosti([valore]);
   return nonLetti > 0 ? 0n : totale;
 }
 
-function sommaClassi(righe: readonly RigaClasse[]): bigint {
+function sommaClassi(righe: readonly { spesa: string }[]): bigint {
   return righe.reduce((s, r) => s + centesimi(r.spesa), 0n);
+}
+
+/**
+ * Le quattro classi, nell'ordine fisso della barra.
+ *
+ * `personale` e `business` si sommano **qui e solo qui**: la barra risponde a
+ * «come si divide il mese fra le quattro classi», che ha sempre le stesse
+ * quattro voci ed e' per questo che la sua forma si impara. La distinzione fra
+ * i due contesti resta intera nell'elenco sotto, dove c'e' spazio per dirla.
+ *
+ * E' una somma di interi di centesimi, non una divisione: nessuna variazione si
+ * ricalcola qui — quelle arrivano da SQL riga per riga.
+ */
+function perLaBarra(classi: readonly VariazioneClasse[]) {
+  const note = ORDINE_CLASSI.map((nome) => ({
+    chiave: nome,
+    valore: sommaClassi(classi.filter((c) => c.discrezionalita === nome)),
+  }));
+  const resto = classi.filter((c) => !ORDINE_CLASSI.includes(c.discrezionalita));
+  return resto.length === 0
+    ? note
+    : [...note, { chiave: 'non classificato', valore: sommaClassi(resto) }];
 }
 
 export default async function CruscottoPage({
@@ -64,9 +84,10 @@ export default async function CruscottoPage({
     mesiDisponibili,
     totali,
     classi,
-    classiPrecedenti,
     categorie,
+    variazioniCategorie,
     esercenti,
+    variazioniEsercenti,
     ricorrente,
     entrate,
     stato,
@@ -92,8 +113,32 @@ export default async function CruscottoPage({
 
   const rigaMese = totali.find((t) => t.mese === mese) ?? null;
   const speso = sommaClassi(classi);
-  const spesoPrima = sommaClassi(classiPrecedenti);
-  const scostamento = mesePrecedente === null ? null : variazione(speso, spesoPrima);
+
+  // Le variazioni, indicizzate: l'albero e l'elenco degli esercenti restano
+  // quelli delle viste — che portano `spesa_diretta`, lo slug, la
+  // discrezionalita' — e ci si aggancia accanto la freccia.
+  const perCategoria = new Map(variazioniCategorie.map((v) => [v.category_id, v as Variazione]));
+  const perEsercente = new Map(variazioniEsercenti.map((v) => [v.merchant_id, v as Variazione]));
+
+  // La ciambella disegna solo le **radici**: con il roll-up, la somma delle
+  // radici e' la spesa categorizzata del mese, esattamente una volta. Mettendoci
+  // anche le figlie ogni euro comparirebbe due volte e il giro non vorrebbe
+  // piu' dire niente.
+  const radici: FettaCategoria[] = variazioniCategorie
+    .filter((v) => v.parent_id === null)
+    .map((v) => ({
+      chiave: v.category_id,
+      etichetta: v.categoria,
+      valore: centesimi(v.spesa),
+      href: `/categoria/${v.category_id}?mese=${mese}`,
+      variazione: v,
+    }))
+    .filter((f) => f.valore !== 0n);
+  const inCategoria = radici.reduce((s, r) => s + r.valore, 0n);
+
+  // Come e' fatto il confronto lo dice una riga sola, presa da una qualsiasi
+  // delle righe: la finestra e' la stessa per tutte, ed e' il punto della 0036.
+  const spiegaIlConfronto = comeSiConfronta(classi[0]);
 
   const vociRicorrenti = ordinaPerPeso(ricorrente);
   const abbonamenti = totalePerTipo(vociRicorrenti, 'abbonamento');
@@ -200,18 +245,6 @@ export default async function CruscottoPage({
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline gap-3">
           <p className="text-3xl font-semibold tabular-nums sm:text-4xl">{formattaEuro(speso)}</p>
-          {/*
-            Un mese in corso NON si confronta con un mese intero: undici giorni
-            contro trentuno si leggono come «ho speso molto meno», che e' falso.
-            Finche' il mese e' incompleto si confronta la stessa finestra dei
-            mesi precedenti — una misura, non una proiezione.
-          */}
-          {confronto === null && scostamento !== null && (
-            <p className="text-sm text-neutral-500">
-              {scostamento > 0 ? '+' : ''}
-              {scostamento.toFixed(1).replace('.', ',')}% su {etichettaMese(mesePrecedente ?? '')}
-            </p>
-          )}
         </div>
 
         {confronto !== null && giorniCoperti !== null && (
@@ -258,40 +291,50 @@ export default async function CruscottoPage({
         {classi.length === 0 ? (
           <p className="text-sm text-neutral-500">Nessun movimento in questo mese.</p>
         ) : (
-          <ul className="space-y-2">
-            {classi.map((c) => {
-              const valore = centesimi(c.spesa);
-              const prima = classiPrecedenti.find(
-                (p) => p.discrezionalita === c.discrezionalita && p.contesto === c.contesto,
-              );
-              const delta = prima === undefined ? null : variazione(valore, centesimi(prima.spesa));
-              return (
-                <li key={`${c.discrezionalita}-${c.contesto}`} className="space-y-1">
-                  <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span>
-                      {c.discrezionalita}
-                      <span className="text-neutral-500"> · {c.contesto}</span>
+          <div className="space-y-3">
+            {/* Una barra sola, sempre con le stesse quattro voci nello stesso
+                ordine: e' la forma che si impara, e che fa riconoscere un mese
+                anomalo senza leggere un numero. */}
+            <BarraClassi voci={perLaBarra(classi)} />
+
+            <ul className="text-sm">
+              {classi.map((c) => (
+                <li
+                  key={`${c.discrezionalita}-${c.contesto}`}
+                  className="border-b border-neutral-100 dark:border-neutral-900"
+                >
+                  <Link
+                    href={perMese({ classe: c.discrezionalita })}
+                    className="flex min-h-11 items-center justify-between gap-3"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: COLORE_CLASSE[c.discrezionalita] ?? '#a3a3a3',
+                        }}
+                      />
+                      <span className="min-w-0 truncate">
+                        {c.discrezionalita}
+                        <span className="text-neutral-500"> · {c.contesto}</span>
+                      </span>
                     </span>
-                    <span className="tabular-nums">
-                      {formattaEuro(valore)}
-                      {delta !== null && (
-                        <span className="ml-2 text-xs text-neutral-500">
-                          {delta > 0 ? '+' : ''}
-                          {delta.toFixed(0)}%
-                        </span>
-                      )}
+                    <span className="shrink-0 tabular-nums whitespace-nowrap">
+                      {formattaEuro(centesimi(c.spesa))}
+                      <Freccia riga={c} />
                     </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
-                    <div
-                      className={`h-full ${COLORI[c.discrezionalita] ?? 'bg-neutral-400'}`}
-                      style={{ width: `${quotaPercentuale(valore, speso)}%` }}
-                    />
-                  </div>
+                  </Link>
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+            </ul>
+
+            {spiegaIlConfronto !== null && (
+              <p className="text-xs text-neutral-500">
+                {spiegaIlConfronto} Il termine di paragone &egrave; la mediana{' '}
+                <strong>scelta</strong> — un mese realmente osservato, non una media.
+              </p>
+            )}
+          </div>
         )}
 
         {incassato !== null && incassato !== 0n && (
@@ -380,15 +423,26 @@ export default async function CruscottoPage({
       {/* ---------------------------------------------------------------- */}
       {/* IN COSA                                                          */}
       {/* ---------------------------------------------------------------- */}
+      {radici.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-medium">In cosa</h2>
+          <Ciambella voci={fetteDellaCiambella(radici)} totale={inCategoria} />
+          <p className="text-xs text-neutral-500">
+            L&rsquo;anello mostra i rami principali. Si tocca la riga e non la fetta: su un telefono
+            una fetta &egrave; larga venti pixel e si sbaglia col pollice.
+          </p>
+        </section>
+      )}
+
       {categorie.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-medium">In cosa</h2>
+          <h2 className="font-medium">L&rsquo;albero intero</h2>
           <p className="text-xs text-neutral-500">
             Ogni categoria porta la somma delle sue sottocategorie, e si tocca per vedere di cosa
             &egrave; fatta. Dove la cifra fra parentesi compare, &egrave; la parte finita
             direttamente su quel nodo invece che in un figlio.
           </p>
-          <Albero righe={categorie} totale={speso} mese={mese} />
+          <Albero righe={categorie} totale={speso} mese={mese} variazioni={perCategoria} />
         </section>
       )}
 
@@ -412,6 +466,9 @@ export default async function CruscottoPage({
                   </span>
                   <span className="shrink-0 tabular-nums whitespace-nowrap">
                     {formattaEuro(valore)}
+                    <Freccia
+                      riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
+                    />
                   </span>
                 </>
               );
@@ -492,10 +549,12 @@ function Albero({
   righe,
   totale,
   mese,
+  variazioni,
 }: {
   righe: readonly RigaCategoria[];
   totale: bigint;
   mese: string;
+  variazioni: ReadonlyMap<string, Variazione>;
 }) {
   const presenti = new Set(righe.map((r) => r.category_id));
   const figli = new Map<string | null, RigaCategoria[]>();
@@ -526,7 +585,10 @@ function Albero({
                 {diretta !== valore && diretta !== 0n && ` · ${formattaEuro(diretta)} qui`}
               </span>
             </span>
-            <span className="shrink-0 tabular-nums whitespace-nowrap">{formattaEuro(valore)}</span>
+            <span className="shrink-0 tabular-nums whitespace-nowrap">
+              {formattaEuro(valore)}
+              <Freccia riga={variazioni.get(r.category_id)} />
+            </span>
           </Link>
           <div
             className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-900"
