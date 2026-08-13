@@ -24,6 +24,14 @@
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
 
+**Il piano delle dieci fasi è finito, e il prossimo non è una fase: è una direzione.**
+`docs/direzione.md` raccoglie cosa si è rotto usando l'applicazione per davvero — la classificazione
+non regge il mondo reale, il cruscotto mostra numeri giusti nel modo sbagliato, il consiglio è un
+elenco e non un consiglio — e le decisioni prese il 13 agosto 2026: ricerca web con verifica per i
+consigli, regola 8 estesa ai motori di ricerca (**solo esercenti garantiti da carta, solo il nome**),
+quattro sincronizzazioni al giorno più una a ogni apertura, query del copilota proposte e approvate.
+Va letto prima di aprire il prossimo cantiere.
+
 **La 6-bis nasce da un inventario, non da un piano.** Fatto a fine Fase 6 e scritto in
 `docs/cruscotto.md`, ha trovato che **nessuna schermata mostra una transazione**: ogni discesa
 finisce su un aggregato. Ne discendono tre impossibilità — verificare un numero scomponendolo,
