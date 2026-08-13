@@ -373,6 +373,26 @@ export function PannelloBackfill({
    * Va dopo la categorizzazione e non prima: il rilevamento raggruppa per
    * esercente, e un movimento senza esercente non entra in nessuna serie.
    */
+  /**
+   * Quanto il rilevamento non ha potuto vedere.
+   *
+   * Si stampa **solo quando c'e' qualcosa**: una riga «0 movimenti fuori»
+   * ripetuta a ogni esecuzione e' rumore, e il rumore in un resoconto insegna a
+   * non leggerlo. Quando invece compare, sta dicendo che il costo ricorrente
+   * manca di qualcosa — ed e' l'unico posto in cui lo direbbe.
+   */
+  function avvisaSenzaCambio(valore: unknown) {
+    const senza = valore as { movimenti?: unknown; esercenti?: unknown } | null | undefined;
+    const movimenti = Number(senza?.movimenti ?? 0);
+    if (!Number.isFinite(movimenti) || movimenti <= 0) return;
+
+    aggiungi(
+      `  ATTENZIONE: ${movimenti} movimenti di ${Number(senza?.esercenti ?? 0)} esercenti sono ` +
+        'restati fuori dal rilevamento perche\u2019 senza importo in euro. Il costo ricorrente ' +
+        'non li conta.',
+    );
+  }
+
   async function rilevaAbbonamenti() {
     setInCorso(true);
     aggiungi('Rilevamento delle ricorrenze…');
@@ -388,6 +408,8 @@ export function PannelloBackfill({
         `${corpo['scritte']} ricorrenze scritte · ${corpo['nellaMetrica']} nel numero su ` +
           `${corpo['totali']} rilevate`,
       );
+
+      avvisaSenzaCambio(corpo['senzaCambio']);
 
       // La metrica per cui l'app esiste, stampata qui e non solo nella
       // schermata: e' il primo momento in cui il numero esiste davvero.
@@ -514,6 +536,7 @@ export function PannelloBackfill({
         aggiungi(
           `Ricorrenze: ${String(r['scritte'])} scritte \u00b7 ${String(r['nellaMetrica'])} nel numero`,
         );
+        avvisaSenzaCambio(r['senzaCambio']);
       }
 
       if (corpo['avvisiCreati'] !== null && corpo['avvisiCreati'] !== undefined) {

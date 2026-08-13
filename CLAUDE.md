@@ -648,8 +648,16 @@ totali, sommare `amount` produrrebbe un numero plausibile e falso, senza nessun 
 Dove `amount_eur` è nullo il movimento **non si somma**: sparirebbe dal totale in silenzio. Viene
 contato in `v_monthly_totals.senza_cambio` e il cruscotto lo mostra come avviso.
 
-**Resta disallineato il detector della Fase 5**, che somma `amount`. Oggi dà lo stesso numero. Da
-allineare, ma non insieme ad altro: sposterebbe i numeri di chiusura appena verificati.
+**Il detector della Fase 5 è stato allineato** dalla `0027`, da solo e dopo la Fase 10, che è il
+motivo per cui era rimasto indietro: farlo insieme ad altro avrebbe reso impossibile la verifica che
+conta. Provato su Postgres locale con `amount = amount_eur`, le due versioni producono **zero righe
+diverse**; con un movimento senza cambio, l'esercente esce dalla serie invece di restarci con la
+somma incompleta — il risultato è un **tasso** (`totale / giorni_coperti`), e tenere l'occorrenza
+allungando il periodo senza aggiungerne la spesa produrrebbe un costo mensile più basso del vero.
+
+Quanto resta fuori si legge da `v_ricorrenze_senza_cambio`, e il resoconto lo stampa **solo se è
+maggiore di zero**: una riga «0 fuori» ripetuta a ogni esecuzione insegna a non leggere il
+resoconto.
 
 #### Il mese è testo `YYYY-MM`, mai un `Date`
 

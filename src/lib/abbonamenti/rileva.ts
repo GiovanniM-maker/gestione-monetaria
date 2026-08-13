@@ -44,6 +44,17 @@ export type EsitoRilevamento = {
   totali: number;
   metrica: readonly RigaMetrica[];
   escluse: readonly RigaEsclusa[];
+  /**
+   * Movimenti che il rilevamento non ha potuto vedere perche' privi di importo
+   * in euro.
+   *
+   * Oggi e' zero, e va riportato proprio per questo: il giorno in cui smette di
+   * esserlo — un conto in valuta collegato, un tasso mancante — il costo
+   * ricorrente comincia a mancare di qualcosa, e senza questa riga non se ne
+   * accorgerebbe nessuno. E' la stessa ragione per cui `v_monthly_totals` conta
+   * `senza_cambio` invece di far sparire il movimento dal totale in silenzio.
+   */
+  senzaCambio: { movimenti: number; esercenti: number };
 };
 
 /**
@@ -63,8 +74,8 @@ export async function rilevaAbbonamenti(minimoOccorrenze = 3): Promise<EsitoRile
     throw new Error(`Rilevamento fallito: ${error.message}`);
   }
 
-  const { metrica, escluse, nellaMetrica, totali } = await leggiRiepilogo();
-  return { scritte: Number(scritte ?? 0), nellaMetrica, totali, metrica, escluse };
+  const riepilogo = await leggiRiepilogo();
+  return { scritte: Number(scritte ?? 0), ...riepilogo };
 }
 
 export async function leggiRiepilogo(): Promise<{
@@ -72,29 +83,42 @@ export async function leggiRiepilogo(): Promise<{
   escluse: readonly RigaEsclusa[];
   nellaMetrica: number;
   totali: number;
+  senzaCambio: { movimenti: number; esercenti: number };
 }> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: metrica }, { data: escluse }, { count: totali }, { count: nellaMetrica }] =
-    await Promise.all([
-      supabase
-        .from('v_recurring_monthly_cost_by_discretion')
-        .select('tipo, discrezionalita, contesto, ricorrenze, costo_mensile::text'),
-      supabase
-        .from('v_ricorrenze_escluse')
-        .select('motivo, esercenti, costo_mensile_potenziale::text, totale_speso::text'),
-      supabase.from('subscriptions').select('id', { count: 'exact', head: true }),
-      supabase
-        .from('v_subscriptions')
-        .select('id', { count: 'exact', head: true })
-        .eq('nella_metrica', true),
-    ]);
+  const [
+    { data: metrica },
+    { data: escluse },
+    { count: totali },
+    { count: nellaMetrica },
+    { data: fuori },
+  ] = await Promise.all([
+    supabase
+      .from('v_recurring_monthly_cost_by_discretion')
+      .select('tipo, discrezionalita, contesto, ricorrenze, costo_mensile::text'),
+    supabase
+      .from('v_ricorrenze_escluse')
+      .select('motivo, esercenti, costo_mensile_potenziale::text, totale_speso::text'),
+    supabase.from('subscriptions').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('v_subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('nella_metrica', true),
+    supabase.from('v_ricorrenze_senza_cambio').select('movimenti, esercenti').maybeSingle(),
+  ]);
+
+  const senza = fuori as { movimenti: number | null; esercenti: number | null } | null;
 
   return {
     metrica: comeArray<RigaMetrica>(metrica),
     escluse: comeArray<RigaEsclusa>(escluse),
     nellaMetrica: nellaMetrica ?? 0,
     totali: totali ?? 0,
+    senzaCambio: {
+      movimenti: Number(senza?.movimenti ?? 0),
+      esercenti: Number(senza?.esercenti ?? 0),
+    },
   };
 }
 
