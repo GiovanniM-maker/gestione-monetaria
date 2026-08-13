@@ -618,6 +618,25 @@ o c'è una ragione esplicita, o è una regressione.
 Escluse: 33 esercenti fermi da tempo (−4.889,66 € spesi in tutto), 7 sotto i tre mesi di presenza
 (−218,10 €), 2 sotto i 75 giorni coperti (−480,34 €, cioè Byteplus e un bar).
 
+**Rimisurati il 13 agosto 2026**, dopo le migration `0027` (importi in euro) e `0028` (prezzo tipico
+scelto e non interpolato). Una sola cosa si è mossa, e non l'hanno mossa loro:
+
+| Grandezza          | 12 agosto                 | 13 agosto                |
+| ------------------ | ------------------------- | ------------------------ |
+| Entrano nel numero | 43                        | **44**                   |
+| Abbonamenti        | −425,96 €/mese su 14 voci | **−435,58 €/mese** su 15 |
+| Abitudini          | −1.610,17 €/mese su 29    | −1.610,17 €/mese su 29   |
+| Totale ricorrente  | −2.036,13 €/mese          | **−2.045,75 €/mese**     |
+
+La voce in più è **Shopify**: `first_seen` 13 aprile, tre mesi civili compiuti nella notte,
+−9,62 €/mese. Verificato: le abitudini e due delle tre righe di esclusione sono identiche al
+centesimo, e un cambio di valuta avrebbe spostato degli **importi**, non l'appartenenza di una sola
+riga. È la soglia temporale, non le migration.
+
+È anche la conferma che la `0027` non ha cambiato niente: `v_ricorrenze_senza_cambio` è a zero,
+quindi `amount` e `amount_eur` coincidono ancora su ogni movimento con un esercente — come deve
+essere finché l'unico conto nei totali è in euro.
+
 **La verifica che conta** è l'ultima riga: il costo ricorrente sta dentro la spesa reale con
 margine. Il confronto va fatto con i mesi recenti e non con la media di tutto lo storico — un
 esercente comparso ad aprile contribuisce col suo tasso pieno anche se a febbraio non esisteva, ed
@@ -645,13 +664,23 @@ guardare anche il merito: cinque pagamenti in undici mesi, mediana 500 € ma to
 
 ### Prova manuale della Fase 5, sotto i 5 minuti
 
-1. `/debug/sync` → **`6 · Rileva abbonamenti`**. Attesi 85 rilevate, 43 nella metrica, e i due
-   totali qui sopra.
+1. `/debug/sync` → **`6 · Rileva abbonamenti`**. Attesi 85 rilevate, 44 nella metrica, e i totali
+   della colonna «13 agosto» qui sopra. Se compare la riga `ATTENZIONE … senza importo in euro`, il
+   costo ricorrente sta mancando di qualcosa e il numero va letto sapendolo.
 2. Rilanciare: gli stessi numeri. È idempotente — la funzione ricalcola tutto da capo.
 3. `/abbonamenti`: due blocchi separati, `Netflix` deve dire **6,99** (se dicesse 6,45 il ramo del
    canone si è rotto), e la casella «mostra anche le escluse» deve far comparire 42 righe.
 4. Dare un giudizio d'uso a una riga e marcarne una come disdetta, poi rilanciare il rilevamento:
    `usage_verdict`, `notes` e lo stato `cancelled` devono sopravvivere.
+5. **Ogni prezzo tipico dev'essere un prezzo pagato.** È l'invariante della `0028`, e questa query
+   deve restituire zero righe:
+
+   ```sql
+   select s.esercente, s.occurrences, s.typical_amount::text
+   from v_subscriptions s
+   where not exists (select 1 from v_expenses e
+                     where e.merchant_id = s.merchant_id and e.amount_eur = s.typical_amount);
+   ```
 
 ### Le decisioni della Fase 6
 
