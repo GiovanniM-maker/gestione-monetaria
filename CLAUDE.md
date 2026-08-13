@@ -19,7 +19,7 @@
 | 6-bis | Il pavimento: movimenti, stato, entrate   | **completata** |
 | 7     | Automazione                               | **completata** |
 | 8     | Motore alert (SQL)                        | **completata** |
-| 9     | Report periodico AI                       | non iniziata   |
+| 9     | Report periodico AI                       | **completata** |
 | 10    | Chat copilot                              | non iniziata   |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
@@ -870,6 +870,64 @@ giro escono tutti insieme.
 Il cruscotto ha già la riga di stato del sistema. Gli stessi due tipi restano avvisi a tutti gli
 effetti — con la loro storia e la possibilità di ignorarli — ma sono esclusi dal blocco in cima:
 un avviso doppio non è due volte più visibile, è metà credibile.
+
+### Le decisioni della Fase 9
+
+#### La difesa non sono le istruzioni, è che non ha i dati
+
+Al modello si dice di non calcolare niente, ma un'istruzione non è una garanzia. La garanzia è che
+riceve **aggregati finiti** e non righe: non ha da cui calcolare. `metriche_report()` produce ogni
+cifra in SQL, e il modello scrive solo le frasi intorno.
+
+Non è prudenza generica. In Fase 4, su cento proposte, ha ragionato dall'importo quando il nome non
+bastava — *«importo alto suggerisce spesa casa»* — e ha inventato una motivazione plausibile pur di
+averne una. Un modello che *scrive* numeri li sbaglia allo stesso modo, e in un report li sbaglia in
+modo **credibile**: nessuno li ricontrolla.
+
+#### Gli aggregati salvati sono la prova, non un residuo
+
+`reports.metrics` contiene esattamente ciò che il modello ha visto — la versione **sanificata**,
+non quella grezza. Davanti a una frase che non torna, fra sei mesi, senza di quelli non si potrebbe
+dire se ha sbagliato il modello o il calcolo. E le due cose si correggono in posti diversi.
+
+#### Un esercente può essere una persona
+
+È il punto che questa fase ha reso urgente. Fra le ricorrenze rilevate ci sono `Sabrina Di
+Javadzade`, `Laura Bovi`, `Cavallo Vincenzo`: controparti di bonifici privati che la Fase 4 ha
+registrato come esercenti, perché a un pagamento ricorrente serve un nome. Mandarli a un modello
+violerebbe la regola 8 tanto quanto in Fase 4 — e qui sarebbe peggio, perché uscirebbero per essere
+**raccontati**.
+
+Si riusa `sembraAttivita`, senza riscriverlo: due copie di una regola di sicurezza divergono, ed è
+dalla divergenza che nascono le fughe. Chi non passa non viene tolto ma **sostituito** con «un
+privato»: il numero resta e il racconto resta possibile.
+
+La sanificazione **cammina l'intera struttura** invece di conoscerne la forma. Un elenco di percorsi
+da ripulire andrebbe aggiornato a ogni chiave nuova, e il giorno che qualcuno se ne dimentica è il
+giorno della fuga.
+
+#### Il titolo di un avviso non è un nome
+
+«Netflix: il prezzo è salito» è una frase che *contiene* un nome, e un filtro che decide se un nome
+può uscire non sa cosa farne: la lascia passare intera o la sostituisce intera. Le metriche mandano
+il nome in un campo suo — trattato come ogni altro nome — e la frase la compone il modello.
+
+#### Niente libreria di markdown
+
+Per tre costrutti — titoletto, elenco, grassetto — una dipendenza intera sarebbe sproporzionata, e
+lo stack vieta le librerie non strettamente necessarie. Il renderer sta in trenta righe e **fallisce
+nel verso giusto**: ciò che non riconosce resta un paragrafo di testo. Un renderer severo farebbe
+sparire la riga, e in un report una frase sparita non si nota.
+
+### Prova manuale della Fase 9, sotto i 5 minuti
+
+1. `/report` → **Genera il report del mese scorso**. Deve comparire il costo e, se ci sono
+   controparti private fra i primi esercenti, quanti nomi sono stati sostituiti.
+2. Aprirlo: nessuna cifra deve essere diversa da quelle del cruscotto per lo stesso mese. Se lo
+   fosse, il modello ha calcolato — ed è il difetto più grave possibile qui.
+3. In fondo, **«I dati esatti che ha ricevuto»**: cercare `un privato` e verificare che nessun nome
+   di persona sia uscito.
+4. Rigenerarlo: sovrascrive invece di creare un secondo report dello stesso mese.
 
 ### Prova manuale della Fase 8, sotto i 5 minuti
 
