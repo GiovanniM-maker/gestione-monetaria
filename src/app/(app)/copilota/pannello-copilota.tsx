@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { analizza, pezzi } from '@/lib/report/testo';
 import type { MessaggioSalvato, PropostaSalvata } from '@/lib/copilota/messaggi';
+import { GraficoCopilota } from './grafico';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 
 /**
@@ -24,10 +25,10 @@ import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
  */
 
 const ESEMPI = [
+  'Come potrei spendere meno per mettere via più soldi?',
+  'Fammi il grafico della mia spesa negli ultimi mesi',
   'Quanto ho speso in ristoranti il mese scorso?',
   'Qual è il mio costo ricorrente voluttuario?',
-  'Fammi vedere le spese sopra i 100 € di luglio',
-  'Deliveroo è voluttuario o utile?',
 ];
 
 type Riga = MessaggioSalvato & { locale?: boolean };
@@ -65,6 +66,7 @@ export function PannelloCopilota({
         testo: pulita,
         strumenti: null,
         proposte: null,
+        grafici: null,
         cifre_inventate: null,
         created_at: new Date().toISOString(),
         locale: true,
@@ -241,6 +243,10 @@ function Messaggio({
           copilota non dovrebbe calcolare niente — verificala prima di fidartene.
         </p>
       )}
+
+      {riga.grafici?.map((g, i) => (
+        <GraficoCopilota key={i} grafico={g} />
+      ))}
 
       {riga.proposte?.map((p, i) => (
         <Scheda

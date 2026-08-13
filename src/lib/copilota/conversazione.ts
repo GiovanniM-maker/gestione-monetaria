@@ -11,7 +11,13 @@ import { confermaMovimento } from '@/lib/conferma/leggi';
 import { aggiornaMerchant } from '@/lib/tassonomia/assegna';
 import { cifreInventate } from './cifre';
 import { ArgomentoNonValido, strumento, STRUMENTI } from './strumenti';
-import type { MessaggioSalvato, Proposta, PropostaSalvata, StrumentoEseguito } from './messaggi';
+import type {
+  Grafico,
+  MessaggioSalvato,
+  Proposta,
+  PropostaSalvata,
+  StrumentoEseguito,
+} from './messaggi';
 import type { Context, Discretion } from '@/lib/db/types';
 
 /**
@@ -86,6 +92,23 @@ REGOLE ASSOLUTE:
 5. Non inventare spiegazioni. Se una spesa è salita e non sai perché, scrivi che è salita e basta.
 6. Le scritture non le esegui tu: le prepari, e l'utente le applica con un tocco. Dopo averne
    preparata una, di' cosa hai preparato e che è in attesa. Non dare mai per fatto il cambiamento.
+7. NON rispondere con un menu di cosa potresti guardare. Hai gli strumenti: usali e rispondi. Chiedi
+   qualcosa solo se senza quella risposta non puoi proprio procedere — e non è quasi mai il caso.
+
+QUANDO CHIEDONO CONSIGLI ("come spendo meno", "dove taglio", "come metto via più soldi"):
+- Chiama SUBITO dove_tagliare e rispondi con quello che torna. È la domanda per cui questa
+  applicazione esiste: rimandarla all'utente sotto forma di menu è il modo peggiore di trattarla.
+- Dai DUE liste separate e dichiaralo: cosa si può DISDIRE (abbonamenti — un gesto, risparmio certo)
+  e cosa si può CAMBIARE (abitudini — nessun gesto la risolve). Non sommarle mai.
+- Sii concreto: nomina l'esercente e la sua cifra, presa dai dati. Mai un risparmio totale calcolato
+  da te — se vuoi un totale, usa quello già presente nel costo ricorrente per classe.
+- Parti da usage_verdict = 'non_usato', se ce n'è: si sta pagando per qualcosa già dichiarato inutile.
+- Una voce di viaggi con poche occorrenze ravvicinate NON è un'abitudine da cambiare. Dillo.
+- Niente prediche e niente consigli generici da manuale ("fai un budget", "porta il pranzo da casa").
+  Vale solo quello che si legge nei suoi dati.
+
+QUANDO CHIEDONO UN GRAFICO, o un andamento nel tempo: chiama grafico_mensile. Il grafico compare da
+solo sotto la tua risposta, quindi NON descriverlo ("come vedi la linea sale") — commenta i valori.
 
 COSA SAPERE SUI DATI:
 - Le uscite sono NEGATIVE. Gli importi sono in euro.
@@ -159,6 +182,7 @@ export async function chiedi(conversazioneId: string, domanda: string): Promise<
 
   const eseguiti: StrumentoEseguito[] = [];
   const proposte: PropostaSalvata[] = [];
+  const grafici: Grafico[] = [];
   let costo: number | null = null;
   let testo: string | null = null;
   let token: number | null = null;
@@ -186,6 +210,7 @@ export async function chiedi(conversazioneId: string, domanda: string): Promise<
       if (esito.proposta !== undefined) {
         proposte.push({ ...esito.proposta, applicata_at: null });
       }
+      if (esito.grafico !== undefined) grafici.push(esito.grafico);
       messaggi.push({ role: 'tool', tool_call_id: chiamata.id, content: esito.serializzato });
     }
 
@@ -220,11 +245,12 @@ export async function chiedi(conversazioneId: string, domanda: string): Promise<
       testo,
       strumenti: eseguiti.length === 0 ? null : eseguiti,
       proposte: proposte.length === 0 ? null : proposte,
+      grafici: grafici.length === 0 ? null : grafici,
       cifre_inventate: inventate.length === 0 ? null : inventate,
       model: modelloInUso(),
       tokens_used: token,
     })
-    .select('id, ruolo, testo, strumenti, proposte, cifre_inventate, created_at')
+    .select('id, ruolo, testo, strumenti, proposte, grafici, cifre_inventate, created_at')
     .single<MessaggioSalvato>();
 
   if (error !== null || data === null) {
@@ -238,6 +264,7 @@ type EsitoChiamata = {
   argomenti: unknown;
   dati: unknown;
   proposta?: Proposta;
+  grafico?: Grafico;
   serializzato: string;
 };
 
@@ -269,10 +296,13 @@ async function eseguiChiamata(chiamata: ChiamataStrumento): Promise<EsitoChiamat
 
   try {
     const esito = await s.esegui(argomenti);
-    const serializzato = tronca(JSON.stringify(esito.dati));
-    return esito.proposta === undefined
-      ? { argomenti, dati: esito.dati, serializzato }
-      : { argomenti, dati: esito.dati, proposta: esito.proposta, serializzato };
+    return {
+      argomenti,
+      dati: esito.dati,
+      serializzato: tronca(JSON.stringify(esito.dati)),
+      ...(esito.proposta === undefined ? {} : { proposta: esito.proposta }),
+      ...(esito.grafico === undefined ? {} : { grafico: esito.grafico }),
+    };
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     if (!(errore instanceof ArgomentoNonValido)) {
@@ -416,7 +446,7 @@ export async function leggiConversazione(id: string): Promise<readonly Messaggio
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from('chat_messages')
-    .select('id, ruolo, testo, strumenti, proposte, cifre_inventate, created_at')
+    .select('id, ruolo, testo, strumenti, proposte, grafici, cifre_inventate, created_at')
     .eq('conversazione_id', id)
     .order('created_at')
     .limit(200);

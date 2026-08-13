@@ -26,6 +26,29 @@ export type Proposta = {
 
 export type PropostaSalvata = Proposta & { applicata_at: string | null };
 
+/**
+ * Un grafico che il copilot ha chiesto di disegnare.
+ *
+ * I punti vengono **sempre** da una query: il modello sceglie cosa disegnare —
+ * quale grandezza, quanti mesi — e non cosa c'è dentro. È la stessa divisione
+ * di tutto il resto dell'applicazione: le cifre le produce SQL, il modello
+ * decide di cosa parlare.
+ *
+ * `valore` è testo e non un numero, come ogni importo che attraversa un
+ * confine: un `numeric` serializzato in JSON diventa un float, e sarebbe
+ * assurdo perdere un centesimo proprio per disegnarlo.
+ */
+export type Punto = { etichetta: string; valore: string };
+export type Serie = { nome: string; punti: readonly Punto[] };
+
+export type Grafico = {
+  titolo: string;
+  tipo: 'linee' | 'barre';
+  serie: readonly Serie[];
+  /** Cosa il grafico non mostra, quando c'è. Va scritto sotto, non taciuto. */
+  nota?: string;
+};
+
 /** Un'operazione eseguita, con quello che ha restituito. È la prova. */
 export type StrumentoEseguito = {
   nome: string;
@@ -39,6 +62,7 @@ export type MessaggioSalvato = {
   testo: string;
   strumenti: readonly StrumentoEseguito[] | null;
   proposte: readonly PropostaSalvata[] | null;
+  grafici: readonly Grafico[] | null;
   /** Cifre scritte dal modello che nei dati letti non c'erano. */
   cifre_inventate: readonly string[] | null;
   created_at: string;

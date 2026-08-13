@@ -1053,6 +1053,72 @@ viste mensili e non accanto: le schermate guardano sempre un mese, una domanda n
 Se le aggregazioni fossero vissute dentro i componenti, questa fase sarebbe stata riscriverle tutte
 una seconda volta, e due copie della stessa somma divergono.
 
+#### La regola 8 arrivava a metà, e si vedeva
+
+Trovato in uso, non in revisione: chiedendo le spese in ristoranti di agosto, **cinque righe su sei
+dicevano «un privato»** — in una categoria dove dall'altra parte c'è un esercente per costruzione.
+Alla domanda «179 € dove?» non c'era risposta.
+
+Il filtro della Fase 4 è `soloCarta || sembraAttivita`. Il primo termine è **l'unica garanzia che
+viene dai dati e non da un'inferenza**; `sanificaMetriche` aveva solo il secondo, perché gli
+aggregati non portano il metodo di pagamento. `Bella Napoli` — due parole, nessuna parola di
+mestiere, nessuna cifra — veniva trattenuta, mentre nel percorso di classificazione sarebbe uscita
+senza discussioni.
+
+La `0029` restituisce l'evidenza con `v_esercenti_da_carta`, e `sanificaMetriche` accetta l'insieme
+dei nomi garantiti. **Omesso, resta il solo `sembraAttivita`**: l'assenza di evidenza non diventa
+mai un permesso.
+
+Nella stessa migration si chiude una falla che era lì dalla `0014`: **`bool_and` ignora i null**,
+quindi `bool_and(bank_code = 'CARD_PAYMENT')` su un gruppo fatto di una carta e di un movimento con
+codice nullo restituiva `true` — l'opposto di ciò che il commento accanto dichiarava. Il caso «tutti
+null» era coperto, quello misto no. `is not distinct from` lo chiude.
+
+Nella stessa occasione il modello aveva **inventato una spiegazione**: «potrebbe essere un pagamento
+in contanti o tramite Satispay». Falso, ed è il modo di sbagliare misurato in Fase 4. Il nome non
+mancava dai dati: gliel'avevamo tolto noi, e il prompt non glielo diceva. Ora dice che «un privato»
+significa _trattenuto_, non _sconosciuto_.
+
+#### A una domanda si risponde, non si risponde con un menu
+
+Alla domanda per cui questa applicazione esiste — _«come potrei spendere meno per mettere via più
+soldi»_ — il copilot ha risposto con quattro voci e «cosa ti interessa vedere?». Non era pigrizia
+del modello: aveva otto strumenti e nessun motivo per preferirne uno, quindi ha chiesto.
+
+La cura non è insegnargli a scegliere, è che a quella domanda servono **tutti i pezzi insieme**:
+`dove_tagliare` li restituisce in una chiamata sola — costo ricorrente diviso per tipo, le singole
+voci, i maggiori esercenti recenti, e quanto resta ogni mese.
+
+Il margine lo calcola SQL (`margine_mensile`), perché «entrate meno spesa» è una **sottrazione** e
+la regola non fa eccezioni per quelle facili — è proprio su una sottrazione facile che il controllo
+delle cifre lo ha già colto. Le uscite sono negative, quindi il margine è una somma: scriverlo come
+differenza fra valori assoluti sarebbe l'occasione perfetta per sbagliare un segno.
+
+Il consiglio segue la forma della metrica: **due liste separate**, cosa si può disdire e cosa si può
+cambiare, mai un totale unico. E niente consigli da manuale — vale solo ciò che si legge nei dati.
+
+#### Un grafico può mentire con numeri veri
+
+Il modello sceglie **cosa** disegnare, mai cosa c'è dentro: i punti escono da una query come ogni
+altra cifra. Un grafico i cui valori li scrivesse lui sarebbe la cosa più pericolosa
+dell'applicazione, perché una figura si guarda e non si ricontrolla.
+
+Due decisioni nella geometria, che sta in un modulo puro proprio per poterle provare:
+
+- **lo zero è sempre nel dominio.** Partire dal minimo osservato fa sembrare un crollo una
+  variazione del 3%, ed è il modo più comune di mentire con dati veri — nonché il comportamento
+  predefinito di quasi tutte le librerie;
+- **gli importi non passano da un float.** Restano `bigint` fino all'etichetta. I pixel sì, e va
+  bene: un pixel è una posizione, non un euro.
+
+Le etichette sono **sempre mesi**, ed è anche il motivo per cui non esiste un grafico per esercente:
+le sue etichette sarebbero nomi, metà diventerebbero «un privato», e cinque colonne chiamate allo
+stesso modo non sono un grafico.
+
+Niente libreria, come per il markdown del report: per una spezzata e qualche barra porterebbe
+decine di chilobyte e il proprio scalamento degli assi — che è esattamente il pezzo che si vuole
+poter provare con degli assert.
+
 #### L'albero delle categorie sta nelle istruzioni
 
 Trentacinque voci con i loro identificativi sono poche centinaia di token, e valgono un giro di
@@ -1073,8 +1139,15 @@ inventare un identificativo di categoria.
    che il cambio ci sia.
 4. Chiedere di un bonifico verso un privato: nel blocco dei dati il nome dev'essere **«un
    privato»**, e il modello non deve poterlo nominare.
-5. Riaprire `/copilota` da un altro indirizzo: la conversazione è ancora lì, con i suoi dati e i
-   suoi avvisi sulle cifre.
+5. Riaprire `/copilota` da un altro indirizzo: la conversazione è ancora lì, con i suoi dati, i suoi
+   grafici e i suoi avvisi sulle cifre.
+6. «Come potrei spendere meno?» → deve **rispondere**, non chiedere cosa guardare. Due liste
+   separate: cosa disdire e cosa cambiare.
+7. «Fammi il grafico della spesa» → compare una figura, e lo **zero è disegnato**. Se la linea
+   riempisse tutta l'altezza per una variazione piccola, la scala si è rotta.
+8. In una categoria di ristoranti, i nomi degli esercenti pagati con carta devono **comparire**. Se
+   dicono ancora «un privato», la garanzia della `0029` non sta arrivando:
+   `select * from v_esercenti_da_carta where solo_carta` deve elencarli.
 
 ### Prova manuale della Fase 9, sotto i 5 minuti
 

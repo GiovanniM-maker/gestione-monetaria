@@ -4,7 +4,7 @@ import { comeArray } from '@/lib/enablebanking/redact';
 import { sanificaMetriche } from '@/lib/report/sanifica';
 import { esercentiDaCarta } from '@/lib/tassonomia/garanzie';
 import type { StrumentoDichiarato } from '@/lib/ai/modello';
-import type { Proposta } from './messaggi';
+import type { Grafico, Proposta } from './messaggi';
 
 /**
  * Le operazioni che il copilot può usare.
@@ -50,6 +50,8 @@ export type EsitoStrumento = {
   dati: unknown;
   /** Presente solo per le scritture. */
   proposta?: Proposta;
+  /** Presente solo per i grafici. Va all'utente, non al modello. */
+  grafico?: Grafico;
 };
 
 export type Strumento = StrumentoDichiarato & {
@@ -467,6 +469,235 @@ const statoEAvvisi: Strumento = {
 };
 
 // ---------------------------------------------------------------------------
+// I consigli
+// ---------------------------------------------------------------------------
+// «Come potrei spendere meno per mettere più soldi di lato» è **la** domanda per
+// cui questa applicazione esiste, e la prima volta che gliel'hanno fatta il
+// copilot ha risposto con un menu: «dimmi cosa vuoi sapere e ti aiuto». Non era
+// pigrizia del modello — aveva otto strumenti e nessun motivo per preferirne
+// uno, quindi ha chiesto.
+//
+// La risposta non è insegnargli a scegliere: è che a quella domanda servono
+// **tutti** i pezzi insieme, e quindi devono arrivare in una chiamata sola. Il
+// costo ricorrente diviso fra abbonamenti e abitudini, le voci che lo compongono,
+// i maggiori esercenti dei mesi recenti, e quanto resta ogni mese.
+//
+// Il margine lo calcola SQL. È una sottrazione — entrate meno spesa — e la
+// regola non fa eccezioni per le sottrazioni facili: è proprio su quelle che il
+// controllo delle cifre lo ha già colto.
+
+const doveTagliare: Strumento = {
+  nome: 'dove_tagliare',
+  descrizione:
+    'Tutto quello che serve per rispondere a «come posso spendere meno» o «dove ' +
+    'posso tagliare» o «come metto via più soldi»: il costo ricorrente diviso fra ' +
+    'abbonamenti e abitudini, le singole voci, i maggiori esercenti recenti e ' +
+    'quanto resta ogni mese. Chiamalo SUBITO quando la domanda è di questo tipo, ' +
+    "invece di chiedere all'utente cosa vuole guardare.",
+  parametri: {
+    type: 'object',
+    properties: {
+      mesi: { type: 'integer', description: 'Quanti mesi guardare indietro. Predefinito 3.' },
+    },
+  },
+  esegui: async (a) => {
+    const supabase = await createSupabaseServerClient();
+    const mesi = intero(a['mesi'], 3, 12);
+
+    // Il primo del mese, `mesi - 1` mesi fa. Con anno e mese come interi la
+    // domanda «qual è il mese prima di gennaio» ha una sola risposta, mentre
+    // `setMonth` su una data letta in UTC riporterebbe al giorno prima.
+    const oggi = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+    const anno = Number(oggi.slice(0, 4));
+    const mese = Number(oggi.slice(5, 7));
+    const indietro = new Date(Date.UTC(anno, mese - 1 - (mesi - 1), 1));
+    const da = `${indietro.toISOString().slice(0, 7)}-01`;
+    const a_ = `${oggi.slice(0, 7)}-01`;
+
+    const [metrica, voci, esercenti, margine] = await Promise.all([
+      supabase
+        .from('v_recurring_monthly_cost_by_discretion')
+        .select('tipo, discrezionalita, contesto, ricorrenze, costo_mensile::text'),
+      supabase
+        .from('v_subscriptions')
+        .select(
+          'esercente, merchant_id, categoria, discrezionalita, contesto, tipo, cadence, ' +
+            'typical_amount::text, costo_mensile::text, occurrences, usage_verdict, status',
+        )
+        .eq('nella_metrica', true)
+        .order('costo_mensile', { ascending: true, nullsFirst: false })
+        .limit(25),
+      supabase.rpc('spesa_per_esercente', { p_da: da, p_a: a_, p_limite: 12 }),
+      supabase.rpc('margine_mensile', { p_mesi: Math.max(mesi, 6) }),
+    ]);
+
+    return fuori({
+      periodo_esercenti: { da_mese: da.slice(0, 7), a_mese: a_.slice(0, 7) },
+      costo_ricorrente: comeArray(metrica.data),
+      voci_ricorrenti: comeArray(voci.data),
+      maggiori_esercenti: comeArray(esercenti.data),
+      margine_mensile: comeArray(margine.data),
+      come_leggerli: [
+        'ABBONAMENTI e ABITUDINI non si sommano mai: il primo si disdice con un gesto e il ' +
+          "risparmio è certo, la seconda si cambia e cambiare un'abitudine non è un gesto.",
+        "usage_verdict = 'non_usato' è una dichiarazione dell'utente: quella voce è la prima " +
+          'da proporre, perché sta pagando per qualcosa che ha già detto di non usare.',
+        "Una voce di viaggi con poche occorrenze concentrate NON è un'abitudine: è una spesa " +
+          'episodica che capita di essere ravvicinata, e proporre di «cambiarla» non ha senso.',
+        'margine è quanto è rimasto quel mese, già calcolato. Non ricalcolarlo.',
+      ],
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// I grafici
+// ---------------------------------------------------------------------------
+// Il modello sceglie **cosa** disegnare, non cosa c'è dentro: i punti escono da
+// una query come tutte le altre cifre. Un grafico i cui valori li scrivesse lui
+// sarebbe la cosa più pericolosa dell'applicazione — un numero sbagliato in un
+// grafico non lo ricontrolla nessuno, perché una figura si guarda, non si legge.
+//
+// Le etichette sono **sempre mesi**. È anche il motivo per cui non esiste un
+// grafico per esercente: le sue etichette sarebbero nomi, e metà diventerebbero
+// «un privato» — un grafico con cinque colonne chiamate allo stesso modo non è
+// un grafico.
+
+const COSE = ['spesa', 'entrate_e_spesa', 'margine', 'categoria'] as const;
+
+const graficoMensile: Strumento = {
+  nome: 'grafico_mensile',
+  descrizione:
+    "Disegna un grafico dell'andamento mese per mese. Usalo quando ti chiedono un " +
+    'grafico, oppure quando la domanda riguarda un andamento nel tempo: una figura ' +
+    'dice in un colpo quello che dieci righe di numeri non dicono. Restituisce anche ' +
+    'i valori, che puoi commentare.',
+  parametri: {
+    type: 'object',
+    properties: {
+      cosa: {
+        type: 'string',
+        enum: [...COSE],
+        description:
+          "'spesa' = spesa reale mensile; 'entrate_e_spesa' = le due insieme; " +
+          "'margine' = quanto resta ogni mese; 'categoria' = la spesa di una " +
+          'categoria (richiede categoria_id).',
+      },
+      categoria_id: STRINGA,
+      mesi: { type: 'integer', description: 'Quanti mesi. Predefinito 8, massimo 24.' },
+    },
+    required: ['cosa'],
+  },
+  esegui: async (a) => {
+    const cosa = fraQuesti(a['cosa'], COSE, 'cosa') ?? 'spesa';
+    const mesi = intero(a['mesi'], 8, 24);
+    const supabase = await createSupabaseServerClient();
+
+    if (cosa === 'categoria') {
+      const categoriaId = identificativo(a['categoria_id'], 'categoria_id');
+      if (categoriaId === null) {
+        throw new ArgomentoNonValido('Per il grafico di una categoria serve categoria_id.');
+      }
+
+      const { data } = await supabase
+        .from('v_monthly_by_category')
+        .select('mese, categoria, spesa::text')
+        .eq('category_id', categoriaId)
+        .order('mese', { ascending: false })
+        .limit(mesi);
+
+      const righe = comeArray<{ mese: string; categoria: string; spesa: string }>(data)
+        .slice()
+        .reverse();
+
+      const nome = righe[0]?.categoria ?? 'categoria';
+      return conGrafico(
+        righe.map((r) => ({ mese: r.mese, valori: { [nome]: r.spesa } })),
+        {
+          titolo: `${nome}, ultimi ${righe.length} mesi`,
+          tipo: 'barre',
+          // Un mese senza spesa in questa categoria non compare nella vista, e
+          // quindi non compare nel grafico: la linea salta da marzo a maggio come
+          // se aprile non fosse esistito. Va detto, non lasciato indovinare.
+          nota: 'I mesi senza nessuna spesa in questa categoria non compaiono.',
+        },
+      );
+    }
+
+    const { data } = await supabase.rpc('margine_mensile', { p_mesi: mesi });
+    const righe = comeArray<Record<string, unknown>>(data).slice().reverse();
+
+    const serie =
+      cosa === 'spesa'
+        ? { spesa: 'spesa' }
+        : cosa === 'margine'
+          ? { margine: 'margine' }
+          : { entrate: 'entrate', spesa: 'spesa' };
+
+    return conGrafico(
+      righe.map((r) => ({
+        mese: String(r['mese']),
+        valori: Object.fromEntries(
+          Object.entries(serie).map(([nome, colonna]) => [nome, String(r[colonna] ?? '0')]),
+        ),
+      })),
+      {
+        titolo:
+          cosa === 'spesa'
+            ? `Spesa reale, ultimi ${righe.length} mesi`
+            : cosa === 'margine'
+              ? `Quanto è rimasto, ultimi ${righe.length} mesi`
+              : `Entrate e spesa, ultimi ${righe.length} mesi`,
+        tipo: cosa === 'margine' ? 'barre' : 'linee',
+      },
+    );
+  },
+};
+
+/**
+ * Compone il grafico e i dati dagli stessi punti.
+ *
+ * Sono la stessa cosa vista due volte, ed è voluto: se la figura e i numeri
+ * commentati venissero da due query, potrebbero divergere — e la divergenza si
+ * noterebbe solo per caso, guardando bene una figura. È lo stesso ragionamento
+ * di `cerca_movimenti`, che restituisce righe e totale da una query sola.
+ */
+async function conGrafico(
+  punti: readonly { mese: string; valori: Record<string, string> }[],
+  forma: { titolo: string; tipo: 'linee' | 'barre'; nota?: string },
+): Promise<EsitoStrumento> {
+  const nomi = [...new Set(punti.flatMap((p) => Object.keys(p.valori)))];
+
+  const grafico: Grafico = {
+    titolo: forma.titolo,
+    tipo: forma.tipo,
+    ...(forma.nota === undefined ? {} : { nota: forma.nota }),
+    serie: nomi.map((nome) => ({
+      nome,
+      punti: punti.map((p) => ({
+        etichetta: etichettaMese(p.mese),
+        valore: p.valori[nome] ?? '0',
+      })),
+    })),
+  };
+
+  const esito = await fuori({
+    grafico_disegnato: forma.titolo,
+    punti: punti.map((p) => ({ mese: p.mese.slice(0, 7), ...p.valori })),
+    nota: "Il grafico è già mostrato all'utente. Commenta i valori, non descrivere la figura.",
+  });
+
+  return { ...esito, grafico };
+}
+
+/** `2026-07-01` → `lug 26`. Corto perché su un telefono ci stanno tre etichette. */
+function etichettaMese(giorno: string): string {
+  const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const indice = Number(giorno.slice(5, 7)) - 1;
+  return `${MESI[indice] ?? giorno.slice(5, 7)} ${giorno.slice(2, 4)}`;
+}
+
+// ---------------------------------------------------------------------------
 // Le scritture — che qui non scrivono
 // ---------------------------------------------------------------------------
 // Ognuna **prepara** l'operazione e la restituisce; ad applicarla è l'utente,
@@ -698,6 +929,8 @@ export const STRUMENTI: readonly Strumento[] = [
   costoRicorrente,
   trovaEsercente,
   statoEAvvisi,
+  doveTagliare,
+  graficoMensile,
   correggiMovimento,
   aggiornaEsercente,
   creaCategoria,
