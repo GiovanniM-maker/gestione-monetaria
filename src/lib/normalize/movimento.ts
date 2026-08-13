@@ -135,17 +135,19 @@ function chiaveFallback(
   importo: string,
   descrizione: string | null,
 ): string {
-  return createHash('sha256')
-    // Separatore NUL, scritto come sequenza di escape e non come byte
-    // vero. Nel sorgente c'era il carattere letterale, che rende il file
-    // "binario" per grep e sopravvive male a qualunque strumento che
-    // tocchi il testo — e se sparisse in silenzio cambierebbero tutte le
-    // chiavi di deduplica dei movimenti senza `entry_reference`.
-    // La scelta del NUL resta giusta: non puo' comparire dentro un campo,
-    // quindi due componenti diverse non possono mai produrre la stessa
-    // concatenazione.
-    .update([accountId, bookingDate, importo, descrizione ?? ''].join('\u0000'))
-    .digest('hex');
+  return (
+    createHash('sha256')
+      // Separatore NUL, scritto come sequenza di escape e non come byte
+      // vero. Nel sorgente c'era il carattere letterale, che rende il file
+      // "binario" per grep e sopravvive male a qualunque strumento che
+      // tocchi il testo — e se sparisse in silenzio cambierebbero tutte le
+      // chiavi di deduplica dei movimenti senza `entry_reference`.
+      // La scelta del NUL resta giusta: non puo' comparire dentro un campo,
+      // quindi due componenti diverse non possono mai produrre la stessa
+      // concatenazione.
+      .update([accountId, bookingDate, importo, descrizione ?? ''].join('\u0000'))
+      .digest('hex')
+  );
 }
 
 export class PayloadNonNormalizzabile extends Error {}

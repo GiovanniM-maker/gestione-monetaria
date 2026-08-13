@@ -161,16 +161,20 @@ export type VoceMetrica = {
 };
 
 export function ordinaPerPeso(righe: readonly RigaMetrica[]): readonly VoceMetrica[] {
-  return righe
-    .map((r) => ({
-      tipo: r.tipo,
-      discrezionalita: r.discrezionalita,
-      contesto: r.contesto,
-      ricorrenze: r.ricorrenze,
-      costoMensile: parseCentesimiTollerante(r.costo_mensile) ?? 0n,
-    }))
-    // Le uscite sono negative: la voce piu' pesante e' la piu' piccola.
-    .sort((a, b) => (a.costoMensile < b.costoMensile ? -1 : a.costoMensile > b.costoMensile ? 1 : 0));
+  return (
+    righe
+      .map((r) => ({
+        tipo: r.tipo,
+        discrezionalita: r.discrezionalita,
+        contesto: r.contesto,
+        ricorrenze: r.ricorrenze,
+        costoMensile: parseCentesimiTollerante(r.costo_mensile) ?? 0n,
+      }))
+      // Le uscite sono negative: la voce piu' pesante e' la piu' piccola.
+      .sort((a, b) =>
+        a.costoMensile < b.costoMensile ? -1 : a.costoMensile > b.costoMensile ? 1 : 0,
+      )
+  );
 }
 
 /**

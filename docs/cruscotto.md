@@ -31,16 +31,16 @@ questa applicazione si costruisce, non dove si usa.
 
 ## 1. Cosa c'è oggi
 
-| Superficie | Cosa risponde | Stato |
-| --- | --- | --- |
-| `/` cruscotto | quanto ho speso questo mese, in cosa, da chi | Fase 6, ampliata in 6-bis |
-| `/movimenti` | la lista completa, filtrabile e cercabile, col totale del filtro | **Fase 6-bis** |
-| `/movimenti/[id]` | la singola riga, in sola lettura | **Fase 6-bis** |
-| `/esercente/[id]` | quanto mi costa questo esercente, e da dove viene la sua classificazione | **Fase 6-bis** |
-| `/categoria/[id]` | cosa c'è dentro questo ramo, e come si muove | **Fase 6-bis** |
-| `/abbonamenti` | quanto costa al mese ciò che si ripete | Fase 5 |
-| `/revisione` | quali etichette ed esercenti mancano di classificazione | Fase 4 |
-| `/debug/sync` | la sequenza operativa: scarica, normalizza, categorizza, rileva | Fase 2–5 |
+| Superficie        | Cosa risponde                                                            | Stato                     |
+| ----------------- | ------------------------------------------------------------------------ | ------------------------- |
+| `/` cruscotto     | quanto ho speso questo mese, in cosa, da chi                             | Fase 6, ampliata in 6-bis |
+| `/movimenti`      | la lista completa, filtrabile e cercabile, col totale del filtro         | **Fase 6-bis**            |
+| `/movimenti/[id]` | la singola riga, in sola lettura                                         | **Fase 6-bis**            |
+| `/esercente/[id]` | quanto mi costa questo esercente, e da dove viene la sua classificazione | **Fase 6-bis**            |
+| `/categoria/[id]` | cosa c'è dentro questo ramo, e come si muove                             | **Fase 6-bis**            |
+| `/abbonamenti`    | quanto costa al mese ciò che si ripete                                   | Fase 5                    |
+| `/revisione`      | quali etichette ed esercenti mancano di classificazione                  | Fase 4                    |
+| `/debug/sync`     | la sequenza operativa: scarica, normalizza, categorizza, rileva          | Fase 2–5                  |
 
 **Il buco descritto nella sezione 2 è colmato.** Il testo resta perché la
 lezione vale oltre il caso: ogni aggregato deve poter essere sceso fino alla
@@ -102,15 +102,15 @@ che rende un cruscotto verificabile invece che decorativo.
 
 ### 4.1 La schermata di apertura resta il mese
 
-**Deciso**: l'app continua ad aprirsi sul cruscotto del mese corrente, non su una schermata *Oggi*
+**Deciso**: l'app continua ad aprirsi sul cruscotto del mese corrente, non su una schermata _Oggi_
 separata. La domanda quotidiana è «quanto ho speso finora», e metterla dietro un tocco per
 guadagnare una schermata di riepilogo sarebbe un peggioramento.
 
-Le tre cose che una schermata *Oggi* avrebbe portato vanno quindi **in cima al cruscotto del mese**,
+Le tre cose che una schermata _Oggi_ avrebbe portato vanno quindi **in cima al cruscotto del mese**,
 sopra il totale:
 
 1. **Lo stato del sistema.** Una riga sola quando va tutto bene, un avviso quando no.
-   *Vedi 5.4: è la cosa che oggi manca e che costa di più.*
+   _Vedi 5.4: è la cosa che oggi manca e che costa di più._
 2. **Cosa richiede un gesto**, quando c'è: «7 movimenti di ieri da confermare». Con il conteggio e
    non con un pallino — un numero è un invito, un pallino rosso è un'ansia.
 3. **Il costo ricorrente** resta dov'è, secondo blocco, perché risponde a una domanda diversa da
@@ -213,7 +213,7 @@ Enable Banking scade — 180 giorni sul connettore Revolut — e quando scade **
 smettono di arrivare**. Il cruscotto continuerebbe a mostrare numeri, sempre più vecchi, senza dire
 niente. È il guasto peggiore possibile per un'applicazione che esiste per essere creduta.
 
-Serve, in cima a *Oggi*:
+Serve, in cima a _Oggi_:
 
 - ultima sincronizzazione riuscita, e quanti giorni fa;
 - data dell'ultimo movimento presente (che non è la stessa cosa);
@@ -291,12 +291,12 @@ Elencato perché il modo tipico di rovinare un cruscotto è aggiungerci cose rag
 
 Prese il 12 agosto 2026, dopo il primo inventario.
 
-| Domanda | Decisione | Conseguenza |
-| --- | --- | --- |
-| **Entrate** | sì, ma **come contesto** | una riga sul cruscotto e una vista `v_monthly_income`; la metrica principale non cambia |
-| **Schermata di apertura** | resta **il mese corrente** | stato del sistema e cose da confermare vanno in cima al cruscotto, non su una schermata nuova |
-| **Budget** | **non ora** | `budgets` resta nello schema inutilizzata; da riprendere quando i numeri veri saranno noti da qualche mese |
-| **Correzione della singola transazione** | **da decidere sui dati** | la lista dei movimenti si costruisce lo stesso; la scheda nasce **in sola lettura**, e le correzioni si aggiungono quando il bisogno si vede |
+| Domanda                                  | Decisione                  | Conseguenza                                                                                                                                  |
+| ---------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Entrate**                              | sì, ma **come contesto**   | una riga sul cruscotto e una vista `v_monthly_income`; la metrica principale non cambia                                                      |
+| **Schermata di apertura**                | resta **il mese corrente** | stato del sistema e cose da confermare vanno in cima al cruscotto, non su una schermata nuova                                                |
+| **Budget**                               | **non ora**                | `budgets` resta nello schema inutilizzata; da riprendere quando i numeri veri saranno noti da qualche mese                                   |
+| **Correzione della singola transazione** | **da decidere sui dati**   | la lista dei movimenti si costruisce lo stesso; la scheda nasce **in sola lettura**, e le correzioni si aggiungono quando il bisogno si vede |
 
 L'ultima riga merita una nota, perché è una decisione di metodo e non di prodotto. La scheda
 movimento in sola lettura serve già a due cose su tre — verificare un numero scomponendolo, e
@@ -313,16 +313,16 @@ service worker, quindi si decide lì.
 
 Ogni riga è un passo che si chiude e si prova da solo.
 
-| # | Cosa | Perché in questa posizione |
-| --- | --- | --- |
-| 1 | **Stato del sistema** in cima al cruscotto | ✅ 0020 |
-| 2 | **Entrate come contesto** — vista e riga sul cruscotto | ✅ 0020 |
-| 3 | **Lista movimenti** con filtri, ricerca e totale | ✅ 0020 |
-| 4 | **Scheda movimento in sola lettura** | ✅ 0020 |
-| 5 | **Aggregati toccabili** — categoria ed esercente aprono | ✅ |
-| 6 | **Schede esercente e categoria** | ✅ |
-| 7 | **Confronto omogeneo** fra periodi | ✅ 0021 |
-| 8 | **Lista giroconti** | ✅ come filtro: `/movimenti?tipo=giroconti` |
+| #   | Cosa                                                    | Perché in questa posizione                  |
+| --- | ------------------------------------------------------- | ------------------------------------------- |
+| 1   | **Stato del sistema** in cima al cruscotto              | ✅ 0020                                     |
+| 2   | **Entrate come contesto** — vista e riga sul cruscotto  | ✅ 0020                                     |
+| 3   | **Lista movimenti** con filtri, ricerca e totale        | ✅ 0020                                     |
+| 4   | **Scheda movimento in sola lettura**                    | ✅ 0020                                     |
+| 5   | **Aggregati toccabili** — categoria ed esercente aprono | ✅                                          |
+| 6   | **Schede esercente e categoria**                        | ✅                                          |
+| 7   | **Confronto omogeneo** fra periodi                      | ✅ 0021                                     |
+| 8   | **Lista giroconti**                                     | ✅ come filtro: `/movimenti?tipo=giroconti` |
 
 Le correzioni sulla scheda movimento restano fuori finché non si sa se servono (vedi 8).
 
@@ -330,7 +330,7 @@ Le correzioni sulla scheda movimento restano fuori finché non si sa se servono 
 
 Non è lavoro pianificato, è ciò che l'inventario ha lasciato indietro di proposito.
 
-- **Il motivo di ogni giroconto.** La lista esiste come filtro, ma non dice *perché* una riga è
+- **Il motivo di ogni giroconto.** La lista esiste come filtro, ma non dice _perché_ una riga è
   marcata `is_transfer` — riferimento condiviso, causale `To`/`From`, controparte dichiarata, o
   movimento speculare. Con quel motivo accanto, la revisione mensile dei giroconti diventa
   verificabile invece che un atto di fede.

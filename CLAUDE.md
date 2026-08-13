@@ -20,7 +20,7 @@
 | 7     | Automazione                               | **completata** |
 | 8     | Motore alert (SQL)                        | **completata** |
 | 9     | Report periodico AI                       | **completata** |
-| 10    | Chat copilot                              | non iniziata   |
+| 10    | Chat copilot                              | **completata** |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
 
@@ -55,7 +55,7 @@ momento in cui vanno fatte, e perché dimenticarle costa più che scriverle.
 
 Realizzata dopo la Fase 7, quando esistevano tutti i presupposti: la lista movimenti, il lavoro
 schedulato che li raccoglie, e le proposte del modello. Il testo sotto resta perché spiega
-*perché* la schermata è fatta così.
+_perché_ la schermata è fatta così.
 
 **Le due azioni non sono la stessa cosa con un parametro diverso.** «Va bene» lascia la riga
 agganciata al suo esercente e **non** marca `manually_categorized`: l'utente ha approvato una
@@ -142,8 +142,8 @@ Preferisci SQL esplicito e query tipizzate.
 
 ### Ogni operazione dev'essere raggiungibile dal copilot, non solo da un bottone
 
-La Fase 10 prevede di chiedere all'app *"quanto ho speso in ristoranti a marzo"*, ma anche
-*"sposta questa transazione in un'altra categoria"* e *"creane una nuova"*. Un copilot può fare
+La Fase 10 prevede di chiedere all'app _"quanto ho speso in ristoranti a marzo"_, ma anche
+_"sposta questa transazione in un'altra categoria"_ e _"creane una nuova"_. Un copilot può fare
 solo ciò che esiste come **operazione nominata**: se la logica vive dentro un gestore di click, per
 lui non esiste.
 
@@ -157,6 +157,11 @@ Conseguenza pratica, valida da subito e non dalla Fase 10:
 
 Non è anticipare la Fase 10: è non doverla riscrivere. Una vista e una funzione SQL sono già
 strumenti che un modello può usare; un `onClick` no.
+
+**Il conto è stato pagato e la regola resta.** La Fase 10 ha esposto undici operazioni al copilot, e
+di quelle **una sola** era da scrivere: `crea_categoria`, l'unica che non esistesse nemmeno come
+bottone. Tutte le altre erano già viste e funzioni. La regola vale ancora identica per ogni fase
+futura: quando la logica finisce dentro un gestore di click, per il copilot smette di esistere.
 
 ### Perché password e non magic link
 
@@ -221,7 +226,7 @@ qui, che è ciò che l'API fa davvero.
   l'unica strada per il primo anno di storico.
 - **Non manca nessuno storico: il conto è stato aperto il 23 settembre 2025.** Verificato il
   12 agosto 2026 sull'estratto conto CSV, che è una fonte indipendente dall'API: ordinando i
-  movimenti del conto corrente per data di completamento, il saldo implicito *prima* del primo
+  movimenti del conto corrente per data di completamento, il saldo implicito _prima_ del primo
   movimento è **0,00**. API e CSV partono dallo stesso identico giorno perché prima di quel giorno
   non esiste niente. Quindi i "10 mesi e mezzo invece di 24" non sono una finestra tagliata dalla
   banca: sono tutta la vita del conto, e **la Fase 2-bis non ha niente da recuperare per Revolut**.
@@ -365,14 +370,14 @@ esplicita, o è una regressione.
 I totali di storico sono quelli **dopo** la riautorizzazione dell'11 agosto e la riparazione dei
 conti duplicati. Fra parentesi i valori precedenti, su tre soli mesi di storico.
 
-| Grandezza                            | Valore          |
-| ------------------------------------ | --------------- |
-| Storico coperto                      | 23/09/2025 → 11/08/2026 |
-| Movimenti normalizzati (storico)     | 1.957 (prima 581) |
+| Grandezza                            | Valore                          |
+| ------------------------------------ | ------------------------------- |
+| Storico coperto                      | 23/09/2025 → 11/08/2026         |
+| Movimenti normalizzati (storico)     | 1.957 (prima 581)               |
 | Giroconti riconosciuti (storico)     | 466 = 23,8% (prima 141 = 24,3%) |
-| Uscite lorde di luglio               | −12.670,32 €    |
-| Uscite di luglio al netto dei pocket | −10.670,32 €    |
-| **Spesa reale di luglio**            | **−3.640,32 €** |
+| Uscite lorde di luglio               | −12.670,32 €                    |
+| Uscite di luglio al netto dei pocket | −10.670,32 €                    |
+| **Spesa reale di luglio**            | **−3.640,32 €**                 |
 
 **Luglio non si è spostato di un centesimo** quadruplicando lo storico, ed è la verifica che conta:
 il backfill ha aggiunto solo passato più vecchio, quindi qualsiasi movimento su luglio sarebbe stato
@@ -394,13 +399,13 @@ Fatta il 12 agosto 2026 confrontando giorno per giorno il nostro database con l'
 Revolut, che è una fonte indipendente dall'API. Differenza lorda **217,68 €**, interamente
 scomposta:
 
-| Voce                                    | Importo    | Chi ha ragione                                          |
-| --------------------------------------- | ---------- | ------------------------------------------------------- |
-| Movimento del 7–8 luglio                | ±53,00 €   | nessuno dei due: si annulla nel mese                    |
-| Movimento del 18–19 luglio              | ±11,99 €   | nessuno dei due: si annulla nel mese                    |
-| Canone Premium del 21 luglio            | 9,99 €     | **noi** — il CSV lo nasconde in `Costo`                 |
-| `Vercel` annullata del 21 luglio        | −0,44 €    | **noi** — il CSV elenca un'operazione annullata          |
-| `Byteplus` del 31 luglio                | 208,13 €   | **il CSV** — vedi sotto                                  |
+| Voce                             | Importo  | Chi ha ragione                                  |
+| -------------------------------- | -------- | ----------------------------------------------- |
+| Movimento del 7–8 luglio         | ±53,00 € | nessuno dei due: si annulla nel mese            |
+| Movimento del 18–19 luglio       | ±11,99 € | nessuno dei due: si annulla nel mese            |
+| Canone Premium del 21 luglio     | 9,99 €   | **noi** — il CSV lo nasconde in `Costo`         |
+| `Vercel` annullata del 21 luglio | −0,44 €  | **noi** — il CSV elenca un'operazione annullata |
+| `Byteplus` del 31 luglio         | 208,13 € | **il CSV** — vedi sotto                         |
 
 Le prime quattro voci confermano la pipeline. La quinta è l'unico difetto reale trovato.
 
@@ -417,17 +422,17 @@ si annulla; sul confine di mese sposta l'importo nell'aggregato sbagliato.
 
 **Quanto vale**: su tutto lo storico solo **4 movimenti** cadono il primo del mese fra mezzanotte e
 le 02:00, per **243,95 €** netti. Su 71 movimenti notturni totali, gli altri 67 restano nel mese
-giusto. Non tocca il costo *ricorrente*, che è la metrica principale, quindi non giustifica la
+giusto. Non tocca il costo _ricorrente_, che è la metrica principale, quindi non giustifica la
 riapertura della Fase 3 — ma va saputo prima di stupirsi di uno scarto su un totale mensile.
 
 ### Numeri di chiusura della Fase 4
 
-| Grandezza | Valore |
-| --------- | ------ |
+| Grandezza                            | Valore                             |
+| ------------------------------------ | ---------------------------------- |
 | Copertura della spesa reale, in euro | **94,0%** — 31.887,13 su 33.915,37 |
-| Copertura in movimenti | 98,2% — 1.294 su 1.318 |
-| Categorie / esercenti / alias | 35 / ~160 / ~180 |
-| Etichette ancora da assegnare | 24, per 2.028 € |
+| Copertura in movimenti               | 98,2% — 1.294 su 1.318             |
+| Categorie / esercenti / alias        | 35 / ~160 / ~180                   |
+| Etichette ancora da assegnare        | 24, per 2.028 €                    |
 
 Delle 24 scoperte, **11 sono nomi di persona** per 2.018 €: non sono un fallimento, sono il confine
 della macchina. Solo l'utente sa se un bonifico a un privato è un affitto, un prestito o un
@@ -476,10 +481,10 @@ mestiere, dominio, cifre, prefisso di incasso. Senza uno di questi segnali l'eti
 Utile alla Fase 9, dove un LLM scriverà i report.
 
 - **Ragiona dall'importo quando il nome non basta.** `Bruno` è stato messo in `casa` /
-  `essenziale` perché *"importo alto suggerisce spesa casa"*. Era un negozio di elettronica, e
+  `essenziale` perché _"importo alto suggerisce spesa casa"_. Era un negozio di elettronica, e
   `essenziale` è la classe che più distorce la metrica.
-- **Inventa una motivazione plausibile pur di averne una.** `Aspit` → *"associazione
-  bar/ristorazione in Emilia"*: falso, ed è un'azienda di trasporti.
+- **Inventa una motivazione plausibile pur di averne una.** `Aspit` → _"associazione
+  bar/ristorazione in Emilia"_: falso, ed è un'azienda di trasporti.
 - **Non è coerente fra un lotto e l'altro.** `Aspit` e `Aspit Campogalliano`, stessi dati,
   classificazioni opposte, perché ogni chiamata non sa cosa ha risposto la precedente.
 - **Il flag `sicuro: false` funziona** e compare su quasi tutte le voci discutibili. È la valvola
@@ -560,7 +565,7 @@ si mostra `total_amount`, che è misurato.
 
 #### Tre mesi civili possono essere ventinove giorni
 
-La regola «presente in almeno tre mesi civili» voleva dire *"deve aver attraversato tre mesi"*.
+La regola «presente in almeno tre mesi civili» voleva dire _"deve aver attraversato tre mesi"_.
 Ma **i mesi civili non misurano il tempo**: il 31 gennaio, il 1° febbraio e il 1° marzo sono tre
 mesi civili e ventinove giorni.
 
@@ -583,15 +588,15 @@ criterio una quarta volta.
 Misurati il 12 agosto 2026 su tutto lo storico. Servono da riferimento: se una modifica li sposta,
 o c'è una ragione esplicita, o è una regressione.
 
-| Grandezza | Valore |
-| --------- | ------ |
-| Ricorrenze rilevate | 85 |
-| Entrano nella metrica | 43 |
-| **Abbonamenti** | **−425,96 €/mese** su 14 voci |
-| **Abitudini** | **−1.610,17 €/mese** su 29 voci |
-| Totale ricorrente | −2.036,13 €/mese |
-| Spesa reale media, mesi pieni feb–lug 2026 | −2.959,24 €/mese |
-| Quota ricorrente | **68,8%** della media, 51–56% di giugno e luglio |
+| Grandezza                                  | Valore                                           |
+| ------------------------------------------ | ------------------------------------------------ |
+| Ricorrenze rilevate                        | 85                                               |
+| Entrano nella metrica                      | 43                                               |
+| **Abbonamenti**                            | **−425,96 €/mese** su 14 voci                    |
+| **Abitudini**                              | **−1.610,17 €/mese** su 29 voci                  |
+| Totale ricorrente                          | −2.036,13 €/mese                                 |
+| Spesa reale media, mesi pieni feb–lug 2026 | −2.959,24 €/mese                                 |
+| Quota ricorrente                           | **68,8%** della media, 51–56% di giugno e luglio |
 
 Escluse: 33 esercenti fermi da tempo (−4.889,66 € spesi in tutto), 7 sotto i tre mesi di presenza
 (−218,10 €), 2 sotto i 75 giorni coperti (−480,34 €, cioè Byteplus e un bar).
@@ -773,7 +778,7 @@ ai dati grezzi già presenti: un disallineamento gratuito, e per giunta invisibi
 #### La risposta è 200 anche con errori
 
 Lo scheduler non sa reagire a un 500 se non ritentando, e ritentare uno scarico fatto a metà non
-aiuta — il cursore è salvato e il giro dopo riprende da solo. Il resoconto dice *quanto* è stato
+aiuta — il cursore è salvato e il giro dopo riprende da solo. Il resoconto dice _quanto_ è stato
 fatto prima di fermarsi, che è l'informazione utile; lo stato duraturo sta comunque in `sync_runs`.
 
 #### Il cron chiama il modello, ma solo per gli esercenti mai visti
@@ -848,7 +853,7 @@ questo avviso sarebbe solo rumore.
 
 Il difetto peggiore della 0023, trovato al primo giro vero: **53 avvisi in una volta.**
 
-`new_subscription` scattava su `subscriptions.created_at`, cioè su quando la *nostra tabella* ha
+`new_subscription` scattava su `subscriptions.created_at`, cioè su quando la _nostra tabella_ ha
 imparato che quella ricorrenza esiste. Ma la tabella era nata due giorni prima: ogni abbonamento
 risultava nuovo, Netflix compreso, che si paga da undici mesi.
 
@@ -880,8 +885,8 @@ riceve **aggregati finiti** e non righe: non ha da cui calcolare. `metriche_repo
 cifra in SQL, e il modello scrive solo le frasi intorno.
 
 Non è prudenza generica. In Fase 4, su cento proposte, ha ragionato dall'importo quando il nome non
-bastava — *«importo alto suggerisce spesa casa»* — e ha inventato una motivazione plausibile pur di
-averne una. Un modello che *scrive* numeri li sbaglia allo stesso modo, e in un report li sbaglia in
+bastava — _«importo alto suggerisce spesa casa»_ — e ha inventato una motivazione plausibile pur di
+averne una. Un modello che _scrive_ numeri li sbaglia allo stesso modo, e in un report li sbaglia in
 modo **credibile**: nessuno li ricontrolla.
 
 #### Gli aggregati salvati sono la prova, non un residuo
@@ -908,7 +913,7 @@ giorno della fuga.
 
 #### Il titolo di un avviso non è un nome
 
-«Netflix: il prezzo è salito» è una frase che *contiene* un nome, e un filtro che decide se un nome
+«Netflix: il prezzo è salito» è una frase che _contiene_ un nome, e un filtro che decide se un nome
 può uscire non sa cosa farne: la lascia passare intera o la sostituisce intera. Le metriche mandano
 il nome in un campo suo — trattato come ogni altro nome — e la frase la compone il modello.
 
@@ -918,6 +923,104 @@ Per tre costrutti — titoletto, elenco, grassetto — una dipendenza intera sar
 lo stack vieta le librerie non strettamente necessarie. Il renderer sta in trenta righe e **fallisce
 nel verso giusto**: ciò che non riconosce resta un paragrafo di testo. Un renderer severo farebbe
 sparire la riga, e in un report una frase sparita non si nota.
+
+### Le decisioni della Fase 10
+
+#### Il difetto della Fase 9 che ha determinato questa fase
+
+Nel primo report, il modello ha scritto _«ben oltre la **media** dei sei mesi precedenti che era
+−2829,02 €»_. Il numero era copiato correttamente. Ma quel valore è una **mediana** —
+`percentile_disc`, scelta apposta perché una media produce un importo che non è mai stato speso in
+nessun mese — e chiamarla media rende falsa una frase che contiene un numero giusto.
+
+In un report è una frase su trenta. In una chat, dove il modello sceglie da solo cosa chiedere, la
+stessa classe di errore arriva moltiplicata: se la risposta che ha in mano non contiene la cifra che
+serve, la calcola. Le istruzioni non lo impediscono — nel report c'erano già, in maiuscolo, e non
+sono bastate.
+
+#### Il controllo delle cifre è l'unica difesa che non dipende dal modello
+
+`cifreInventate()` confronta ogni cifra scritta con quelle presenti nei dati ricevuti, e quelle che
+non ci sono compaiono **marcate sotto il messaggio**. Non censura niente: la risposta si legge lo
+stesso, ma la cifra senza provenienza è visibile.
+
+Due scelte che lo rendono utile invece che fastidioso:
+
+- **si controllano solo importi e percentuali** — cifre con decimali, sopra il migliaio, o seguite
+  da `%` e `€`. Gli interi piccoli («due o tre voci», «59 ordini») no: contare gli elementi di un
+  elenco ricevuto è l'unica aritmetica concedibile, e segnalarla riempirebbe di avvisi ogni
+  risposta. Un avviso costante non lo legge nessuno, e a quel punto non protegge più niente;
+- **il confronto è tollerante**: valore assoluto, separatori indifferenti, arrotondamenti a zero e a
+  un decimale accettati. `−3640.32` nei dati e «3.640 €» nel testo sono lo stesso numero. L'errore
+  da prendere non è l'arrotondamento, è la cifra che nei dati non c'è affatto.
+
+Verificato sui casi veri: prende la differenza fra due mesi calcolata a mano, prende una percentuale
+composta, prende un canone inventato. Tace su tutto il resto.
+
+#### Il copilot propone le scritture, non le esegue
+
+`manually_categorized` significa «questa riga fa eccezione perché l'ho deciso io», e blocca **per
+sempre** ogni automatismo su quella riga: è la cosa più vicina a un'incisione che ci sia nello
+schema. Farlo scattare sull'interpretazione di una frase — «sposta quella spesa di ieri» —
+significherebbe che il patto delle regole di correttezza, _le correzioni manuali dell'utente sono
+sacre_, protegge una decisione che l'utente non ha preso.
+
+Quindi la scrittura si prepara e l'utente la applica con un tocco. Due dettagli che la rendono
+onesta:
+
+1. **la descrizione la scrive il server**, dagli argomenti già risolti in nomi. Se la scrivesse il
+   modello si approverebbe una cosa e ne succederebbe un'altra al primo riassunto sbagliato;
+2. **all'applicazione la proposta si rilegge dal database**, non dal corpo della richiesta. Ciò che
+   l'utente ha letto e ciò che viene eseguito devono essere lo stesso oggetto, non due che
+   _dovrebbero_ combaciare.
+
+Il costo è un tocco. Il ricavo è che ogni scrittura resta attribuibile a chi l'ha voluta.
+
+#### La proiezione è un elenco di ciò che può uscire
+
+Nessun risultato va al modello com'è: ogni riga si ricostruisce campo per campo. Restano fuori
+`raw_description` (contiene nomi e IBAN delle controparti), `counterparty_raw`, le **note**
+dell'utente — che possono contenere qualsiasi cosa — il conto e le cifre della carta.
+
+Un elenco di campi ammessi fallisce chiuso: una colonna nuova su `transactions` non arriva al
+modello finché qualcuno non la scrive qui. Un elenco di campi da togliere avrebbe la proprietà
+opposta, ed è la proprietà sbagliata. Sopra la proiezione gira comunque `sanificaMetriche`, ed è per
+questo che **ogni nome di esercente, in ogni strumento, sta in un campo che si chiama `esercente`**:
+è quella la chiave che il filtro conosce, e un sinonimo lo scavalcherebbe senza rompere niente.
+
+#### Questa fase è corta perché la regola della Fase 0 è stata pagata ogni volta
+
+«Ogni operazione dev'essere raggiungibile dal copilot, non solo da un bottone» si incassa qui:
+`strumenti.ts` non contiene nessuna logica di analisi, chiama viste e funzioni che il cruscotto già
+usa. Delle undici operazioni esposte, **una sola** non esisteva — `crea_categoria`, che non era
+possibile nemmeno da un bottone — più tre somme su un intervallo di mesi, costruite **sopra** le
+viste mensili e non accanto: le schermate guardano sempre un mese, una domanda no.
+
+Se le aggregazioni fossero vissute dentro i componenti, questa fase sarebbe stata riscriverle tutte
+una seconda volta, e due copie della stessa somma divergono.
+
+#### L'albero delle categorie sta nelle istruzioni
+
+Trentacinque voci con i loro identificativi sono poche centinaia di token, e valgono un giro di
+ricerca risparmiato a ogni domanda. Soprattutto: con l'albero sotto gli occhi il modello non può
+inventare un identificativo di categoria.
+
+### Prova manuale della Fase 10, sotto i 5 minuti
+
+1. `/copilota` → «Quanto ho speso in ristoranti il mese scorso?». Aprire **«da dove vengono i
+   numeri»**: la cifra della risposta dev'essere identica a quella del risultato dello strumento. Se
+   diverge, il modello ha calcolato.
+2. Chiedere una cosa che richiede un calcolo: «di quanto è aumentata la spesa rispetto a giugno?».
+   La risposta corretta è che non lo sa; se scrive una differenza, sotto il messaggio deve comparire
+   il riquadro **«questa cifra non compare nei dati letti»**. Quel riquadro che appare è la prova
+   che il controllo funziona, non un difetto.
+3. Chiedere di cambiare la classificazione di un esercente. Deve comparire una **scheda con
+   «Applica»** e il modello deve dire che è in attesa. Applicarla, poi verificare su `/revisione`
+   che il cambio ci sia.
+4. Chiedere di un bonifico verso un privato: nel blocco dei dati il nome dev'essere **«un
+   privato»**, e il modello non deve poterlo nominare.
+5. Riaprire `/copilota` da un altro indirizzo: la conversazione è ancora lì, con i suoi dati e i
+   suoi avvisi sulle cifre.
 
 ### Prova manuale della Fase 9, sotto i 5 minuti
 
@@ -945,7 +1048,7 @@ sparire la riga, e in un report una frase sparita non si nota.
    normalizzazione, categorizzazione, ricorrenze — e la durata.
 2. Rilanciare: le righe nuove devono essere **0** e i numeri di copertura identici. È idempotente.
 3. `/` in cima: `ultima sincronizzazione riuscita` deve essere di oggi.
-4. Su Vercel, `CRON_SECRET` impostata sul progetto e il cron visibile in *Settings → Cron Jobs*.
+4. Su Vercel, `CRON_SECRET` impostata sul progetto e il cron visibile in _Settings → Cron Jobs_.
    Senza la variabile la route risponde **500**, non 200: meglio rifiutare tutto che accettare
    tutto quando la configurazione è rotta.
 
@@ -956,7 +1059,7 @@ sparire la riga, e in un report una frase sparita non si nota.
    non si vedrebbe.**
 2. Sotto il totale, le entrate e la spesa come loro quota. Se sembra troppo alto c'è un giroconto
    in entrata non marcato: `/movimenti?tipo=giroconti` lo trova.
-3. `/movimenti` filtrato su luglio, tipo *spese reali*: **−3.640,32 €** su 132 movimenti, gli
+3. `/movimenti` filtrato su luglio, tipo _spese reali_: **−3.640,32 €** su 132 movimenti, gli
    stessi del cruscotto. Se i due percorsi divergono è una regressione.
 4. Toccare una categoria apre `/categoria/[id]` col mese conservato; toccare un esercente apre la
    sua scheda con l'andamento mensile e l'origine della classificazione.

@@ -34,6 +34,9 @@ REGOLE ASSOLUTE:
    nominata.
 4. Non inventare spiegazioni. Se non sai perché una spesa è salita, scrivi che è salita e basta.
    Una causa plausibile ma inventata è peggio di nessuna causa.
+5. Chiama il numero con il suo nome. "spesa_tipica" è una MEDIANA — un mese realmente osservato — e
+   chiamarla "media" rende falsa una frase che contiene un numero giusto. Scrivi "il mese tipico" o
+   "il valore mediano", mai "la media".
 
 COSA SCRIVERE, in quest'ordine e senza titoli generici:
 - Una frase sola su com'è andato il mese, confrontata con il tipico dei mesi precedenti.

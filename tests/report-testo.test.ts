@@ -4,7 +4,9 @@ import { analizza, pezzi } from '@/lib/report/testo';
 describe('analizza', () => {
   it('riconosce titoli, elenchi e paragrafi', () => {
     expect(
-      analizza('## Il mese\n\nHai speso meno.\nRispetto al solito.\n\n- Deliveroo 129 €\n- Coop 229 €'),
+      analizza(
+        '## Il mese\n\nHai speso meno.\nRispetto al solito.\n\n- Deliveroo 129 €\n- Coop 229 €',
+      ),
     ).toEqual([
       { tipo: 'titolo', testo: 'Il mese' },
       { tipo: 'paragrafo', testo: 'Hai speso meno. Rispetto al solito.' },
@@ -16,9 +18,7 @@ describe('analizza', () => {
     // Un renderer severo farebbe sparire la riga, e in un report una frase
     // sparita non si nota.
     const blocchi = analizza('> una citazione\n| una tabella |');
-    expect(blocchi).toEqual([
-      { tipo: 'paragrafo', testo: '> una citazione | una tabella |' },
-    ]);
+    expect(blocchi).toEqual([{ tipo: 'paragrafo', testo: '> una citazione | una tabella |' }]);
   });
 
   it('su un testo vuoto non produce blocchi', () => {
@@ -44,8 +44,6 @@ describe('pezzi', () => {
   });
 
   it('senza grassetto e’ un pezzo solo', () => {
-    expect(pezzi('Niente di speciale.')).toEqual([
-      { testo: 'Niente di speciale.', forte: false },
-    ]);
+    expect(pezzi('Niente di speciale.')).toEqual([{ testo: 'Niente di speciale.', forte: false }]);
   });
 });

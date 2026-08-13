@@ -220,7 +220,9 @@ export async function registerSessionAccounts(ebSessionId: string): Promise<Regi
     const { data, error } = await query.single<AccountRow>();
 
     if (error !== null || data === null) {
-      throw new Error(`Salvataggio conto ${passo.uid} fallito: ${error?.message ?? 'nessuna riga'}`);
+      throw new Error(
+        `Salvataggio conto ${passo.uid} fallito: ${error?.message ?? 'nessuna riga'}`,
+      );
     }
 
     accounts.push(data);

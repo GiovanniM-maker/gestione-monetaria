@@ -43,9 +43,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // sotto tre la confidenza vale poco.
   const grezzo = request.nextUrl.searchParams.get('minimo');
   const minimo = grezzo === null ? 3 : Number(grezzo);
-  return protetta(() =>
-    rilevaAbbonamenti(Number.isInteger(minimo) && minimo >= 2 ? minimo : 3),
-  );
+  return protetta(() => rilevaAbbonamenti(Number.isInteger(minimo) && minimo >= 2 ? minimo : 3));
 }
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {

@@ -23,8 +23,6 @@ export { CRITERIO_RICORRENZA } from './formato';
  * chiamera' il copilot.
  */
 
-
-
 /**
  * Le colonne `numeric` si chiedono **sempre** con `::text`.
  *
@@ -150,7 +148,8 @@ export async function aggiornaGiudizio(richiesta: RichiestaGiudizio): Promise<Ri
       throw new GiudizioNonValido(`Giudizio non ammesso: ${String(richiesta.usageVerdict)}`);
     }
     modifiche['usage_verdict'] = richiesta.usageVerdict;
-    modifiche['verdict_updated_at'] = richiesta.usageVerdict === null ? null : new Date().toISOString();
+    modifiche['verdict_updated_at'] =
+      richiesta.usageVerdict === null ? null : new Date().toISOString();
   }
 
   if (richiesta.disdetto !== undefined) {

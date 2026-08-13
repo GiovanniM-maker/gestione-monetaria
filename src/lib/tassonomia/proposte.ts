@@ -107,7 +107,6 @@ type Candidata = {
   solo_carta: boolean;
 };
 
-
 /** Esegue **una fetta**. Va richiamata finche' `rimaste` non e' zero. */
 export async function proponiClassificazioni(): Promise<EsitoProposte> {
   const supabase = await createSupabaseServerClient();
@@ -207,7 +206,10 @@ async function chiediLotto(
   perEtichetta: ReadonlyMap<string, Candidata>,
 ): Promise<{ voci: unknown[]; token: number | null; costo: number | null }> {
   const albero = categorie
-    .map((c) => `- ${c.slug}: ${c.name}${c.default_discretion === null ? '' : ` (${c.default_discretion})`}`)
+    .map(
+      (c) =>
+        `- ${c.slug}: ${c.name}${c.default_discretion === null ? '' : ` (${c.default_discretion})`}`,
+    )
     .join('\n');
 
   // Il payload in JSON, e non in righe formattate.
@@ -269,7 +271,9 @@ async function scrivi(proposte: readonly Proposta[]): Promise<void> {
           is_subscription: p.abbonamento,
           origine: 'ai',
           confermato_at: null,
-          motivazione: p.sicuro ? p.motivo : `${p.motivo} — il nome non dice l'attività, da controllare`,
+          motivazione: p.sicuro
+            ? p.motivo
+            : `${p.motivo} — il nome non dice l'attività, da controllare`,
         },
         { onConflict: 'canonical_norm' },
       )

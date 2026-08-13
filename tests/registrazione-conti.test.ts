@@ -14,7 +14,9 @@ import type { AccountRow } from '@/lib/db/types';
 
 const CONNESSIONE = 'c0000000-0000-0000-0000-000000000000';
 
-function conto(parziale: Partial<AccountRow> & Pick<AccountRow, 'id' | 'eb_account_uid'>): AccountRow {
+function conto(
+  parziale: Partial<AccountRow> & Pick<AccountRow, 'id' | 'eb_account_uid'>,
+): AccountRow {
   return {
     connection_id: CONNESSIONE,
     iban_masked: null,

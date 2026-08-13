@@ -129,9 +129,7 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
       supabase.from('categories').select('*'),
     ]);
 
-  const categorie = new Map(
-    comeArray<CategoryRow>(categorieGrezze).map((c) => [c.id, c] as const),
-  );
+  const categorie = new Map(comeArray<CategoryRow>(categorieGrezze).map((c) => [c.id, c] as const));
 
   // La discrezionalita' della categoria fa da ripiego a quella dell'esercente:
   // e' il valore di partenza per un merchant appena creato, che altrimenti

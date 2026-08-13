@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  confronta,
-  giornoDelMese,
-  leggiPeriodi,
-  medianaScelta,
-} from '@/lib/cruscotto/confronto';
+import { confronta, giornoDelMese, leggiPeriodi, medianaScelta } from '@/lib/cruscotto/confronto';
 
 describe('medianaScelta — sceglie un valore osservato, non ne inventa uno', () => {
   it('su un numero dispari e’ il centrale', () => {
@@ -62,9 +57,10 @@ describe('confronta — undici giorni contro undici giorni', () => {
   });
 
   it('senza mesi precedenti non c’e’ un riferimento, e non se ne inventa uno', () => {
-    const c = confronta('2026-08', leggiPeriodi([
-      { mese: '2026-08-01', spesa: '-996.14', movimenti: 53 },
-    ]));
+    const c = confronta(
+      '2026-08',
+      leggiPeriodi([{ mese: '2026-08-01', spesa: '-996.14', movimenti: 53 }]),
+    );
     expect(c?.riferimento).toBeNull();
     expect(c?.scostamento).toBeNull();
   });

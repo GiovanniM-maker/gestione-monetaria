@@ -46,6 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Voce href="/movimenti">Movimenti</Voce>
           <Voce href="/abbonamenti">Ricorrente</Voce>
           <Voce href="/revisione">Revisione</Voce>
+          <Voce href="/copilota">Copilota</Voce>
         </nav>
 
         <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">

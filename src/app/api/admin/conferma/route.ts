@@ -1,10 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import {
-  confermaMovimento,
-  ConfermaNonValida,
-  type RichiestaConferma,
-} from '@/lib/conferma/leggi';
+import { confermaMovimento, ConfermaNonValida, type RichiestaConferma } from '@/lib/conferma/leggi';
 
 export const dynamic = 'force-dynamic';
 

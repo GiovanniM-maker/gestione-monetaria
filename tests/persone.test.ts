@@ -11,9 +11,7 @@ describe('il guasto del 12 agosto: un bonifico privato è uscito davvero', () =>
   const NOME = 'Massimiliano De Jesus Sarta Naccarata';
 
   it('non lo invia', () => {
-    const { inviabili, trattenute } = selezionaInviabili([
-      { etichetta: NOME, soloCarta: false },
-    ]);
+    const { inviabili, trattenute } = selezionaInviabili([{ etichetta: NOME, soloCarta: false }]);
     expect(inviabili).toHaveLength(0);
     expect(trattenute).toEqual([NOME]);
   });

@@ -11,7 +11,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const chiesto = request.nextUrl.searchParams.get('mese');
-  const mese = chiesto !== null && /^\d{4}-\d{2}$/.test(chiesto) ? `${chiesto}-01` : mesePrecedente();
+  const mese =
+    chiesto !== null && /^\d{4}-\d{2}$/.test(chiesto) ? `${chiesto}-01` : mesePrecedente();
 
   try {
     return NextResponse.json(await generaReport(mese));

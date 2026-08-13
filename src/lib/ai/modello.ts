@@ -84,6 +84,43 @@ export type RispostaAi = {
 
 /** Chiede una risposta al modello e restituisce il testo, senza interpretarlo. */
 export async function chiediAlModello(richiesta: RichiestaAi): Promise<RispostaAi> {
+  const dati = await chiama({
+    model: modelloInUso(),
+    max_tokens: richiesta.maxTokens ?? 4096,
+    messages: [
+      { role: 'system', content: richiesta.system },
+      { role: 'user', content: richiesta.prompt },
+    ],
+  });
+
+  const scelte = Array.isArray(dati.choices) ? dati.choices : [];
+  const prima = scelte[0] as { message?: { content?: unknown } } | undefined;
+  const testo = prima?.message?.content;
+
+  if (typeof testo !== 'string' || testo.trim() === '') {
+    throw new ErroreAi('Risposta del modello senza testo.');
+  }
+
+  return { testo, token: numero(dati.usage?.total_tokens), costo: numero(dati.usage?.cost) };
+}
+
+type RispostaGrezza = {
+  choices?: unknown;
+  error?: unknown;
+  usage?: { total_tokens?: unknown; cost?: unknown };
+};
+
+const numero = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
+
+/**
+ * La chiamata vera, condivisa da tutti i modi di interrogare il modello.
+ *
+ * `temperature: 0` per tutti, e non solo per la classificazione: qui non si
+ * scrive narrativa libera, si legge un dato e lo si riferisce. Due risposte
+ * diverse alla stessa domanda sugli stessi numeri sarebbero un difetto, non una
+ * varietà.
+ */
+async function chiama(corpo: Record<string, unknown>): Promise<RispostaGrezza> {
   const risposta = await fetch(URL_CHAT, {
     method: 'POST',
     headers: {
@@ -91,36 +128,25 @@ export async function chiediAlModello(richiesta: RichiestaAi): Promise<RispostaA
       authorization: `Bearer ${chiave()}`,
     },
     body: JSON.stringify({
-      model: modelloInUso(),
-      max_tokens: richiesta.maxTokens ?? 4096,
-      // Classificare non è scrivere: si vuole la stessa risposta a ogni giro,
-      // o due esecuzioni sugli stessi esercenti darebbero categorie diverse.
       temperature: 0,
-      messages: [
-        { role: 'system', content: richiesta.system },
-        { role: 'user', content: richiesta.prompt },
-      ],
       // Chiede a OpenRouter di allegare il conteggio dei token e il costo.
       usage: { include: true },
+      ...corpo,
     }),
     cache: 'no-store',
   });
 
   if (!risposta.ok) {
-    const corpo = await risposta.text().catch(() => '');
+    const dettaglio = await risposta.text().catch(() => '');
     throw new ErroreAi(
-      `OpenRouter ha risposto ${risposta.status} per il modello «${modelloInUso()}»: ${corpo.slice(0, 500)}`,
+      `OpenRouter ha risposto ${risposta.status} per il modello «${modelloInUso()}»: ${dettaglio.slice(0, 500)}`,
     );
   }
 
   // La forma della risposta non si dà per scontata, come per Enable Banking:
   // un campo assente deve produrre un errore leggibile, non un `undefined` che
   // viaggia fino a rompere qualcosa tre funzioni più in là.
-  const dati = (await risposta.json()) as {
-    choices?: unknown;
-    error?: unknown;
-    usage?: { total_tokens?: unknown; cost?: unknown };
-  };
+  const dati = (await risposta.json()) as RispostaGrezza;
 
   // OpenRouter può rispondere 200 con un errore nel corpo, quando è il
   // fornitore a monte a rifiutare. Senza questo controllo si leggerebbe una
@@ -133,18 +159,90 @@ export async function chiediAlModello(richiesta: RichiestaAi): Promise<RispostaA
     );
   }
 
-  const scelte = Array.isArray(dati.choices) ? dati.choices : [];
-  const prima = scelte[0] as { message?: { content?: unknown } } | undefined;
-  const testo = prima?.message?.content;
+  return dati;
+}
 
-  if (typeof testo !== 'string' || testo.trim() === '') {
-    throw new ErroreAi('Risposta del modello senza testo.');
+/**
+ * ---------------------------------------------------------------------------
+ * Le conversazioni con strumenti
+ * ---------------------------------------------------------------------------
+ * Il copilot della Fase 10 non chiede una risposta: chiede *quale operazione
+ * eseguire*, riceve il risultato e continua. Serve quindi la conversazione
+ * intera a ogni giro e la dichiarazione degli strumenti disponibili.
+ *
+ * I tipi sono quelli di OpenAI, che OpenRouter espone per tutti i fornitori.
+ * Restano confinati qui dentro: il resto dell'applicazione parla di operazioni
+ * nominate, non di `tool_calls`.
+ */
+
+export type ChiamataStrumento = {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+};
+
+export type MessaggioModello =
+  | { role: 'system' | 'user'; content: string }
+  | { role: 'assistant'; content: string | null; tool_calls?: readonly ChiamataStrumento[] }
+  | { role: 'tool'; tool_call_id: string; content: string };
+
+export type StrumentoDichiarato = {
+  nome: string;
+  descrizione: string;
+  /** JSON Schema dei parametri. */
+  parametri: Record<string, unknown>;
+};
+
+export type RispostaConStrumenti = {
+  testo: string | null;
+  chiamate: readonly ChiamataStrumento[];
+  token: number | null;
+  costo: number | null;
+};
+
+export async function conversaConModello(richiesta: {
+  messaggi: readonly MessaggioModello[];
+  strumenti: readonly StrumentoDichiarato[];
+  maxTokens?: number;
+}): Promise<RispostaConStrumenti> {
+  const dati = await chiama({
+    model: modelloInUso(),
+    max_tokens: richiesta.maxTokens ?? 1500,
+    messages: richiesta.messaggi,
+    tools: richiesta.strumenti.map((s) => ({
+      type: 'function',
+      function: { name: s.nome, description: s.descrizione, parameters: s.parametri },
+    })),
+  });
+
+  const scelte = Array.isArray(dati.choices) ? dati.choices : [];
+  const messaggio = (scelte[0] as { message?: unknown } | undefined)?.message as
+    { content?: unknown; tool_calls?: unknown } | undefined;
+
+  if (messaggio === undefined) throw new ErroreAi('Risposta del modello senza messaggio.');
+
+  const grezze = Array.isArray(messaggio.tool_calls) ? messaggio.tool_calls : [];
+  const chiamate: ChiamataStrumento[] = [];
+
+  // Una chiamata malformata si scarta invece di far fallire il giro: il modello
+  // ne emette spesso più d'una, e perderle tutte perché una è rotta sarebbe una
+  // reazione sproporzionata.
+  for (const grezza of grezze) {
+    const c = grezza as { id?: unknown; function?: { name?: unknown; arguments?: unknown } };
+    if (typeof c.id !== 'string' || typeof c.function?.name !== 'string') continue;
+    chiamate.push({
+      id: c.id,
+      type: 'function',
+      function: {
+        name: c.function.name,
+        arguments: typeof c.function.arguments === 'string' ? c.function.arguments : '{}',
+      },
+    });
   }
 
-  const numero = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
-
   return {
-    testo,
+    testo: typeof messaggio.content === 'string' ? messaggio.content : null,
+    chiamate,
     token: numero(dati.usage?.total_tokens),
     costo: numero(dati.usage?.cost),
   };

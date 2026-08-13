@@ -12,7 +12,12 @@ import {
  * abbiamo effettivamente misurato.
  */
 
-function alias(pattern: string, merchantId: string, priority = 0, matchType: Alias['matchType'] = 'contains'): Alias {
+function alias(
+  pattern: string,
+  merchantId: string,
+  priority = 0,
+  matchType: Alias['matchType'] = 'contains',
+): Alias {
   return { merchantId, pattern, matchType, priority };
 }
 
@@ -89,10 +94,7 @@ describe('abbinaMerchant — precedenze', () => {
   });
 
   it('la priorita batte la lunghezza, perche e il comando manuale', () => {
-    const elenco = [
-      alias('booking com hotel', 'generico'),
-      alias('booking', 'specifico', 10),
-    ];
+    const elenco = [alias('booking com hotel', 'generico'), alias('booking', 'specifico', 10)];
     expect(abbinaMerchant('Booking.com Hotel', elenco)?.merchantId).toBe('specifico');
   });
 
