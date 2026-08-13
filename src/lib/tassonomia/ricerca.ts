@@ -65,12 +65,17 @@ const PAUSA_MS = 1_100;
 /**
  * Quanto puo' durare una fetta.
  *
- * A un secondo per esercente, il tempo e' la risorsa scarsa: con 277 nomi da
- * cercare, un limite fisso di venti per fetta vorrebbe dire quattordici
- * pressioni del bottone. Si va a **budget**, come il ciclo del backfill
- * quotidiano, e ci si ferma prima che Vercel interrompa la funzione.
+ * Non e' il tetto della funzione, e' molto piu' corto: **la risposta deve
+ * tornare al browser**. Con 90 secondi di budget il primo giro vero ha cercato
+ * e salvato 56 esercenti, poi la risposta non e' arrivata e il browser ha detto
+ * «Load failed» — il lavoro c'era, il resoconto no. E un'operazione di cui non
+ * si vede l'esito e' un'operazione di cui non ci si fida.
+ *
+ * Quaranta secondi sono una fetta che torna sempre. A cicliare e' il browser,
+ * come gia' fa col backfill: e' lo stesso schema, e non c'era ragione di
+ * inventarne un altro.
  */
-const BUDGET_MS = 90_000;
+const BUDGET_MS = 40_000;
 
 /** Quante volte riprovare dopo un 429 prima di arrendersi. */
 const RITENTATIVI = 2;

@@ -393,41 +393,70 @@ export function PannelloBackfill({
     );
   }
 
+  /**
+   * Cerca a fette finche' non resta niente.
+   *
+   * Il ciclo sta qui e non nel server, come per il backfill: una richiesta che
+   * dura due minuti non torna: il primo giro vero ha cercato e salvato 56
+   * esercenti e poi il browser ha detto «Load failed» — il lavoro c'era, il
+   * resoconto no.
+   *
+   * Con fette da quaranta secondi ogni risposta arriva, e il resoconto cresce
+   * mentre va invece di comparire tutto alla fine.
+   */
   async function cercaSulMondo() {
     setInCorso(true);
     aggiungi('Ricerca degli esercenti mai visti\u2026');
     try {
-      const risposta = await fetchConAttesa('/api/admin/ricerca', 120);
-      const corpo = await leggiRisposta(risposta);
-      if (!risposta.ok) {
-        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
-        return;
-      }
+      let trovatiInTutto = 0;
+      let vuotiInTutto = 0;
 
-      aggiungi(
-        `${String(corpo['esaminati'])} esaminati \u00b7 ${String(corpo['trovati'])} trovati \u00b7 ` +
-          `${String(corpo['vuoti'])} senza risultato utile \u00b7 ${String(corpo['rimasti'])} rimasti`,
-      );
-
-      // Chi la regola 8b ha trattenuto, e perche'. Va detto: sono esercenti che
-      // resteranno classificati a occhio, e chi legge deve saperlo.
-      const trattenuti = corpo['trattenuti'];
-      if (Array.isArray(trattenuti) && trattenuti.length > 0) {
-        aggiungi(`  ${trattenuti.length} trattenuti dalla regola 8b:`);
-        for (const v of trattenuti) {
-          const t = v as Record<string, unknown>;
-          aggiungi(`    ${String(t['esercente'])}: ${String(t['motivo'])}`);
+      for (let fetta = 1; ; fetta += 1) {
+        const risposta = await fetchConAttesa('/api/admin/ricerca', 90);
+        const corpo = await leggiRisposta(risposta);
+        if (!risposta.ok) {
+          aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+          return;
         }
-      }
 
-      if (corpo['errore'] !== null && corpo['errore'] !== undefined) {
-        aggiungi(`  fermata: ${String(corpo['errore'])}`);
-      }
-      if (Number(corpo['rimasti'] ?? 0) > 0) {
-        aggiungi('  Rilancia per la fetta successiva.');
+        trovatiInTutto += Number(corpo['trovati'] ?? 0);
+        vuotiInTutto += Number(corpo['vuoti'] ?? 0);
+        const rimasti = Number(corpo['rimasti'] ?? 0);
+
+        aggiungi(
+          `  fetta ${fetta}: ${String(corpo['esaminati'])} esaminati, ` +
+            `${String(corpo['trovati'])} trovati \u00b7 ${rimasti} rimasti`,
+        );
+
+        // Chi la regola 8b ha trattenuto, e perche'. Va detto: sono esercenti
+        // che resteranno classificati a occhio, e chi legge deve saperlo.
+        const trattenuti = corpo['trattenuti'];
+        if (Array.isArray(trattenuti) && trattenuti.length > 0) {
+          for (const v of trattenuti) {
+            const t = v as Record<string, unknown>;
+            aggiungi(`    trattenuto ${String(t['esercente'])}: ${String(t['motivo'])}`);
+          }
+        }
+
+        // Un errore vero ferma il ciclo. Il budget di tempo no: e' il modo
+        // normale in cui una fetta finisce, e ricominciare e' esattamente cio'
+        // che si deve fare.
+        const errore = corpo['errore'];
+        if (typeof errore === 'string' && !errore.startsWith('Budget')) {
+          aggiungi(`  fermata: ${errore}`);
+          return;
+        }
+
+        if (rimasti === 0 || Number(corpo['esaminati'] ?? 0) === 0) {
+          aggiungi(
+            `Ricerca finita: ${trovatiInTutto} trovati, ${vuotiInTutto} senza risultato utile.`,
+          );
+          return;
+        }
       }
     } catch (e) {
       aggiungi(`Errore: ${e instanceof Error ? e.message : String(e)}`);
+      aggiungi('  Il lavoro fatto e’ salvato: rilancia e riprende da dove era arrivata.');
     } finally {
       setInCorso(false);
     }
