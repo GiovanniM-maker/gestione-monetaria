@@ -928,6 +928,106 @@ const creaCategoria: Strumento = {
   },
 };
 
+const spostaMovimentoStrumento: Strumento = {
+  nome: 'sposta_movimento',
+  descrizione:
+    'Prepara lo spostamento di UNA transazione su un altro esercente. Serve quando ' +
+    'sotto lo stesso nome convivono cose diverse che la banca scrive in modo ' +
+    'identico — un canone e un acquisto singolo — e nessuna regola sulle etichette ' +
+    'può separarli. La riga eredita la classificazione della destinazione e nessun ' +
+    'automatismo la tocca più. Se la destinazione non esiste, passa nuovo_esercente.',
+  parametri: {
+    type: 'object',
+    properties: {
+      movimento_id: STRINGA,
+      esercente_id: { type: 'string', description: 'Destinazione, se esiste già.' },
+      nuovo_esercente: {
+        type: 'object',
+        description: 'Da creare al volo, quando la destinazione non esiste ancora.',
+        properties: {
+          nome: STRINGA,
+          categoria_id: STRINGA,
+          discrezionalita: { type: 'string', enum: [...DISCREZIONALITA] },
+          contesto: { type: 'string', enum: [...CONTESTI] },
+          abbonamento: { type: 'boolean' },
+        },
+        required: ['nome'],
+      },
+    },
+    required: ['movimento_id'],
+  },
+  esegui: async (a) => {
+    const movimentoId = identificativo(a['movimento_id'], 'movimento_id');
+    if (movimentoId === null) throw new ArgomentoNonValido("Serve l'identificativo del movimento.");
+
+    const esercenteId = identificativo(a['esercente_id'], 'esercente_id');
+    const grezzo = a['nuovo_esercente'];
+    const nuovo =
+      grezzo !== null && typeof grezzo === 'object' && !Array.isArray(grezzo)
+        ? (grezzo as Record<string, unknown>)
+        : null;
+
+    if (esercenteId === null && nuovo === null) {
+      throw new ArgomentoNonValido(
+        'Serve esercente_id, oppure nuovo_esercente con almeno un nome.',
+      );
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase.rpc('cerca_movimenti', {
+      p_id: movimentoId,
+      p_tipo: 'tutti',
+      p_limite: 1,
+    });
+    const riga = comeArray<Record<string, unknown>>(data)[0];
+    if (riga === undefined) {
+      throw new ArgomentoNonValido(`Nessun movimento con identificativo ${movimentoId}.`);
+    }
+
+    let destinazione: string;
+    let argomenti: Record<string, unknown>;
+
+    if (esercenteId !== null) {
+      destinazione = await nomeEsercente(esercenteId);
+      argomenti = { id: movimentoId, merchantId: esercenteId };
+    } else {
+      const nome = testo(nuovo?.['nome']);
+      if (nome === null) throw new ArgomentoNonValido('Serve il nome del nuovo esercente.');
+      const categoriaId = identificativo(nuovo?.['categoria_id'], 'categoria_id');
+      destinazione = `${nome} (nuovo${categoriaId === null ? '' : `, in ${await nomeCategoria(categoriaId)}`})`;
+      argomenti = {
+        id: movimentoId,
+        merchantId: null,
+        nuovo: {
+          nome,
+          categoriaId,
+          discrezionalita: fraQuesti(
+            nuovo?.['discrezionalita'],
+            DISCREZIONALITA,
+            'discrezionalita',
+          ),
+          contesto: fraQuesti(nuovo?.['contesto'], CONTESTI, 'contesto'),
+          abbonamento: nuovo?.['abbonamento'] === true,
+        },
+      };
+    }
+
+    return {
+      dati: PREPARATA,
+      proposta: {
+        operazione: 'sposta_movimento',
+        argomenti,
+        descrizione:
+          `Sposta il movimento del ${String(riga['booking_date'])} ` +
+          `(${String(riga['amount_eur'] ?? riga['amount'])} €) ` +
+          `da ${String(riga['esercente'] ?? 'nessun esercente')} a ${destinazione}. ` +
+          'La riga eredita la classificazione della destinazione, e da qui in poi nessun ' +
+          'automatismo la tocca più.',
+      },
+    };
+  },
+};
+
 export const STRUMENTI: readonly Strumento[] = [
   cercaMovimenti,
   spesaPerCategoria,
@@ -942,6 +1042,7 @@ export const STRUMENTI: readonly Strumento[] = [
   correggiMovimento,
   aggiornaEsercente,
   creaCategoria,
+  spostaMovimentoStrumento,
 ];
 
 export function strumento(nome: string): Strumento | undefined {

@@ -1097,6 +1097,31 @@ differenza fra valori assoluti sarebbe l'occasione perfetta per sbagliare un seg
 Il consiglio segue la forma della metrica: **due liste separate**, cosa si può disdire e cosa si può
 cambiare, mai un totale unico. E niente consigli da manuale — vale solo ciò che si legge nei dati.
 
+#### Un esercente non è un abbonamento solo perché ci torni ogni mese
+
+Sotto `Apple` ci sono sedici movimenti: **undici da 2,99 il 24 di ogni mese** — iCloud, la serie più
+regolare del database — e **cinque fra il 12 e il 28 aprile 2026 per 444,65 €**, che sono un
+dispositivo e i suoi accessori. La banca li scrive **identici**: `apple.com/bill` e `CARD_PAYMENT`
+su tutti e sedici.
+
+Mediandoli insieme, `amount_stability` va a 0,00, il ramo del canone non scatta, e il rilevatore
+dichiara `477,54 × 30,44 / 323,44 = 44,94 €/mese` per un servizio che ne costa 2,99 — un fattore
+quindici, e quaranta euro nella riga **abbonamenti** della metrica principale, cioè proprio in
+«quanto si libera con un gesto».
+
+**È il caso Euronics, previsto dalla Fase 4 e mai raggiungibile.** Lo schema copriva metà del caso:
+`manually_categorized` protegge discrezionalità, contesto e note della singola riga, ma **non
+l'esercente** — ed è sull'esercente che il rilevatore raggruppa. Nessuna correzione di
+discrezionalità poteva riparare quel canone.
+
+`sposta_movimento()` chiude la lacuna, e con essa la scheda del movimento esce dalla sola lettura —
+alla condizione che `docs/cruscotto.md` §8 aveva posto: un bisogno **misurato**, non ipotizzato.
+Serviva `crea_esercente()`, perché fino a ieri un esercente nasceva solo insieme a un alias, e qui
+l'alias è precisamente ciò che non può esistere.
+
+Marca `manually_categorized`: senza, l'alias su `apple.com/bill` riabbinerebbe la riga alle 05:00 del
+mattino dopo, e lo spostamento durerebbe una notte.
+
 #### Una media storica non è un risparmio
 
 Il primo consiglio vero ha elencato «Anthropic −91,26 €/mese» sotto il titolo «da disdire, risparmio

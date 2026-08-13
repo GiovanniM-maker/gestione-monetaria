@@ -11,7 +11,7 @@
 
 /** Una scrittura preparata dal copilot, in attesa che l'utente la applichi. */
 export type Proposta = {
-  operazione: 'correggi_movimento' | 'aggiorna_esercente' | 'crea_categoria';
+  operazione: 'correggi_movimento' | 'aggiorna_esercente' | 'crea_categoria' | 'sposta_movimento';
   argomenti: Record<string, unknown>;
   /**
    * Cosa succede se si applica, scritto **dal server** dagli argomenti risolti

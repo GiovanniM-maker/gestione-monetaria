@@ -9,6 +9,7 @@ import {
 } from '@/lib/ai/modello';
 import { confermaMovimento } from '@/lib/conferma/leggi';
 import { aggiornaMerchant } from '@/lib/tassonomia/assegna';
+import { spostaMovimento, type NuovoEsercente } from '@/lib/movimenti/sposta';
 import { cifreInventate } from './cifre';
 import { ArgomentoNonValido, strumento, STRUMENTI } from './strumenti';
 import type {
@@ -428,6 +429,14 @@ async function esegui(proposta: Proposta): Promise<void> {
       });
       return;
     }
+
+    case 'sposta_movimento':
+      await spostaMovimento({
+        id: String(a['id']),
+        merchantId: (a['merchantId'] as string | null) ?? null,
+        ...(a['nuovo'] === undefined ? {} : { nuovo: a['nuovo'] as NuovoEsercente }),
+      });
+      return;
 
     case 'crea_categoria': {
       const supabase = await createSupabaseServerClient();

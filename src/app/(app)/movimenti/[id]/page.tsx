@@ -3,19 +3,31 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { leggiMovimento } from '@/lib/movimenti/cerca';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { comeArray } from '@/lib/enablebanking/redact';
+import { SpostaMovimento } from './sposta';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimento' };
 
 /**
- * La scheda di un movimento, **in sola lettura**.
+ * La scheda di un movimento.
  *
- * Serve gia' a due cose senza poter scrivere niente: verificare un numero
- * scomponendolo fino alla riga, e leggere la causale grezza di un movimento
- * che non si riconosce. La terza — correggerlo — ha un costo di progettazione
- * alto e un bisogno ancora misurato a zero: si aggiunge quando si sara' visto
- * quante volte la si sarebbe voluta usare, invece di indovinare adesso
+ * Nata **in sola lettura**: verificare un numero scomponendolo fino alla riga e
+ * leggere la causale grezza di un movimento che non si riconosce. La scrittura
+ * era rimandata a quando il bisogno fosse stato misurato invece che ipotizzato
  * (`docs/cruscotto.md` §8).
+ *
+ * Il bisogno e' arrivato, e uno solo: **spostare la riga su un altro
+ * esercente**. Sotto `Apple` convivono undici canoni iCloud da 2,99 e cinque
+ * acquisti di aprile per 444,65 €, con la stessa identica causale
+ * `apple.com/bill` — nessuna regola sulle stringhe li separa, e finche' stanno
+ * insieme il rilevatore dichiara un canone da 44,94 €/mese per un servizio che
+ * ne costa 2,99.
+ *
+ * Le altre scritture restano fuori: discrezionalita' e contesto si correggono
+ * da `/da-confermare`, la classificazione di **tutte** le occorrenze da
+ * `/revisione`. Ognuna nel posto dove vale la sua portata.
  *
  * Regola 7: l'IBAN resta mascherato, come arriva dal database.
  */
@@ -29,6 +41,15 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const m = await leggiMovimento(id);
   if (m === null) notFound();
+
+  const supabase = await createSupabaseServerClient();
+  const { data: albero } = await supabase
+    .from('v_categorie_albero')
+    .select('id, percorso, archiviata')
+    .order('percorso');
+  const categorie = comeArray<{ id: string; percorso: string; archiviata: boolean }>(albero)
+    .filter((c) => !c.archiviata)
+    .map((c) => ({ id: c.id, percorso: c.percorso }));
 
   return (
     <div className="space-y-6">
@@ -100,13 +121,20 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         <Voce nome="escluso dall’analisi" valore={m.excluded_from_analysis ? 'sì' : 'no'} />
       </Blocco>
 
+      <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />
+
       <p className="text-xs text-neutral-500">
-        Questa scheda &egrave; in sola lettura. Per cambiare la classificazione di{' '}
-        <strong>tutte</strong> le occorrenze di un esercente si passa da{' '}
+        Per cambiare la classificazione di <strong>tutte</strong> le occorrenze di un esercente si
+        passa da{' '}
         <Link className="underline" href="/revisione">
           revisione
         </Link>
-        , dove l&rsquo;assegnazione crea un alias e vale anche per il futuro.
+        , dove l&rsquo;assegnazione crea un alias e vale anche per il futuro. Per correggere{' '}
+        <strong>questa</strong> spesa senza spostarla, da{' '}
+        <Link className="underline" href="/da-confermare">
+          da confermare
+        </Link>
+        .
       </p>
     </div>
   );
