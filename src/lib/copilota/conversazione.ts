@@ -9,7 +9,7 @@ import {
 } from '@/lib/ai/modello';
 import { confermaMovimento } from '@/lib/conferma/leggi';
 import { aggiornaMerchant } from '@/lib/tassonomia/assegna';
-import { spostaMovimento, type NuovoEsercente } from '@/lib/movimenti/sposta';
+import { spostaMovimenti, type NuovoEsercente } from '@/lib/movimenti/sposta';
 import { cifreInventate } from './cifre';
 import { ArgomentoNonValido, strumento, STRUMENTI } from './strumenti';
 import type {
@@ -431,8 +431,8 @@ async function esegui(proposta: Proposta): Promise<void> {
     }
 
     case 'sposta_movimento':
-      await spostaMovimento({
-        id: String(a['id']),
+      await spostaMovimenti({
+        ids: Array.isArray(a['ids']) ? (a['ids'] as string[]) : [],
         merchantId: (a['merchantId'] as string | null) ?? null,
         ...(a['nuovo'] === undefined ? {} : { nuovo: a['nuovo'] as NuovoEsercente }),
       });

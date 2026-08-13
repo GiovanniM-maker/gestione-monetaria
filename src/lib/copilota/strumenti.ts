@@ -939,7 +939,13 @@ const spostaMovimentoStrumento: Strumento = {
   parametri: {
     type: 'object',
     properties: {
-      movimento_id: STRINGA,
+      movimenti_id: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Uno o più movimenti, tutti verso la stessa destinazione. Passali INSIEME ' +
+          'quando appartengono allo stesso gruppo: una conferma sola invece di cinque.',
+      },
       esercente_id: { type: 'string', description: 'Destinazione, se esiste già.' },
       nuovo_esercente: {
         type: 'object',
@@ -954,11 +960,17 @@ const spostaMovimentoStrumento: Strumento = {
         required: ['nome'],
       },
     },
-    required: ['movimento_id'],
+    required: ['movimenti_id'],
   },
   esegui: async (a) => {
-    const movimentoId = identificativo(a['movimento_id'], 'movimento_id');
-    if (movimentoId === null) throw new ArgomentoNonValido("Serve l'identificativo del movimento.");
+    const grezziId = Array.isArray(a['movimenti_id']) ? a['movimenti_id'] : [a['movimenti_id']];
+    const movimenti = grezziId
+      .map((v, i) => identificativo(v, `movimenti_id[${i}]`))
+      .filter((v): v is string => v !== null);
+
+    if (movimenti.length === 0) {
+      throw new ArgomentoNonValido("Serve almeno l'identificativo di un movimento.");
+    }
 
     const esercenteId = identificativo(a['esercente_id'], 'esercente_id');
     const grezzo = a['nuovo_esercente'];
@@ -973,30 +985,38 @@ const spostaMovimentoStrumento: Strumento = {
       );
     }
 
+    // Ogni riga si rilegge dal database: la descrizione che l'utente approva
+    // dev'essere costruita sui movimenti veri, non su quello che il modello
+    // crede di aver scelto.
     const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.rpc('cerca_movimenti', {
-      p_id: movimentoId,
-      p_tipo: 'tutti',
-      p_limite: 1,
-    });
-    const riga = comeArray<Record<string, unknown>>(data)[0];
-    if (riga === undefined) {
-      throw new ArgomentoNonValido(`Nessun movimento con identificativo ${movimentoId}.`);
+    const righe: Record<string, unknown>[] = [];
+    for (const id of movimenti) {
+      const { data } = await supabase.rpc('cerca_movimenti', {
+        p_id: id,
+        p_tipo: 'tutti',
+        p_limite: 1,
+      });
+      const riga = comeArray<Record<string, unknown>>(data)[0];
+      if (riga === undefined) {
+        throw new ArgomentoNonValido(`Nessun movimento con identificativo ${id}.`);
+      }
+      righe.push(riga);
     }
+    const riga = righe[0] as Record<string, unknown>;
 
     let destinazione: string;
     let argomenti: Record<string, unknown>;
 
     if (esercenteId !== null) {
       destinazione = await nomeEsercente(esercenteId);
-      argomenti = { id: movimentoId, merchantId: esercenteId };
+      argomenti = { ids: movimenti, merchantId: esercenteId };
     } else {
       const nome = testo(nuovo?.['nome']);
       if (nome === null) throw new ArgomentoNonValido('Serve il nome del nuovo esercente.');
       const categoriaId = identificativo(nuovo?.['categoria_id'], 'categoria_id');
       destinazione = `${nome} (nuovo${categoriaId === null ? '' : `, in ${await nomeCategoria(categoriaId)}`})`;
       argomenti = {
-        id: movimentoId,
+        ids: movimenti,
         merchantId: null,
         nuovo: {
           nome,
@@ -1018,11 +1038,18 @@ const spostaMovimentoStrumento: Strumento = {
         operazione: 'sposta_movimento',
         argomenti,
         descrizione:
-          `Sposta il movimento del ${String(riga['booking_date'])} ` +
-          `(${String(riga['amount_eur'] ?? riga['amount'])} €) ` +
-          `da ${String(riga['esercente'] ?? 'nessun esercente')} a ${destinazione}. ` +
-          'La riga eredita la classificazione della destinazione, e da qui in poi nessun ' +
-          'automatismo la tocca più.',
+          (righe.length === 1
+            ? `Sposta il movimento del ${String(riga['booking_date'])} ` +
+              `(${String(riga['amount_eur'] ?? riga['amount'])} €)`
+            : `Sposta ${righe.length} movimenti — ` +
+              righe
+                .map(
+                  (r) => `${String(r['booking_date'])} ${String(r['amount_eur'] ?? r['amount'])} €`,
+                )
+                .join(', ')) +
+          ` da ${String(riga['esercente'] ?? 'nessun esercente')} a ${destinazione}. ` +
+          `${righe.length === 1 ? 'La riga eredita' : 'Le righe ereditano'} la classificazione ` +
+          'della destinazione, e da qui in poi nessun automatismo le tocca più.',
       },
     };
   },

@@ -61,27 +61,38 @@ export async function creaEsercente(nuovo: NuovoEsercente): Promise<string> {
 }
 
 export type RichiestaSpostamento = {
-  id: string;
-  /** `null` toglie l'esercente: la riga esce dalle ricorrenze. */
+  /**
+   * Uno o più movimenti, verso la **stessa** destinazione.
+   *
+   * Il plurale non è una comodità: i casi veri arrivano in gruppo. I cinque
+   * acquisti di aprile su `Apple` vanno tutti insieme nello stesso posto, e
+   * cinque operazioni separate vorrebbero dire cinque conferme, cinque
+   * riapplicazioni della tassonomia — che è la parte lenta — e la possibilità
+   * di fermarsi a metà lasciando la serie ancora sporca.
+   */
+  ids: readonly string[];
+  /** `null` toglie l'esercente: le righe escono dalle ricorrenze. */
   merchantId: string | null;
   /** Dati per crearlo al volo, quando non esiste ancora. */
   nuovo?: NuovoEsercente;
 };
 
 /**
- * Sposta la transazione e **rilancia la categorizzazione**.
+ * Sposta i movimenti e **rilancia la categorizzazione una volta sola**.
  *
- * Il rilancio costa qualche secondo e serve: la riga spostata è protetta da
+ * Il rilancio costa qualche secondo e serve: le righe spostate sono protette da
  * `manually_categorized`, ma il resto della tassonomia va riapplicato perché un
- * esercente nuovo può cambiare i conteggi di copertura. È lo stesso motivo per
- * cui `assegnaEtichetta` la rilancia invece di aggiornare le sole righe
- * toccate — un secondo percorso di abbinamento, scritto qui e leggermente
- * diverso da quello vero, è il modo classico per farli divergere.
+ * esercente nuovo cambia i conteggi di copertura. È lo stesso motivo per cui
+ * `assegnaEtichetta` la rilancia invece di aggiornare le sole righe toccate —
+ * un secondo percorso di abbinamento, scritto qui e leggermente diverso da
+ * quello vero, è il modo classico per farli divergere.
+ *
+ * Alla fine e non a ogni riga: cinque rilanci sugli stessi millecinquecento
+ * movimenti darebbero lo stesso risultato cinque volte più lentamente.
  */
-export async function spostaMovimento(richiesta: RichiestaSpostamento): Promise<void> {
-  if (typeof richiesta.id !== 'string' || richiesta.id.trim() === '') {
-    throw new SpostamentoNonValido('Movimento non indicato.');
-  }
+export async function spostaMovimenti(richiesta: RichiestaSpostamento): Promise<number> {
+  const ids = richiesta.ids.filter((id) => typeof id === 'string' && id.trim() !== '');
+  if (ids.length === 0) throw new SpostamentoNonValido('Nessun movimento indicato.');
 
   let merchantId = richiesta.merchantId;
   if (merchantId === null && richiesta.nuovo !== undefined) {
@@ -89,14 +100,28 @@ export async function spostaMovimento(richiesta: RichiestaSpostamento): Promise<
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc('sposta_movimento', {
-    p_id: richiesta.id,
-    p_merchant_id: merchantId,
-  });
 
-  if (error !== null) throw new SpostamentoNonValido(`Spostamento fallito: ${error.message}`);
+  for (const id of ids) {
+    const { error } = await supabase.rpc('sposta_movimento', {
+      p_id: id,
+      p_merchant_id: merchantId,
+    });
+    // Si ferma alla prima riga che fallisce invece di proseguire: metà gruppo
+    // spostato è uno stato peggiore di nessuno, perché la serie resta sporca e
+    // non si vede più quali righe mancano.
+    if (error !== null) throw new SpostamentoNonValido(`Spostamento fallito: ${error.message}`);
+  }
 
   await applicaTassonomia();
+  return ids.length;
+}
+
+/** Un movimento solo. È il caso della scheda, dove si guarda una riga per volta. */
+export async function spostaMovimento(
+  richiesta: Omit<RichiestaSpostamento, 'ids'> & { id: string },
+): Promise<void> {
+  const { id, ...resto } = richiesta;
+  await spostaMovimenti({ ...resto, ids: [id] });
 }
 
 export type EsercenteMinimo = {
