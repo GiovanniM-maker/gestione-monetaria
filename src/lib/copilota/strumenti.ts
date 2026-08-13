@@ -544,6 +544,10 @@ const doveTagliare: Strumento = {
         'Se le tre cifre coincidono è un canone stabile e puoi citarne una qualsiasi. Se ' +
           'divergono, stabilita_importo bassa lo conferma: è un servizio a consumo, dillo e ' +
           'cita la cifra recente.',
+        'stabilita_importo vicina a 0 con prezzo_tipico molto sotto media_mensile_recente ' +
+          'significa che sotto quel nome convivono cose diverse — un canone piccolo e degli ' +
+          "acquisti singoli. NON dire che si disdice risparmiando la media: non c'è una cosa " +
+          'sola da disdire. Dillo, e proponi di separarlo o di non trattarlo come abbonamento.',
         "usage_verdict = 'non_usato' è una dichiarazione dell'utente: quella voce è la prima " +
           'da proporre, perché sta pagando per qualcosa che ha già detto di non usare.',
         "Una voce di viaggi con poche occorrenze concentrate NON è un'abitudine: è una spesa " +
