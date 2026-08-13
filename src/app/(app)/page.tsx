@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { leggiCruscotto } from '@/lib/cruscotto/leggi';
-import type { RigaCategoria, RigaTotaleMese } from '@/lib/cruscotto/leggi';
+import type { RigaClasse, RigaCategoria, RigaTotaleMese } from '@/lib/cruscotto/leggi';
 import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import { comeSiConfronta } from '@/lib/cruscotto/andamento';
-import type { Variazione, VariazioneClasse } from '@/lib/cruscotto/andamento';
+import type { Variazione } from '@/lib/cruscotto/andamento';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
@@ -59,7 +59,7 @@ function sommaClassi(righe: readonly { spesa: string }[]): bigint {
  * E' una somma di interi di centesimi, non una divisione: nessuna variazione si
  * ricalcola qui — quelle arrivano da SQL riga per riga.
  */
-function perLaBarra(classi: readonly VariazioneClasse[]) {
+function perLaBarra(classi: readonly RigaClasse[]) {
   const note = ORDINE_CLASSI.map((nome) => ({
     chiave: nome,
     valore: sommaClassi(classi.filter((c) => c.discrezionalita === nome)),
@@ -84,10 +84,12 @@ export default async function CruscottoPage({
     mesiDisponibili,
     totali,
     classi,
+    variazioniClassi,
     categorie,
     variazioniCategorie,
     esercenti,
     variazioniEsercenti,
+    variazioniMancanti,
     ricorrente,
     entrate,
     stato,
@@ -112,11 +114,19 @@ export default async function CruscottoPage({
   const meseSuccessivo = indice >= 0 ? (mesiDisponibili[indice + 1] ?? null) : null;
 
   const rigaMese = totali.find((t) => t.mese === mese) ?? null;
-  const speso = sommaClassi(classi);
+
+  // Il totale del mese viene da `v_monthly_totals`, che e' la vista che lo
+  // definisce. Sommare le classi darebbe lo stesso numero — le due viste
+  // stanno entrambe su `v_expenses` — ma lo farebbe dipendere da una seconda
+  // lettura, e un totale non deve mai dipendere da piu' cose del necessario.
+  const speso = rigaMese === null ? sommaClassi(classi) : centesimi(rigaMese.spesa);
 
   // Le variazioni, indicizzate: l'albero e l'elenco degli esercenti restano
   // quelli delle viste — che portano `spesa_diretta`, lo slug, la
   // discrezionalita' — e ci si aggancia accanto la freccia.
+  const perClasse = new Map(
+    variazioniClassi.map((v) => [`${v.discrezionalita}|${v.contesto}`, v as Variazione]),
+  );
   const perCategoria = new Map(variazioniCategorie.map((v) => [v.category_id, v as Variazione]));
   const perEsercente = new Map(variazioniEsercenti.map((v) => [v.merchant_id, v as Variazione]));
 
@@ -124,21 +134,21 @@ export default async function CruscottoPage({
   // radici e' la spesa categorizzata del mese, esattamente una volta. Mettendoci
   // anche le figlie ogni euro comparirebbe due volte e il giro non vorrebbe
   // piu' dire niente.
-  const radici: FettaCategoria[] = variazioniCategorie
-    .filter((v) => v.parent_id === null)
-    .map((v) => ({
-      chiave: v.category_id,
-      etichetta: v.categoria,
-      valore: centesimi(v.spesa),
-      href: `/categoria/${v.category_id}?mese=${mese}`,
-      variazione: v,
+  const radici: FettaCategoria[] = categorie
+    .filter((c) => c.parent_id === null)
+    .map((c) => ({
+      chiave: c.category_id,
+      etichetta: c.categoria,
+      valore: centesimi(c.spesa),
+      href: `/categoria/${c.category_id}?mese=${mese}`,
+      variazione: perCategoria.get(c.category_id),
     }))
     .filter((f) => f.valore !== 0n);
   const inCategoria = radici.reduce((s, r) => s + r.valore, 0n);
 
   // Come e' fatto il confronto lo dice una riga sola, presa da una qualsiasi
   // delle righe: la finestra e' la stessa per tutte, ed e' il punto della 0036.
-  const spiegaIlConfronto = comeSiConfronta(classi[0]);
+  const spiegaIlConfronto = comeSiConfronta(variazioniClassi[0]);
 
   const vociRicorrenti = ordinaPerPeso(ricorrente);
   const abbonamenti = totalePerTipo(vociRicorrenti, 'abbonamento');
@@ -321,12 +331,20 @@ export default async function CruscottoPage({
                     </span>
                     <span className="shrink-0 tabular-nums whitespace-nowrap">
                       {formattaEuro(centesimi(c.spesa))}
-                      <Freccia riga={c} />
+                      <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
                     </span>
                   </Link>
                 </li>
               ))}
             </ul>
+
+            {variazioniMancanti !== null && (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
+                <strong>Le cifre qui sopra sono corrette</strong> — vengono dalle viste, non dal
+                confronto. Motivo: {variazioniMancanti}
+              </p>
+            )}
 
             {spiegaIlConfronto !== null && (
               <p className="text-xs text-neutral-500">

@@ -37,6 +37,13 @@ export type RigaTotaleMese = {
   spesa_senza_categoria: string;
 };
 
+export type RigaClasse = {
+  discrezionalita: string;
+  contesto: string;
+  spesa: string;
+  movimenti: number;
+};
+
 export type RigaCategoria = {
   category_id: string;
   categoria: string;
@@ -72,20 +79,27 @@ export type Cruscotto = {
   mesiDisponibili: readonly string[];
   totali: readonly RigaTotaleMese[];
   /**
-   * Le classi del mese **con la loro variazione**, che arriva calcolata da SQL.
-   *
-   * Ha sostituito la coppia «classi del mese + classi del mese prima» e la
-   * sottrazione fatta qui: il mese prima non e' il termine di paragone giusto —
-   * puo' essere stato un mese strano — e la sottrazione era aritmetica in
-   * TypeScript su una cosa che le regole vogliono in SQL.
+   * Le classi del mese. Vengono dalla **vista**, non dalla funzione delle
+   * variazioni: i numeri devono esistere anche se il confronto non c'e'.
    */
-  classi: readonly VariazioneClasse[];
+  classi: readonly RigaClasse[];
+  /** Le variazioni per classe, da agganciare per `discrezionalita` + `contesto`. */
+  variazioniClassi: readonly VariazioneClasse[];
   categorie: readonly RigaCategoria[];
   /** Le variazioni per categoria, da agganciare all'albero per `category_id`. */
   variazioniCategorie: readonly VariazioneCategoria[];
   esercenti: readonly RigaEsercente[];
   /** Le variazioni per esercente, da agganciare all'elenco per `merchant_id`. */
   variazioniEsercenti: readonly VariazioneEsercente[];
+  /**
+   * Perche' le frecce non ci sono, quando non ci sono.
+   *
+   * Va detto in schermata e non ingoiato: le cifre restano giuste, ma una
+   * colonna di confronti sparita senza spiegazione fa dubitare di tutto il
+   * resto — ed e' successo davvero, il giorno in cui la `0036` non era ancora
+   * stata applicata.
+   */
+  variazioniMancanti: string | null;
   ricorrente: readonly RigaMetrica[];
   /** Le entrate del mese, come denominatore. Non cambiano la metrica principale. */
   entrate: RigaEntrate | null;
@@ -150,6 +164,7 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
 
   const [
     classi,
+    variazioniClassi,
     categorie,
     variazioniCategorie,
     esercenti,
@@ -158,6 +173,7 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     entrate,
     stato,
   ] = await Promise.all([
+    leggiClassi(mese),
     leggiVariazioniClassi(mese, finestra),
     leggiCategorie(mese),
     leggiVariazioniCategorie(mese, finestra),
@@ -179,10 +195,13 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
     mesiDisponibili,
     totali,
     classi,
+    variazioniClassi: variazioniClassi.righe,
     categorie,
-    variazioniCategorie,
+    variazioniCategorie: variazioniCategorie.righe,
     esercenti,
-    variazioniEsercenti,
+    variazioniEsercenti: variazioniEsercenti.righe,
+    variazioniMancanti:
+      variazioniClassi.errore ?? variazioniCategorie.errore ?? variazioniEsercenti.errore,
     ricorrente,
     entrate,
     stato,
@@ -231,6 +250,25 @@ async function leggiEntrate(mese: string): Promise<RigaEntrate | null> {
 /** Il primo giorno del mese, che e' come la vista lo espone. */
 function primoGiorno(mese: string): string {
   return `${mese}-01`;
+}
+
+/**
+ * Le classi del mese, dalla vista della 0019.
+ *
+ * Era stata tolta quando le variazioni hanno cominciato a portare anche gli
+ * importi, e toglierla e' stato uno sbaglio: il giorno in cui la funzione non
+ * c'era, il cruscotto ha mostrato **zero euro spesi**. Le viste sono i numeri,
+ * le funzioni delle variazioni sono il commento — e un commento che manca non
+ * deve poter cancellare cio' che commenta.
+ */
+async function leggiClassi(mese: string): Promise<readonly RigaClasse[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('v_monthly_by_discretion')
+    .select('discrezionalita, contesto, spesa::text, movimenti')
+    .eq('mese', primoGiorno(mese))
+    .order('spesa', { ascending: true });
+  return comeArray<RigaClasse>(data);
 }
 
 async function leggiCategorie(mese: string): Promise<readonly RigaCategoria[]> {

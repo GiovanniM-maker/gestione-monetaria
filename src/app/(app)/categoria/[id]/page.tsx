@@ -144,11 +144,15 @@ export default async function CategoriaPage({
     mese === null
       ? [[], []]
       : await Promise.all([
-          leggiVariazioniCategorie(mese, finestra),
-          leggiVariazioniEsercenti(mese, finestra, ESERCENTI_MOSTRATI, id),
+          leggiVariazioniCategorie(mese, finestra).then((v) => v.righe),
+          leggiVariazioniEsercenti(mese, finestra, ESERCENTI_MOSTRATI, id).then((v) => v.righe),
         ]);
-  const perCategoria = new Map(variazioniCat.map((v) => [v.category_id, v as Variazione]));
-  const perEsercente = new Map(variazioniMerc.map((v) => [v.merchant_id, v as Variazione]));
+  const perCategoria = new Map<string, Variazione>(
+    variazioniCat.map((v) => [v.category_id, v as Variazione]),
+  );
+  const perEsercente = new Map<string, Variazione>(
+    variazioniMerc.map((v) => [v.merchant_id, v as Variazione]),
+  );
   const spiegaIlConfronto = comeSiConfronta(perCategoria.get(id) ?? variazioniCat[0]);
 
   const estremi = mese === null ? null : estremiDelMese(mese);

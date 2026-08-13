@@ -23,6 +23,19 @@ import type {
  */
 
 /**
+ * Cosa torna da una lettura di variazioni.
+ *
+ * Le righe **e** il motivo per cui non ci sono. La prima versione ingoiava
+ * l'errore e rispondeva con un elenco vuoto, ed e' stato un difetto vero:
+ * finche' le funzioni della `0036` non sono state applicate, la schermata
+ * mostrava zero spesa senza dire niente. Un numero mancante che si presenta
+ * come uno zero e' il modo di guastarsi che questa applicazione non si puo'
+ * permettere, ed e' scritto nero su bianco nelle regole di correttezza —
+ * `v_monthly_totals.senza_cambio` esiste per la stessa ragione.
+ */
+export type Variazioni<T> = { righe: readonly T[]; errore: string | null };
+
+/**
  * Quanti mesi indietro guardare per trovare il mese tipico.
  *
  * Sei e' un compromesso misurato: meno di tre mesi e la mediana non e' una
@@ -45,29 +58,29 @@ const MESI_DI_CONFRONTO = 6;
 export async function leggiVariazioniClassi(
   mese: string,
   giorni: number | null,
-): Promise<readonly VariazioneClasse[]> {
+): Promise<Variazioni<VariazioneClasse>> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc('variazioni_per_classe', {
     p_mese: `${mese}-01`,
     p_mesi_confronto: MESI_DI_CONFRONTO,
     p_giorni: giorni,
   });
-  if (error !== null) return [];
-  return comeArray<VariazioneClasse>(data);
+  if (error !== null) return { righe: [], errore: error.message };
+  return { righe: comeArray<VariazioneClasse>(data), errore: null };
 }
 
 export async function leggiVariazioniCategorie(
   mese: string,
   giorni: number | null,
-): Promise<readonly VariazioneCategoria[]> {
+): Promise<Variazioni<VariazioneCategoria>> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc('variazioni_per_categoria', {
     p_mese: `${mese}-01`,
     p_mesi_confronto: MESI_DI_CONFRONTO,
     p_giorni: giorni,
   });
-  if (error !== null) return [];
-  return comeArray<VariazioneCategoria>(data);
+  if (error !== null) return { righe: [], errore: error.message };
+  return { righe: comeArray<VariazioneCategoria>(data), errore: null };
 }
 
 /**
@@ -83,7 +96,7 @@ export async function leggiVariazioniEsercenti(
   giorni: number | null,
   limite: number,
   categoria: string | null = null,
-): Promise<readonly VariazioneEsercente[]> {
+): Promise<Variazioni<VariazioneEsercente>> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc('variazioni_per_esercente', {
     p_mese: `${mese}-01`,
@@ -92,8 +105,8 @@ export async function leggiVariazioniEsercenti(
     p_giorni: giorni,
     p_categoria: categoria,
   });
-  if (error !== null) return [];
-  return comeArray<VariazioneEsercente>(data);
+  if (error !== null) return { righe: [], errore: error.message };
+  return { righe: comeArray<VariazioneEsercente>(data), errore: null };
 }
 
 /**
