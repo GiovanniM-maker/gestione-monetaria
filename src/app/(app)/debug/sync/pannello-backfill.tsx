@@ -461,17 +461,37 @@ export function PannelloBackfill({
 
       const n = corpo['normalizzazione'] as Record<string, unknown> | null;
       if (n !== null && n !== undefined) {
+        // `scartate` va stampata sempre, anche a zero: una riga grezza che non
+        // diventa un movimento e sparisce senza dirlo e' esattamente il tipo
+        // di perdita silenziosa che le regole di questo progetto vietano.
         aggiungi(
           `Normalizzazione: ${String(n['esaminate'])} esaminate \u00b7 ${String(n['inserite'])} inserite \u00b7 ` +
-            `${String(n['aggiornate'])} aggiornate \u00b7 ${String(n['protette'])} protette`,
+            `${String(n['aggiornate'])} aggiornate \u00b7 ${String(n['protette'])} protette \u00b7 ` +
+            `${String(n['scartate'])} scartate \u00b7 ${String(n['girocontiSpeculari'])} giroconti speculari`,
         );
+        for (const e of (n['errori'] as string[] | undefined) ?? []) aggiungi(`  \u26a0 ${e}`);
       }
 
       const c = corpo['categorizzazione'] as Record<string, unknown> | null;
       if (c !== null && c !== undefined) {
+        const abbinate = Number(c['speseAbbinate'] ?? 0);
+        const esaminate = Number(c['speseEsaminate'] ?? 0);
+        const scoperte = esaminate - abbinate;
+        // La copertura in percentuale e non solo in valore assoluto: e'
+        // l'unico modo di accorgersi che sta scendendo. Il conteggio delle
+        // classificate puo' restare identico mentre il totale cresce, e
+        // "1294" da solo sembra un numero stabile.
         aggiungi(
-          `Categorizzazione: ${String(c['speseAbbinate'])} su ${String(c['speseEsaminate'])} spese classificate`,
+          `Categorizzazione: ${abbinate} su ${esaminate} spese classificate ` +
+            `(${esaminate === 0 ? '0' : String(Math.round((abbinate / esaminate) * 1000) / 10)}%) \u00b7 ` +
+            `${scoperte} scoperte`,
         );
+        if (scoperte > 0) {
+          aggiungi(
+            `  \u26a0 Le spese scoperte non si classificano da sole: il cron non chiama il ` +
+              `modello. Servono il bottone 5 o un'assegnazione da /revisione.`,
+          );
+        }
       }
 
       const r = corpo['ricorrenze'] as Record<string, unknown> | null;
