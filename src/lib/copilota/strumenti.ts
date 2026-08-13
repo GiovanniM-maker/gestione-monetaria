@@ -518,15 +518,11 @@ const doveTagliare: Strumento = {
       supabase
         .from('v_recurring_monthly_cost_by_discretion')
         .select('tipo, discrezionalita, contesto, ricorrenze, costo_mensile::text'),
-      supabase
-        .from('v_subscriptions')
-        .select(
-          'esercente, merchant_id, categoria, discrezionalita, contesto, tipo, cadence, ' +
-            'typical_amount::text, costo_mensile::text, occurrences, usage_verdict, status',
-        )
-        .eq('nella_metrica', true)
-        .order('costo_mensile', { ascending: true, nullsFirst: false })
-        .limit(25),
+      // Tre cifre per voce, non una. `costo_mensile` da solo aveva fatto
+      // scrivere «Anthropic −91,26 €/mese, risparmio certo» per un servizio
+      // che oggi ne costa 110: è la media su tutto lo storico, e risponde a
+      // un'altra domanda.
+      supabase.rpc('ricorrenti_con_recente', { p_mesi: 3 }),
       supabase.rpc('spesa_per_esercente', { p_da: da, p_a: a_, p_limite: 12 }),
       supabase.rpc('margine_mensile', { p_mesi: Math.max(mesi, 6) }),
     ]);
@@ -540,6 +536,14 @@ const doveTagliare: Strumento = {
       come_leggerli: [
         'ABBONAMENTI e ABITUDINI non si sommano mai: il primo si disdice con un gesto e il ' +
           "risparmio è certo, la seconda si cambia e cambiare un'abitudine non è un gesto.",
+        'Ogni voce ha TRE cifre che rispondono a domande diverse. Per «quanto risparmio se ' +
+          'disdico» usa media_mensile_recente (quanto è uscito davvero negli ultimi mesi ' +
+          'interi) oppure ultimo_importo. media_su_tutto_lo_storico è la media da quando la ' +
+          'serie esiste: per un servizio a consumo cresciuto nel tempo è molto più bassa del ' +
+          'prezzo di oggi, e spacciarla per un risparmio è falso.',
+        'Se le tre cifre coincidono è un canone stabile e puoi citarne una qualsiasi. Se ' +
+          'divergono, stabilita_importo bassa lo conferma: è un servizio a consumo, dillo e ' +
+          'cita la cifra recente.',
         "usage_verdict = 'non_usato' è una dichiarazione dell'utente: quella voce è la prima " +
           'da proporre, perché sta pagando per qualcosa che ha già detto di non usare.',
         "Una voce di viaggi con poche occorrenze concentrate NON è un'abitudine: è una spesa " +

@@ -1097,6 +1097,28 @@ differenza fra valori assoluti sarebbe l'occasione perfetta per sbagliare un seg
 Il consiglio segue la forma della metrica: **due liste separate**, cosa si può disdire e cosa si può
 cambiare, mai un totale unico. E niente consigli da manuale — vale solo ciò che si legge nei dati.
 
+#### Una media storica non è un risparmio
+
+Il primo consiglio vero ha elencato «Anthropic −91,26 €/mese» sotto il titolo «da disdire, risparmio
+certo». Il canone vero è fra i 108 e i 120.
+
+Il numero non era sbagliato: rispondeva a un'altra domanda. Per un servizio a consumo — `confidence`
+0,28, quindi fuori dal ramo del canone — `costo_mensile` vale `totale speso × 30,44 / giorni
+coperti`, cioè **la media su tutto il periodo osservato**. Un servizio partito a 20 € e arrivato a
+110 ha una media che non è mai stata il suo prezzo.
+
+È il modo di sbagliare un numero **senza inventarlo**, e il controllo delle cifre non lo prende:
+la cifra nei dati c'era. Solo che era la risposta a «quanto mi è costato in media», messa sotto la
+domanda «quanto smetto di pagare».
+
+`ricorrenti_con_recente()` dà tre cifre per voce, con i nomi che dicono a cosa rispondono:
+`media_su_tutto_lo_storico`, `ultimo_importo` e `media_mensile_recente` — quest'ultima misurata sugli
+ultimi mesi **interi**, perché il mese in corso confrontato con mesi interi si legge come un crollo.
+Su un canone stabile le tre coincidono; quando divergono, `stabilita_importo` bassa dice perché.
+
+Nella proiezione mandata al copilot mancava anche `expected_amount`, che dalla Fase 5 esiste
+esattamente per questa domanda: il modello non poteva dire 110 nemmeno volendo.
+
 #### Un grafico può mentire con numeri veri
 
 Il modello sceglie **cosa** disegnare, mai cosa c'è dentro: i punti escono da una query come ogni
