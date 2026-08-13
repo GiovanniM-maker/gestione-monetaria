@@ -6,6 +6,7 @@ import { comeArray } from '@/lib/enablebanking/redact';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { etichettaBreve, meseDaData, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
+import { CorreggiEsercente } from '../../correggi';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Esercente' };
@@ -21,6 +22,12 @@ export const metadata: Metadata = { title: 'Esercente' };
  * si corregge solo se si sa chi l'ha messa. Le proposte del modello nascono
  * con `origine = 'ai'` e valgono subito, ma restano da confermare: qui si vede
  * quali.
+ *
+ * **La correzione sta qui**, non su `/revisione`: e' il posto dove si guarda il
+ * numero, ed e' arrivandoci da un totale che non torna che viene voglia di
+ * correggere. Sopra il pannello c'e' scritto fin dove arriva l'effetto — tutte
+ * le sue spese, anche quelle dei mesi gia' chiusi — perche' e' esattamente cio'
+ * che distingue questa correzione da quella della singola riga.
  */
 
 type Mensile = { mese: string; spesa: string; movimenti: number };
@@ -71,7 +78,7 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         .eq('merchant_id', id)
         .order('mese', { ascending: false })
         .limit(18),
-      supabase.from('categories').select('id, name'),
+      supabase.from('v_categorie_albero').select('id, nome, percorso, archiviata').order('percorso'),
       supabase
         .from('v_subscriptions')
         .select('id, tipo, cadence, costo_mensile::text, nella_metrica, status')
@@ -91,8 +98,16 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
     return v < max ? v : max;
   }, 0n);
 
-  const categoria =
-    comeArray<{ id: string; name: string }>(categorie).find((c) => c.id === m.category_id) ?? null;
+  const albero = comeArray<{
+    id: string;
+    nome: string;
+    percorso: string;
+    archiviata: boolean;
+  }>(categorie);
+  const categoria = albero.find((c) => c.id === m.category_id) ?? null;
+  const sceglibili = albero
+    .filter((c) => !c.archiviata)
+    .map((c) => ({ id: c.id, percorso: c.percorso }));
 
   return (
     <div className="space-y-6">
@@ -117,14 +132,14 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           tutti i movimenti
         </Link>
         <Link className={BOTTONE_MINORE} href="/revisione">
-          cambia la classificazione
+          tutti quelli da rivedere
         </Link>
       </div>
 
       <section className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
         <h2 className="mb-2 text-sm font-medium">Classificazione</h2>
         <dl className="space-y-1 text-sm">
-          <Voce nome="categoria" valore={categoria?.name ?? null} />
+          <Voce nome="categoria" valore={categoria?.percorso ?? null} />
           <Voce nome="discrezionalità" valore={m.discretion} />
           <Voce nome="contesto" valore={m.context} />
           <Voce nome="abbonamento" valore={m.is_subscription ? 'sì' : 'no'} />
@@ -143,6 +158,15 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           </p>
         )}
       </section>
+
+      <CorreggiEsercente
+        id={m.id}
+        categoryId={m.category_id}
+        discrezionalita={m.discretion}
+        contesto={m.context}
+        abbonamento={m.is_subscription}
+        categorie={sceglibili}
+      />
 
       {ricorrenza !== null && (
         <section className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">

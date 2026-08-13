@@ -549,8 +549,8 @@ difficoltà: è **quanta della prossima cosa dipende da questa**.
 | 1   | **Accesso al DB in sviluppo**                                                    | Ogni verifica successiva costa un quarto                | **fatto**   |
 | 2   | **Ricerca del mondo reale** nella classificazione                                | La qualità di tutto il resto dipende da qui             | **fatto**   |
 | 3   | **Le variazioni in SQL** (per classe, categoria, esercente, a finestra omogenea) | Il cruscotto nuovo non esiste senza                     | **fatto**   |
-| 4   | **Il cruscotto**: numerone, barra, ciambella, discesa, correzione a ogni livello | È la schermata che si apre                              | il prossimo |
-| 5   | **Notifiche e 4 sincronizzazioni**                                               | Chiude il ciclo di conferma                             |             |
+| 4   | **Il cruscotto**: numerone, barra, ciambella, discesa, correzione a ogni livello | È la schermata che si apre                              | **fatto**   |
+| 5   | **Notifiche e 4 sincronizzazioni**                                               | Chiude il ciclo di conferma                             | il prossimo |
 | 6   | **Spiegazioni** e avvisi di buon senso                                           | Rende comprensibile il passato                          |             |
 | 7   | **Consigli ricercati** nel copilota                                              | Il più rischioso: per ultimo, quando le difese esistono |             |
 | 8   | **Chat multiple, scadenza, segnalibro**                                          | Indipendente, si può infilare ovunque                   |             |
@@ -575,7 +575,7 @@ Tre regole, incise nelle funzioni e non nelle schermate che le useranno:
    «il mese tipico», mai «la media»: è la parola che in Fase 9 ha reso falsa una frase con un numero
    giusto;
 3. **il segno è sulla spesa**, quindi si confrontano i valori assoluti. Le uscite sono negative:
-   spendere 600 dove il tipico è 500 dà una differenza fra i due numeri *negativa* ed è un
+   spendere 600 dove il tipico è 500 dà una differenza fra i due numeri _negativa_ ed è un
    **aumento**. Sbagliarlo produce frecce rovesciate, cioè il guasto più imbarazzante possibile su
    un cruscotto — ed è per questo che il caso `+20% / su` è la prima cosa che il collaudo verifica.
 
@@ -586,3 +586,97 @@ categoria che il mese prima non esisteva non è aumentata dell'infinito per cent
 Classe e categoria usano una **full join** fra il mese corrente e i precedenti — una classe sparita è
 informazione, e compare a `0 €` con `−100%`. Gli esercenti no: uno che questo mese non c'è, fra
 centosessanta, è rumore.
+
+### Cosa ha prodotto il punto 4
+
+Le figure, i confronti e la correzione a ogni livello della discesa.
+`0036_la_finestra_si_dichiara.sql`, `0037_correggere_dove_si_guarda.sql`,
+`lib/ui/fette.ts`, `lib/cruscotto/andamento.ts`, `app/(app)/grafici.tsx`,
+`app/(app)/correggi.tsx`.
+
+**La 0036 corregge un difetto della 0035 che si vedeva solo sulla schermata vera.** Là la
+finestra la decideva `current_date`; il numerone in cima invece usa l'ultimo giorno **con dei
+dati**. Se è il 13 e l'ultimo movimento è dell'11, le due cifre parlano di due finestre diverse:
+il mese in corso non ha spesa nei giorni 12 e 13, i mesi di riferimento sì, e **ogni freccia della
+schermata punterebbe in basso** per il solo fatto che i dati arrivano con un giorno di ritardo.
+Era l'errore che la 0035 dichiarava di evitare, rientrato dalla porta di servizio. Ora la finestra
+si dichiara: `p_giorni`, letto una volta sola da `finestraDiConfronto()` e passato a tutto — al
+cruscotto e alla scheda di una categoria, perché scendere da un numero non deve cambiarne il
+termine di paragone.
+
+**La barra e la ciambella rispondono a due domande diverse.** La barra dice come si divide il mese
+fra le quattro classi: ha sempre le stesse quattro voci nello stesso ordine, quindi la sua forma si
+impara e un mese anomalo si riconosce senza leggere un numero. L'anello dice in cosa, ha trenta
+voci possibili e cambia ogni mese — serve a scegliere dove scendere, non a essere memorizzato.
+`personale` e `business` si sommano solo sulla barra; nell'elenco sotto restano distinti, perché lì
+c'è spazio per dirlo.
+
+**L'anello non si tocca**, ed è deliberato: su un telefono una fetta è larga venti pixel e si
+sbaglia col pollice. È `aria-hidden`, e il bersaglio è la riga sotto, alta quarantaquattro. Chi usa
+un lettore di schermo non perde niente, perché tutto quello che la figura dice sta nell'elenco in
+forma di testo.
+
+Nessuna libreria, come per il markdown del report e i grafici del copilota. La geometria sta in
+`lib/ui/fette.ts` ed è provata lì, perché è la parte che può mentire con dati veri:
+
+- i confini si calcolano **cumulati**, non una fetta per volta. Arrotondando ogni fetta per conto
+  suo gli errori si sommano e l'anello non chiude: tre terzi darebbero 999 millesimi su 1000;
+- gli importi restano `bigint` fino all'etichetta. I pixel no, e va bene: un pixel è una posizione,
+  non un euro;
+- il resto oltre la settima categoria si **somma** in una fetta grigia invece di sparire —
+  altrimenti la figura direbbe che manca qualcosa quando non manca niente.
+
+**Il tono della freccia segue la spesa, non il gradimento.** Un investimento che cresce è ambra
+come un voluttuario che cresce. Dire se hai fatto bene non è compito di un cruscotto: questa
+applicazione misura, non prescrive.
+
+#### La correzione, dove si guarda il numero
+
+Le tre scritture esistevano già — è di nuovo la regola della Fase 0 che si incassa — ma vivevano in
+tre schermate diverse, e una in particolare era **irraggiungibile**: `/da-confermare` mostra solo
+ciò che non è ancora stato confermato, quindi una riga approvata ieri non era più correggibile da
+nessuna parte. Ora ogni livello della discesa ha il suo pannello, con **scritto sopra fin dove
+arriva l'effetto**:
+
+| Dove      | Cosa cambia                             | Fin dove arriva                   |
+| --------- | --------------------------------------- | --------------------------------- |
+| Movimento | discrezionalità, contesto, nota         | solo questa riga, per sempre      |
+| Esercente | categoria, discrezionalità, abbonamento | tutte le sue spese, anche passate |
+| Categoria | nome, genitore, discrezionalità di base | la tassonomia                     |
+
+Non è una cortesia: correggere per sbaglio tutte le occorrenze di un esercente quando si voleva
+toccare una riga sola è un danno che si scopre settimane dopo, guardando un totale che non torna.
+
+Il pannello del movimento scrive **solo se qualcosa è davvero cambiato**. Aprirlo e richiuderlo non
+deve marcare `manually_categorized`: quella marcatura blocca per sempre ogni automatismo su quella
+riga, ed è la cosa più vicina a un'incisione che ci sia nello schema.
+
+Il terzo livello non esisteva nemmeno come bottone — si potevano **creare** categorie
+(`crea_categoria`, 0026) e non correggerle. `aggiorna_categoria` colma la lacuna con due difese:
+lo **slug non segue il nome** (è un identificativo, e la riclassificazione ci si abbina: cambiarlo
+romperebbe l'abbinamento in silenzio), e il **ciclo si rifiuta** nel punto in cui verrebbe creato.
+Appendere «Ristoranti» sotto la sua figlia «Pizzeria» si fa con un tocco sbagliato, le viste non
+girerebbero all'infinito grazie al limite di profondità, ma quel ramo sparirebbe dai totali di
+primo livello senza nessun errore.
+
+### Prova manuale del punto 4, sotto i 5 minuti
+
+1. `/` sul mese in corso: sotto il numerone c'è **una barra sola** divisa in quattro colori, e
+   accanto a ogni classe una freccia. Una classe con più spesa del solito deve dire **▲ e una
+   percentuale positiva**: se dicesse ▼ il segno si è rovesciato, ed è il guasto più imbarazzante
+   possibile qui.
+2. In fondo alla lista delle classi, la riga che dice **su quanti giorni** è fatto il confronto.
+   Deve essere lo stesso numero del riquadro «nei primi N giorni» sopra. Se divergono, la 0036 non
+   è stata applicata.
+3. L'anello: le fette sommano al totale scritto al centro, e se le categorie radice sono più di
+   otto compare **«altre N categorie»** in grigio — il resto non sparisce.
+4. Toccare una riga dell'anello → `/categoria/[id]` col mese conservato: stesso totale, stessa
+   freccia, e gli esercenti di **quel ramo** con la loro variazione.
+5. Su quella scheda, **«Correggi la categoria»**: provare ad appendere la categoria a una sua
+   figlia. Deve rifiutare con un messaggio, non accettare.
+6. Su `/esercente/[id]`, **«Cambia la classificazione dell'esercente»**: cambiare la
+   discrezionalità e tornare al cruscotto — la spesa si è spostata di classe anche nei mesi chiusi.
+7. Su `/movimenti/[id]`, **«Correggi questo movimento»**: senza toccare niente il bottone è spento
+   e lo dice. Cambiando la discrezionalità e applicando, `corretto a mano` diventa «sì».
+8. Dal telefono: nessuna schermata scorre lateralmente, e l'anello sta sopra il suo elenco invece
+   che accanto.

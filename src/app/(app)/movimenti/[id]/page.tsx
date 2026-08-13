@@ -6,6 +6,7 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { SpostaMovimento } from './sposta';
+import { CorreggiMovimento } from '../../correggi';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimento' };
@@ -25,9 +26,13 @@ export const metadata: Metadata = { title: 'Movimento' };
  * insieme il rilevatore dichiara un canone da 44,94 €/mese per un servizio che
  * ne costa 2,99.
  *
- * Le altre scritture restano fuori: discrezionalita' e contesto si correggono
- * da `/da-confermare`, la classificazione di **tutte** le occorrenze da
- * `/revisione`. Ognuna nel posto dove vale la sua portata.
+ * Con il cruscotto nuovo la correzione e' arrivata **dove si guarda il
+ * numero**, quindi anche qui: discrezionalita', contesto e nota di questa
+ * riga. Prima si potevano cambiare solo da `/da-confermare`, che pero' mostra
+ * soltanto cio' che non e' ancora stato confermato — una riga approvata ieri
+ * non era piu' correggibile da nessuna parte. La classificazione di **tutte**
+ * le occorrenze resta sulla scheda dell'esercente: ognuna nel posto dove vale
+ * la sua portata, e con la portata scritta sopra.
  *
  * Regola 7: l'IBAN resta mascherato, come arriva dal database.
  */
@@ -121,20 +126,27 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         <Voce nome="escluso dall’analisi" valore={m.excluded_from_analysis ? 'sì' : 'no'} />
       </Blocco>
 
-      <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />
+      <div className="space-y-3">
+        <CorreggiMovimento
+          id={m.id}
+          discrezionalita={m.discrezionalita}
+          contesto={m.contesto}
+          note={m.note}
+        />
+        <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />
+      </div>
 
       <p className="text-xs text-neutral-500">
-        Per cambiare la classificazione di <strong>tutte</strong> le occorrenze di un esercente si
-        passa da{' '}
-        <Link className="underline" href="/revisione">
-          revisione
-        </Link>
-        , dove l&rsquo;assegnazione crea un alias e vale anche per il futuro. Per correggere{' '}
-        <strong>questa</strong> spesa senza spostarla, da{' '}
-        <Link className="underline" href="/da-confermare">
-          da confermare
-        </Link>
-        .
+        Per cambiare la classificazione di <strong>tutte</strong> le occorrenze di questo esercente
+        si passa dalla{' '}
+        {m.merchant_id === null ? (
+          'sua scheda'
+        ) : (
+          <Link className="underline" href={`/esercente/${m.merchant_id}`}>
+            sua scheda
+          </Link>
+        )}
+        : l&rsquo;effetto arriva anche sui mesi gi&agrave; chiusi.
       </p>
     </div>
   );

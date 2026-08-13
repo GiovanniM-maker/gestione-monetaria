@@ -13,11 +13,7 @@ import {
   leggiVariazioniClassi,
   leggiVariazioniEsercenti,
 } from './variazioni';
-import type {
-  VariazioneCategoria,
-  VariazioneClasse,
-  VariazioneEsercente,
-} from './andamento';
+import type { VariazioneCategoria, VariazioneClasse, VariazioneEsercente } from './andamento';
 
 /**
  * Le letture del cruscotto.

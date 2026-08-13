@@ -20,6 +20,8 @@ import {
 } from '@/lib/cruscotto/variazioni';
 import { comeSiConfronta, type Variazione } from '@/lib/cruscotto/andamento';
 import { Freccia } from '../../grafici';
+import { CorreggiCategoria } from '../../correggi';
+import { genitoriPossibili } from '@/lib/tassonomia/categorie';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Categoria' };
@@ -80,7 +82,11 @@ export default async function CategoriaPage({
   const supabase = await createSupabaseServerClient();
 
   const [{ data: categoria }, { data: serie }] = await Promise.all([
-    supabase.from('categories').select('id, name, parent_id').eq('id', id).maybeSingle(),
+    supabase
+      .from('categories')
+      .select('id, name, parent_id, default_discretion')
+      .eq('id', id)
+      .maybeSingle(),
     supabase
       .from('v_monthly_by_category')
       .select(
@@ -91,7 +97,12 @@ export default async function CategoriaPage({
       .limit(18),
   ]);
 
-  const cat = categoria as { id: string; name: string; parent_id: string | null } | null;
+  const cat = categoria as {
+    id: string;
+    name: string;
+    parent_id: string | null;
+    default_discretion: string | null;
+  } | null;
   if (cat === null) notFound();
 
   const mesi = comeArray<RigaCat>(serie).map((r) => ({ ...r, mese: meseDaData(r.mese) ?? r.mese }));
@@ -175,6 +186,14 @@ export default async function CategoriaPage({
           tutti i movimenti del ramo
         </Link>
       </div>
+
+      <CorreggiCategoria
+        id={cat.id}
+        nome={cat.name}
+        discrezionalitaPredefinita={cat.default_discretion}
+        parentId={cat.parent_id}
+        genitoriPossibili={await genitoriPossibili(cat.id)}
+      />
 
       {comeArray<RigaCat>(figli).length > 0 && (
         <section className="space-y-2">

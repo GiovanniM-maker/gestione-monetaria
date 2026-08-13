@@ -225,9 +225,7 @@ export function Ciambella({ voci, totale }: { voci: readonly FettaCategoria[]; t
 }
 
 /** Le prime della tavolozza, piu' una fetta grigia per tutto il resto. */
-export function fetteDellaCiambella(
-  voci: readonly FettaCategoria[],
-): readonly FettaCategoria[] {
+export function fetteDellaCiambella(voci: readonly FettaCategoria[]): readonly FettaCategoria[] {
   const { teste, resto } = conResto(voci, TAVOLOZZA.length);
   if (resto === null) return teste;
   return [
