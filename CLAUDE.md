@@ -551,6 +551,23 @@ Due formule, e quale si applica dipende da quanto la serie è regolare davvero:
 deve diventare il prezzo. `expected_amount` resta l'ultimo importo perché risponde a un'altra
 domanda — quanto arriverà la prossima volta — ed è il riferimento della Fase 8 per gli aumenti.
 
+**È una mediana _scelta_, dalla `0028`.** Con `percentile_cont` un numero pari di occorrenze non
+sceglieva: interpolava. Quattro addebiti da 6,99 e quattro da 8,99 davano **7,99**, un prezzo mai
+pagato, che finiva in due posti dove conta — il canone mostrato su `/abbonamenti`, dove vale la
+regola «un numero che non si riconosce non si crede», e il termine di paragone dell'avviso di
+aumento di prezzo. È la stessa correzione fatta in Fase 6-bis sul confronto fra mesi, e per la
+stessa ragione: come riferimento serve un numero vero.
+
+Su un numero pari `percentile_disc` prende il più basso dei due centrali, cioè — con importi
+negativi ordinati in modo crescente — la spesa più alta. Non è un difetto: **nessuna mediana sa dire
+quanto costa adesso**, e a quella domanda risponde `expected_amount`. È esattamente il motivo per
+cui sono due colonne.
+
+`giorni_tipici` resta su `percentile_cont`, ed è una scelta e non una svista: non è un valore che
+qualcuno abbia pagato, è la distanza fra due osservazioni, e serve a **prevedere** il prossimo
+addebito. Per una previsione 30,5 è più accurato di 30. La regola non è «mai interpolare», è «un
+numero mostrato come un importo dev'essere un importo che è esistito».
+
 #### Estrapolare da un intervallo mediano produce cifre assurde
 
 Il difetto più grave della prima versione, e vale la pena ricordarlo perché è generale.
