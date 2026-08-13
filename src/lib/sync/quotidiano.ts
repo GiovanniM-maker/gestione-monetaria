@@ -126,7 +126,24 @@ function giorniFa(giorni: number): string {
   return data.toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
 }
 
-export async function eseguiSincronizzazioneQuotidiana(): Promise<EsitoQuotidiano> {
+/**
+ * Quanta ricerca sul mondo fare, e perche' dipende da chi ha chiamato.
+ *
+ * La sequenza e' la stessa per il cron e per il bottone — «il bottone non e' un
+ * doppione della schedulazione: chiama la stessa funzione» — ma il tempo
+ * disponibile no. Dietro il cron non c'e' nessuno; dietro il bottone c'e' un
+ * browser che tiene aperta una connessione, e una richiesta che resta muta
+ * troppo a lungo **non torna**: misurato tre volte, e ogni volta il lavoro era
+ * stato fatto e il resoconto perso.
+ *
+ * Quindi non due funzioni diverse: la stessa, con un budget che dice quanto si
+ * puo' far aspettare chi guarda.
+ */
+export const RICERCA_COL_BROWSER_MS = 20_000;
+
+export async function eseguiSincronizzazioneQuotidiana(
+  budgetRicercaMs: number = BUDGET_SENZA_BROWSER,
+): Promise<EsitoQuotidiano> {
   const avvio = Date.now();
   const esito = vuoto();
   const supabase = await createSupabaseServerClient();
@@ -252,7 +269,7 @@ export async function eseguiSincronizzazioneQuotidiana(): Promise<EsitoQuotidian
     // a funzionare, solo peggio.
     if (ricercaConfigurata()) {
       try {
-        esito.ricerca = await arricchisciEsercenti(200, BUDGET_SENZA_BROWSER);
+        esito.ricerca = await arricchisciEsercenti(200, budgetRicercaMs);
       } catch (errore) {
         // Una ricerca fallita non deve fermare la sequenza: e' un
         // miglioramento della classificazione, non un suo presupposto.

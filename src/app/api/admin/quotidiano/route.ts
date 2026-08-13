@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import { eseguiSincronizzazioneQuotidiana } from '@/lib/sync/quotidiano';
+import { eseguiSincronizzazioneQuotidiana, RICERCA_COL_BROWSER_MS } from '@/lib/sync/quotidiano';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -22,7 +22,7 @@ export async function POST(): Promise<NextResponse> {
   }
 
   try {
-    return NextResponse.json(await eseguiSincronizzazioneQuotidiana());
+    return NextResponse.json(await eseguiSincronizzazioneQuotidiana(RICERCA_COL_BROWSER_MS));
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     console.error('[quotidiano] fallita:', messaggio);
