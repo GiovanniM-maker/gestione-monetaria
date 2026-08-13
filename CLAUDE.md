@@ -17,7 +17,7 @@
 | 5     | Detector abbonamenti (SQL puro)           | **completata** |
 | 6     | Dashboard                                 | **completata** |
 | 6-bis | Il pavimento: movimenti, stato, entrate   | **completata** |
-| 7     | Automazione                               | non iniziata   |
+| 7     | Automazione                               | **completata** |
 | 8     | Motore alert (SQL)                        | non iniziata   |
 | 9     | Report periodico AI                       | non iniziata   |
 | 10    | Chat copilot                              | non iniziata   |
@@ -707,6 +707,62 @@ non una previsione. Il termine di paragone è la mediana **scelta** (`percentile
 TypeScript la selezione dell'elemento centrale), mai la media: su un numero pari di mesi la media
 produrrebbe un valore che non è mai stato speso in nessun mese, e come riferimento serve un numero
 vero.
+
+### Le decisioni della Fase 7
+
+#### Il ciclo delle fette passa dal browser al server
+
+Il backfill si spezza in fette e **il browser** lo richiama finché non ha finito. Un cron non ha un
+browser: il ciclo sta nel server e si ferma da solo per **budget**, non per numero di giri — il
+tempo è la risorsa scarsa di una funzione serverless. Se il budget si esaurisce il cursore resta
+salvato e il giorno dopo si riprende. È la riavviabilità scritta in Fase 2 che rende questa fase
+corta.
+
+#### Sette giorni indietro, non uno
+
+Una sincronizzazione che chiedesse solo ieri sarebbe più economica e fragile. Tre ragioni:
+
+1. le **`pending` diventano `booked`** e l'importo può cambiare — la riga va riletta, e
+   `entry_reference` come chiave di idempotenza fa il resto;
+2. la banca può **contabilizzare in ritardo** un movimento di giorni prima;
+3. se un giorno il cron non gira — deploy, guasto, quota — la finestra larga **si ripara da sola**
+   al giro dopo, invece di lasciare un buco permanente che nessuno noterebbe.
+
+Costa poco: sette giorni sono qualche decina di movimenti, cioè una pagina.
+
+#### Il consenso scaduto si ferma prima di chiamare la banca
+
+E lascia una riga `failed` in `sync_runs` con il motivo scritto in italiano. Un 401 dall'ASPSP
+direbbe la stessa cosa in modo molto meno leggibile fra sei mesi, e senza quella riga l'unico posto
+dove resterebbe scritto sarebbe il log del cron, che nessuno legge. Il cruscotto la mostra da
+`v_stato_sistema`.
+
+#### Normalizza, categorizza e rileva girano anche se lo scarico è fallito
+
+Sono idempotenti e lavorano su ciò che c'è già. Saltarli lascerebbe il cruscotto indietro rispetto
+ai dati grezzi già presenti: un disallineamento gratuito, e per giunta invisibile.
+
+#### La risposta è 200 anche con errori
+
+Lo scheduler non sa reagire a un 500 se non ritentando, e ritentare uno scarico fatto a metà non
+aiuta — il cursore è salvato e il giro dopo riprende da solo. Il resoconto dice *quanto* è stato
+fatto prima di fermarsi, che è l'informazione utile; lo stato duraturo sta comunque in `sync_runs`.
+
+#### Il bottone 7 non è un doppione della schedulazione
+
+Chiama **la stessa funzione** del cron. Senza, l'automazione si potrebbe osservare solo aspettando
+le 05:00, e un lavoro che si prova una volta al giorno di fatto non si prova. Se le due strade
+divergessero, provarne una non direbbe niente sull'altra.
+
+### Prova manuale della Fase 7, sotto i 5 minuti
+
+1. `/debug/sync` → **`7 · Sequenza quotidiana`**. Deve stampare quattro righe: scarico,
+   normalizzazione, categorizzazione, ricorrenze — e la durata.
+2. Rilanciare: le righe nuove devono essere **0** e i numeri di copertura identici. È idempotente.
+3. `/` in cima: `ultima sincronizzazione riuscita` deve essere di oggi.
+4. Su Vercel, `CRON_SECRET` impostata sul progetto e il cron visibile in *Settings → Cron Jobs*.
+   Senza la variabile la route risponde **500**, non 200: meglio rifiutare tutto che accettare
+   tutto quando la configurazione è rotta.
 
 ### Prova manuale della Fase 6-bis, sotto i 5 minuti
 

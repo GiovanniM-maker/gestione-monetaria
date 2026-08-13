@@ -427,6 +427,72 @@ export function PannelloBackfill({
     }
   }
 
+  /**
+   * La stessa sequenza che gira ogni notte, lanciata a mano.
+   *
+   * Serve a poterla provare: un lavoro schedulato che si puo' osservare solo
+   * una volta al giorno, di fatto, non si prova mai.
+   */
+  async function quotidiano() {
+    setInCorso(true);
+    setMessaggi([]);
+    aggiungi('Sincronizzazione quotidiana\u2026 (scarico, normalizza, categorizza, rileva)');
+    try {
+      const risposta = await fetchConAttesa('/api/admin/quotidiano', 290);
+      const corpo = await leggiRisposta(risposta);
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+        return;
+      }
+
+      if (corpo['saltata'] !== null && corpo['saltata'] !== undefined) {
+        aggiungi(`SALTATA: ${String(corpo['saltata'])}`);
+      } else {
+        aggiungi(
+          `Scarico: ${corpo['fette']} fette \u00b7 ${corpo['righeLette']} righe lette \u00b7 ` +
+            `${corpo['righeNuove']} nuove \u00b7 ${corpo['righeDuplicate']} duplicate \u00b7 ` +
+            `${corpo['completato'] === true ? 'completato' : 'INTERROTTO, riprende al giro dopo'}`,
+        );
+      }
+
+      for (const avviso of (corpo['avvisi'] as string[] | undefined) ?? []) {
+        aggiungi(`  \u26a0 ${avviso}`);
+      }
+
+      const n = corpo['normalizzazione'] as Record<string, unknown> | null;
+      if (n !== null && n !== undefined) {
+        aggiungi(
+          `Normalizzazione: ${String(n['esaminate'])} esaminate \u00b7 ${String(n['inserite'])} inserite \u00b7 ` +
+            `${String(n['aggiornate'])} aggiornate \u00b7 ${String(n['protette'])} protette`,
+        );
+      }
+
+      const c = corpo['categorizzazione'] as Record<string, unknown> | null;
+      if (c !== null && c !== undefined) {
+        aggiungi(
+          `Categorizzazione: ${String(c['speseAbbinate'])} su ${String(c['speseEsaminate'])} spese classificate`,
+        );
+      }
+
+      const r = corpo['ricorrenze'] as Record<string, unknown> | null;
+      if (r !== null && r !== undefined) {
+        aggiungi(
+          `Ricorrenze: ${String(r['scritte'])} scritte \u00b7 ${String(r['nellaMetrica'])} nel numero`,
+        );
+      }
+
+      if (corpo['errore'] !== null && corpo['errore'] !== undefined) {
+        aggiungi(`Errore: ${String(corpo['errore'])}`);
+      }
+      aggiungi(`Durata: ${Math.round(Number(corpo['durataMs'] ?? 0) / 1000)} s`);
+      router.refresh();
+    } catch (errore) {
+      aggiungi(`${errore instanceof Error ? errore.message : String(errore)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   async function riprendi(id: string) {
     setInCorso(true);
     aggiungi(`Ripresa della corsa ${id.slice(0, 8)}…`);
@@ -503,7 +569,15 @@ export function PannelloBackfill({
         >
           6 · Rileva abbonamenti
         </button>
+        <button type="button" onClick={quotidiano} disabled={inCorso} className={stileBottone}>
+          7 · Sequenza quotidiana
+        </button>
       </div>
+      <p className="text-xs text-neutral-500">
+        Il bottone 7 esegue in un colpo ciò che Vercel Cron lancia ogni notte alle 05:00 UTC:
+        scarica gli ultimi 7 giorni, normalizza, categorizza e rileva le ricorrenze. Chiama la
+        stessa funzione del cron — se divergessero, provarla non direbbe niente.
+      </p>
 
       {corseRiprendibili.length > 0 && (
         <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
