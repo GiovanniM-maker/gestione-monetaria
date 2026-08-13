@@ -110,3 +110,89 @@ export function interrogazione(nome: string): string | null {
   if (motivoDelRifiuto(nome) !== null) return null;
   return nome.trim().replace(/\s+/g, ' ');
 }
+
+// ---------------------------------------------------------------------------
+// La pertinenza — che il risultato parli davvero di quell'esercente
+// ---------------------------------------------------------------------------
+// Osservato sui dati veri, la prima volta che la ricerca è girata:
+//
+//   `Bruno Spa Modica`      → «Bruno Elettrodomestici S.r.l. a Modica (RG)»  ✓
+//   `Aspit Campogalliano`   → «Calcola pedaggio dal casello di Campogalliano» ✗
+//
+// Nel secondo caso il motore ha agganciato il **paese** e ha ignorato
+// l'azienda. Il testo è vero, pertinente a Campogalliano, e non dice niente su
+// Aspit. Dato al modello diventerebbe un fatto: classificherebbe l'azienda
+// sotto trasporti o pedaggi con una motivazione perfettamente argomentata e
+// senza nessun fondamento — che è lo stesso modo di sbagliare misurato in
+// Fase 4, solo con una fonte esterna a fargli da complice.
+//
+// **Un risultato non pertinente è peggio di nessun risultato**, perché nessun
+// risultato lascia il modello nel dubbio mentre uno sbagliato glielo toglie.
+//
+// Il controllo: la **prima parola significativa** del nome deve comparire nel
+// testo trovato. È la parola che porta il marchio — i nomi degli esercenti sono
+// costruiti così, marchio prima e luogo o filiale dopo. `Bruno` compare,
+// `Aspit` no.
+//
+// Perché la prima e non una qualsiasi: in `Aspit Campogalliano` anche
+// `Campogalliano` è una parola del nome, e compare in tutti i risultati
+// sbagliati. Accettare una parola qualsiasi farebbe passare proprio il caso che
+// questo controllo esiste per fermare.
+
+/** Sigle che non identificano nessuno: si saltano cercando la parola del marchio. */
+const NON_DISTINTIVE = new Set([
+  'spa',
+  'srl',
+  'srls',
+  'sas',
+  'snc',
+  'sc',
+  'scarl',
+  'ltd',
+  'inc',
+  'llc',
+  'plc',
+  'gmbh',
+  'the',
+  'di',
+  'da',
+  'de',
+  'del',
+  'della',
+  'san',
+  'santa',
+]);
+
+function senzaAccenti(testo: string): string {
+  return testo
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * La parola su cui si giudica la pertinenza, o `null` se non ce n'è una.
+ *
+ * Almeno tre caratteri: sotto, è una preposizione o un'iniziale e comparirebbe
+ * ovunque.
+ */
+export function parolaDistintiva(nome: string): string | null {
+  for (const parola of senzaAccenti(nome).split(/[^a-z0-9]+/)) {
+    if (parola.length >= 3 && !NON_DISTINTIVE.has(parola)) return parola;
+  }
+  return null;
+}
+
+/**
+ * `true` se il testo trovato parla davvero di quell'esercente.
+ *
+ * Senza una parola distintiva si risponde `false`: non si può giudicare, e in
+ * dubbio si scarta. È la stessa direzione di `sembraAttivita` — fallire chiuso
+ * costa una classificazione a mano, fallire aperto costa un numero sbagliato
+ * che sembra giusto.
+ */
+export function pertinente(nome: string, testoTrovato: string): boolean {
+  const parola = parolaDistintiva(nome);
+  if (parola === null) return false;
+  return senzaAccenti(testoTrovato).includes(parola);
+}

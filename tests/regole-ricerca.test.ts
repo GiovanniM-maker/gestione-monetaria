@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { interrogazione, motivoDelRifiuto } from '@/lib/tassonomia/regole-ricerca';
+import {
+  interrogazione,
+  motivoDelRifiuto,
+  parolaDistintiva,
+  pertinente,
+} from '@/lib/tassonomia/regole-ricerca';
 
 /**
  * La regola 8b è più stretta della 8, e la ragione è che un'interrogazione di
@@ -62,5 +67,48 @@ describe('cosa non esce, e fallisce chiuso', () => {
   it('un nome rifiutato non produce nessuna interrogazione', () => {
     expect(interrogazione('IT60X0542811101000000123456')).toBeNull();
     expect(interrogazione('Deliveroo 129,76 €')).toBeNull();
+  });
+});
+
+describe('la pertinenza del risultato', () => {
+  it('accetta il risultato che nomina il marchio', () => {
+    // Il caso vero: cercando `Bruno Spa Modica` il motore ha risposto
+    // «Bruno Elettrodomestici S.r.l. a Modica (RG)».
+    expect(pertinente('Bruno Spa Modica', 'Bruno Elettrodomestici S.r.l. a Modica (RG)')).toBe(
+      true,
+    );
+  });
+
+  it('scarta il risultato che ha agganciato solo il paese', () => {
+    // Il caso vero: cercando `Aspit Campogalliano` il motore ha risposto con i
+    // pedaggi del casello di Campogalliano. È vero, e non dice niente su Aspit.
+    // Dato al modello diventerebbe un fatto.
+    expect(
+      pertinente(
+        'Aspit Campogalliano',
+        'Calcola pedaggio dal casello di Campogalliano — Autostrade',
+      ),
+    ).toBe(false);
+  });
+
+  it('la parola distintiva è la prima, non una qualsiasi', () => {
+    // Accettando una parola qualsiasi, «Campogalliano» farebbe passare proprio
+    // il risultato che il controllo esiste per fermare.
+    expect(parolaDistintiva('Aspit Campogalliano')).toBe('aspit');
+    expect(parolaDistintiva('Bruno Spa Modica')).toBe('bruno');
+  });
+
+  it('salta le sigle societarie, che non identificano nessuno', () => {
+    expect(parolaDistintiva('SRL Panificio Rossi')).toBe('panificio');
+    expect(parolaDistintiva('Di Martino Pasta')).toBe('martino');
+  });
+
+  it('non bada ad accenti e maiuscole', () => {
+    expect(pertinente('Caffè Città', 'Il CAFFE CITTA di Bologna')).toBe(true);
+  });
+
+  it('senza una parola distintiva scarta: in dubbio non si passa', () => {
+    expect(parolaDistintiva('SA di')).toBeNull();
+    expect(pertinente('SA di', 'qualunque cosa')).toBe(false);
   });
 });

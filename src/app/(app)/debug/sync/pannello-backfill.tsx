@@ -393,6 +393,46 @@ export function PannelloBackfill({
     );
   }
 
+  async function cercaSulMondo() {
+    setInCorso(true);
+    aggiungi('Ricerca degli esercenti mai visti\u2026');
+    try {
+      const risposta = await fetchConAttesa('/api/admin/ricerca', 120);
+      const corpo = await leggiRisposta(risposta);
+      if (!risposta.ok) {
+        aggiungi(`Errore: ${String(corpo['error'] ?? risposta.status)}`);
+        return;
+      }
+
+      aggiungi(
+        `${String(corpo['esaminati'])} esaminati \u00b7 ${String(corpo['trovati'])} trovati \u00b7 ` +
+          `${String(corpo['vuoti'])} senza risultato utile \u00b7 ${String(corpo['rimasti'])} rimasti`,
+      );
+
+      // Chi la regola 8b ha trattenuto, e perche'. Va detto: sono esercenti che
+      // resteranno classificati a occhio, e chi legge deve saperlo.
+      const trattenuti = corpo['trattenuti'];
+      if (Array.isArray(trattenuti) && trattenuti.length > 0) {
+        aggiungi(`  ${trattenuti.length} trattenuti dalla regola 8b:`);
+        for (const v of trattenuti) {
+          const t = v as Record<string, unknown>;
+          aggiungi(`    ${String(t['esercente'])}: ${String(t['motivo'])}`);
+        }
+      }
+
+      if (corpo['errore'] !== null && corpo['errore'] !== undefined) {
+        aggiungi(`  fermata: ${String(corpo['errore'])}`);
+      }
+      if (Number(corpo['rimasti'] ?? 0) > 0) {
+        aggiungi('  Rilancia per la fetta successiva.');
+      }
+    } catch (e) {
+      aggiungi(`Errore: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   async function rilevaAbbonamenti() {
     setInCorso(true);
     aggiungi('Rilevamento delle ricorrenze…');
@@ -620,8 +660,11 @@ export function PannelloBackfill({
         <button type="button" onClick={categorizza} disabled={inCorso} className={stileBottone}>
           4 · Categorizza
         </button>
+        <button type="button" onClick={cercaSulMondo} disabled={inCorso} className={stileBottone}>
+          5 · Cerca sul mondo
+        </button>
         <button type="button" onClick={proponi} disabled={inCorso} className={stileBottone}>
-          5 · Proponi con l&rsquo;AI
+          6 · Proponi con l&rsquo;AI
         </button>
         <button
           type="button"
@@ -629,10 +672,10 @@ export function PannelloBackfill({
           disabled={inCorso}
           className={stileBottone}
         >
-          6 · Rileva abbonamenti
+          7 · Rileva abbonamenti
         </button>
         <button type="button" onClick={quotidiano} disabled={inCorso} className={stileBottone}>
-          7 · Sequenza quotidiana
+          8 · Sequenza quotidiana
         </button>
       </div>
       <p className="text-xs text-neutral-500">

@@ -672,7 +672,7 @@ guardare anche il merito: cinque pagamenti in undici mesi, mediana 500 € ma to
 
 ### Prova manuale della Fase 5, sotto i 5 minuti
 
-1. `/debug/sync` → **`6 · Rileva abbonamenti`**. Attesi 85 rilevate, 44 nella metrica, e i totali
+1. `/debug/sync` → **`7 · Rileva abbonamenti`**. Attesi 85 rilevate, 44 nella metrica, e i totali
    della colonna «13 agosto» qui sopra. Se compare la riga `ATTENZIONE … senza importo in euro`, il
    costo ricorrente sta mancando di qualcosa e il numero va letto sapendolo.
 2. Rilanciare: gli stessi numeri. È idempotente — la funzione ricalcola tutto da capo.
@@ -1216,7 +1216,7 @@ inventare un identificativo di categoria.
 
 ### Prova manuale della Fase 8, sotto i 5 minuti
 
-1. `/debug/sync` → **`7 · Sequenza quotidiana`**: l'ultima riga deve dire quanti avvisi nuovi.
+1. `/debug/sync` → **`8 · Sequenza quotidiana`**: l'ultima riga deve dire quanti avvisi nuovi.
 2. Rilanciare: **0 avvisi nuovi**. È l'unica prova che conta — un generatore che si ripete rende
    inutile il canale nel giro di una settimana.
 3. `/avvisi`: gli avvisi aperti, con il collegamento al posto dove si fa qualcosa. «Ignora» li
@@ -1226,7 +1226,7 @@ inventare un identificativo di categoria.
 
 ### Prova manuale della Fase 7, sotto i 5 minuti
 
-1. `/debug/sync` → **`7 · Sequenza quotidiana`**. Deve stampare quattro righe: scarico,
+1. `/debug/sync` → **`8 · Sequenza quotidiana`**. Deve stampare quattro righe: scarico,
    normalizzazione, categorizzazione, ricorrenze — e la durata.
 2. Rilanciare: le righe nuove devono essere **0** e i numeri di copertura identici. È idempotente.
 3. `/` in cima: `ultima sincronizzazione riuscita` deve essere di oggi.
