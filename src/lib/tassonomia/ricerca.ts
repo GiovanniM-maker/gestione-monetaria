@@ -47,8 +47,40 @@ const RISULTATI = 3;
 /** Oltre questa lunghezza il testo trovato si taglia: al modello serve un indizio, non una pagina. */
 const LIMITE_TESTO = 600;
 
+/**
+ * Distanza fra due richieste.
+ *
+ * Il piano gratuito di Brave concede **una richiesta al secondo**
+ * (`rate_limit: 1`), e non e' una quota giornaliera: e' un limite istantaneo.
+ * Alla seconda chiamata sparata subito dopo la prima risponde 429 e la fetta si
+ * ferma dopo due esercenti — che e' esattamente com'e' andata al primo giro
+ * vero.
+ *
+ * 1.100 ms e non 1.000: il limite si misura sull'arrivo al loro server, non
+ * sulla partenza dal nostro, e cento millisecondi di margine costano nulla
+ * mentre un 429 costa l'intera fetta.
+ */
+const PAUSA_MS = 1_100;
+
+/**
+ * Quanto puo' durare una fetta.
+ *
+ * A un secondo per esercente, il tempo e' la risorsa scarsa: con 277 nomi da
+ * cercare, un limite fisso di venti per fetta vorrebbe dire quattordici
+ * pressioni del bottone. Si va a **budget**, come il ciclo del backfill
+ * quotidiano, e ci si ferma prima che Vercel interrompa la funzione.
+ */
+const BUDGET_MS = 90_000;
+
+/** Quante volte riprovare dopo un 429 prima di arrendersi. */
+const RITENTATIVI = 2;
+
+const attendi = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export class RicercaNonConfigurata extends Error {}
 export class ErroreRicerca extends Error {}
+/** Il limite di frequenza, che si supera aspettando e non arrendendosi. */
+export class TroppoVeloce extends ErroreRicerca {}
 
 function chiave(): string {
   const valore = process.env['SEARCH_API_KEY'];
@@ -109,6 +141,13 @@ export async function cercaSulMondo(
     },
     cache: 'no-store',
   });
+
+  if (risposta.status === 429) {
+    // Il limite e' istantaneo, quindi aspettare basta: non serve arrendersi.
+    // `ErroreRicerca` con questo messaggio dice a chi chiama che vale la pena
+    // riprovare, invece di far sembrare esaurita la quota mensile.
+    throw new TroppoVeloce('Una richiesta al secondo: rallento e riprovo.');
+  }
 
   if (!risposta.ok) {
     const dettaglio = await risposta.text().catch(() => '');
@@ -180,7 +219,7 @@ export type EsitoArricchimento = {
  * rilancia finché `rimasti` è zero — lo stesso schema del backfill e delle
  * proposte, che è già il modo in cui questa applicazione fa le cose lunghe.
  */
-export async function arricchisciEsercenti(limite = 20): Promise<EsitoArricchimento> {
+export async function arricchisciEsercenti(limite = 80): Promise<EsitoArricchimento> {
   const supabase = await createSupabaseServerClient();
   const esito: EsitoArricchimento = {
     esaminati: 0,
@@ -191,6 +230,8 @@ export async function arricchisciEsercenti(limite = 20): Promise<EsitoArricchime
     errore: null,
   };
 
+  const scadenza = Date.now() + BUDGET_MS;
+
   const { data, error } = await supabase
     .from('v_esercenti_da_cercare')
     .select('merchant_id, esercente, movimenti, speso')
@@ -200,10 +241,18 @@ export async function arricchisciEsercenti(limite = 20): Promise<EsitoArricchime
 
   const da = comeArray<{ merchant_id: string; esercente: string }>(data);
 
-  for (const m of da) {
+  for (const [indice, m] of da.entries()) {
+    if (Date.now() >= scadenza) {
+      esito.errore = 'Budget di tempo esaurito. Rilancia: si riprende da dove si era arrivati.';
+      break;
+    }
+    // Il passo, non prima del primo: un secondo di attesa iniziale sarebbe un
+    // secondo regalato a ogni fetta.
+    if (indice > 0) await attendi(PAUSA_MS);
+
     esito.esaminati += 1;
     try {
-      const { ritrovamento, rifiuto } = await cercaSulMondo(m.esercente);
+      const { ritrovamento, rifiuto } = await conRitentativi(() => cercaSulMondo(m.esercente));
 
       if (rifiuto !== null) {
         esito.trattenuti.push({ esercente: m.esercente, motivo: rifiuto });
@@ -237,4 +286,27 @@ export async function arricchisciEsercenti(limite = 20): Promise<EsitoArricchime
   esito.rimasti = count ?? 0;
 
   return esito;
+}
+
+/**
+ * Riprova quando il limite di frequenza scatta comunque.
+ *
+ * Il passo fisso non basta sempre: due invocazioni ravvicinate della stessa
+ * fetta, o un ritardo di rete che accorcia la distanza percepita dal loro
+ * server, e il 429 arriva lo stesso. Aspettare due secondi lo risolve, e
+ * fermare l'intera fetta per un limite che dura un secondo sarebbe
+ * sproporzionato.
+ *
+ * Solo per `TroppoVeloce`: un 401 o un 403 non migliorano riprovando, e
+ * insistere su una chiave sbagliata e' solo un modo lento di fallire.
+ */
+async function conRitentativi<T>(azione: () => Promise<T>): Promise<T> {
+  for (let tentativo = 0; ; tentativo += 1) {
+    try {
+      return await azione();
+    } catch (errore) {
+      if (!(errore instanceof TroppoVeloce) || tentativo >= RITENTATIVI) throw errore;
+      await attendi(2_000 * (tentativo + 1));
+    }
+  }
 }

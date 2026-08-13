@@ -13,6 +13,9 @@ import { arricchisciEsercenti, RicercaNonConfigurata } from '@/lib/tassonomia/ri
  * browser autenticato e tocca dati bancari.
  */
 export const dynamic = 'force-dynamic';
+// Il budget interno e' 90 secondi, questo e' il tetto duro con margine: il
+// piano gratuito di Brave concede una richiesta al secondo, quindi il tempo e'
+// la risorsa scarsa e la fetta ne usa quanto puo'.
 export const maxDuration = 120;
 
 export async function POST(): Promise<NextResponse> {
@@ -21,7 +24,7 @@ export async function POST(): Promise<NextResponse> {
   }
 
   try {
-    return NextResponse.json(await arricchisciEsercenti(20));
+    return NextResponse.json(await arricchisciEsercenti(80));
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     const atteso = errore instanceof RicercaNonConfigurata;
