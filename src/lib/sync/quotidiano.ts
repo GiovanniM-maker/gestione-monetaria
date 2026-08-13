@@ -6,6 +6,7 @@ import { normalizzaTutto, type EsitoNormalizzazione } from '@/lib/normalize/run'
 import { applicaTassonomia } from '@/lib/tassonomia/applica';
 import { proponiClassificazioni } from '@/lib/tassonomia/proposte';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
+import { generaAvvisi } from '@/lib/avvisi/leggi';
 import type { AccountRow, BankConnectionRow } from '@/lib/db/types';
 
 /**
@@ -79,6 +80,7 @@ export type EsitoQuotidiano = {
     costo: number;
   } | null;
   ricorrenze: EsitoRilevamento | null;
+  avvisiCreati: number | null;
   errore: string | null;
   durataMs: number;
 };
@@ -97,6 +99,7 @@ function vuoto(): EsitoQuotidiano {
     categorizzazione: null,
     proposte: null,
     ricorrenze: null,
+    avvisiCreati: null,
     errore: null,
     durataMs: 0,
   };
@@ -253,6 +256,11 @@ export async function eseguiSincronizzazioneQuotidiana(): Promise<EsitoQuotidian
     };
 
     esito.ricorrenze = await rilevaAbbonamenti();
+
+    // Gli avvisi per ultimi: leggono cio' che i passi precedenti hanno appena
+    // scritto — un aumento di prezzo si vede solo dopo che il rilevamento ha
+    // aggiornato `expected_amount`.
+    esito.avvisiCreati = await generaAvvisi();
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     esito.errore = esito.errore === null ? messaggio : `${esito.errore} · ${messaggio}`;

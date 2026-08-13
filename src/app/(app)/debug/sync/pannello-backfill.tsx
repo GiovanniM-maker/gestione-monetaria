@@ -510,6 +510,10 @@ export function PannelloBackfill({
         );
       }
 
+      if (corpo['avvisiCreati'] !== null && corpo['avvisiCreati'] !== undefined) {
+        aggiungi(`Avvisi: ${String(corpo['avvisiCreati'])} nuovi`);
+      }
+
       if (corpo['errore'] !== null && corpo['errore'] !== undefined) {
         aggiungi(`Errore: ${String(corpo['errore'])}`);
       }

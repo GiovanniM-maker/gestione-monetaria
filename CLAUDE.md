@@ -18,7 +18,7 @@
 | 6     | Dashboard                                 | **completata** |
 | 6-bis | Il pavimento: movimenti, stato, entrate   | **completata** |
 | 7     | Automazione                               | **completata** |
-| 8     | Motore alert (SQL)                        | non iniziata   |
+| 8     | Motore alert (SQL)                        | **completata** |
 | 9     | Report periodico AI                       | non iniziata   |
 | 10    | Chat copilot                              | non iniziata   |
 
@@ -796,6 +796,69 @@ la protezione contro un ciclo a vuoto, e quante etichette restano viene riportat
 Chiama **la stessa funzione** del cron. Senza, l'automazione si potrebbe osservare solo aspettando
 le 05:00, e un lavoro che si prova una volta al giorno di fatto non si prova. Se le due strade
 divergessero, provarne una non direbbe niente sull'altra.
+
+### Le decisioni della Fase 8
+
+#### Solo due cose meritano un avviso
+
+Un cruscotto si guarda quando lo si apre; un avviso pretende attenzione. Ne vale la pena solo per
+**il costo ricorrente che cambia** (un canone aumentato, uno nuovo, uno dichiarato non usato che si
+paga ancora) e per **il numero che smette di essere affidabile** (consenso in scadenza, sync
+fallita). Tutto il resto è rumore, e il rumore in un canale di avvisi non è neutro: spegne il
+canale.
+
+`budget_exceeded` non è implementato perché i budget non esistono. `missing_fixed_charge` perché si
+sovrappone allo stato `lapsed` che il rilevatore già calcola — due avvisi per lo stesso fatto sono
+un avviso e mezzo di rumore.
+
+#### Il problema vero non è rilevare, è non ripetersi
+
+Il generatore gira ogni notte. Senza una chiave stabile, la settima notte ci sarebbero sette copie
+dello stesso avviso — e a quel punto si ignorerebbero tutti, che è il modo in cui i sistemi di
+notifica muoiono.
+
+`dedupe_key` con indice unico, e la chiave contiene **ciò che rende l'avviso quello che è**: non
+solo l'oggetto ma anche il valore che l'ha scatenato. Un aumento da 9,99 a 12,99 e uno da 12,99 a
+15,99 sono due avvisi diversi e devono esserlo; lo stesso aumento visto sette notti di fila è uno.
+Ogni blocco fa `on conflict do nothing`, quindi un avviso già letto o ignorato **non torna a
+galla** — stessa ragione per cui `rileva_abbonamenti` non sovrascrive `usage_verdict`.
+
+#### Perché `expected_amount` e `typical_amount` erano due colonne
+
+L'aumento di prezzo confronta l'**ultimo importo pagato** con il **prezzo tipico** (la mediana). È
+il motivo per cui in Fase 5 sono due colonne invece di una: confrontare l'ultimo con l'ultimo non
+direbbe niente, e confrontarlo con la media lo farebbe scattare a ogni oscillazione.
+
+Due soglie insieme — 10% **e** un euro — e servono entrambe: la percentuale da sola segnalerebbe un
+canone da 2,99 che passa a 3,49; l'euro da solo segnalerebbe ogni servizio a consumo.
+
+#### Il picco di categoria si misura sull'ultimo mese **completo**
+
+Sul mese in corso produrrebbe un falso allarme ogni primo del mese, cioè un avviso che insegna a
+ignorare gli avvisi. È la stessa lettura sbagliata già corretta sul cruscotto in Fase 6-bis. Il
+riferimento è la mediana **scelta** (`percentile_disc`): un mese realmente osservato, non una media
+che nessun mese ha mai avuto.
+
+#### Il doppio addebito ha una soglia sull'importo
+
+Due caffè uguali nello stesso giorno sono normali, due addebiti da 40 € no. Senza i 15 € di soglia
+questo avviso sarebbe solo rumore.
+
+#### Consenso e sync non si mostrano due volte
+
+Il cruscotto ha già la riga di stato del sistema. Gli stessi due tipi restano avvisi a tutti gli
+effetti — con la loro storia e la possibilità di ignorarli — ma sono esclusi dal blocco in cima:
+un avviso doppio non è due volte più visibile, è metà credibile.
+
+### Prova manuale della Fase 8, sotto i 5 minuti
+
+1. `/debug/sync` → **`7 · Sequenza quotidiana`**: l'ultima riga deve dire quanti avvisi nuovi.
+2. Rilanciare: **0 avvisi nuovi**. È l'unica prova che conta — un generatore che si ripete rende
+   inutile il canale nel giro di una settimana.
+3. `/avvisi`: gli avvisi aperti, con il collegamento al posto dove si fa qualcosa. «Ignora» li
+   chiude e non tornano.
+4. Marcare un abbonamento come `non_usato` su `/abbonamenti` e rilanciare: compare l'avviso col
+   costo annuale.
 
 ### Prova manuale della Fase 7, sotto i 5 minuti
 

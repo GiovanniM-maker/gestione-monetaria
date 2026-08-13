@@ -40,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             al suo posto, fra il titolo e l'utente. */}
         <nav className="order-last -ml-2 flex w-full gap-1 overflow-x-auto text-sm sm:order-none sm:ml-0 sm:w-auto sm:gap-4">
           <Voce href="/">Cruscotto</Voce>
+          <Voce href="/avvisi">Avvisi</Voce>
           <Voce href="/da-confermare">Da confermare</Voce>
           <Voce href="/movimenti">Movimenti</Voce>
           <Voce href="/abbonamenti">Ricorrente</Voce>

@@ -71,6 +71,7 @@ export default async function CruscottoPage({
     entrate,
     stato,
     daConfermare,
+    avvisi,
     confronto,
     giorniCoperti,
   } = dati;
@@ -117,6 +118,34 @@ export default async function CruscottoPage({
       {stato.map((s) => (
         <StatoSistema key={s.connection_id} riga={s} />
       ))}
+
+      {/* Gli avvisi che il riquadro di stato non dice gia'. Al massimo tre:
+          una lista lunga di avvisi non e' piu' una lista di avvisi. */}
+      {avvisi.length > 0 && (
+        <div className="space-y-2">
+          {avvisi.slice(0, 3).map((a) => (
+            <Link
+              key={a.id}
+              href="/avvisi"
+              className={`block rounded-lg border p-3 text-sm ${
+                a.severity === 'critical'
+                  ? 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200'
+                  : a.severity === 'warning'
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                    : 'border-neutral-200 dark:border-neutral-800'
+              }`}
+            >
+              <span className="font-medium">{a.title}</span>
+              <span className="mt-0.5 block text-xs opacity-80">{a.body}</span>
+            </Link>
+          ))}
+          {avvisi.length > 3 && (
+            <Link className="text-xs text-neutral-500 underline" href="/avvisi">
+              altri {avvisi.length - 3} avvisi
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Cosa richiede un gesto. Con il conteggio e non con un pallino: un
           numero e' un invito, un pallino rosso e' un'ansia. */}
