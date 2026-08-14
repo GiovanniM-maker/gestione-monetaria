@@ -14,6 +14,14 @@
 
 export type Andamento = 'su' | 'giu' | 'stabile' | 'nuovo';
 
+/**
+ * Quanti mesi indietro si guarda per trovare il mese tipico.
+ *
+ * Sei e' un compromesso misurato: meno di tre e la mediana non e' una mediana,
+ * piu' di dodici e ci si confronta con abitudini che non si hanno piu'.
+ */
+export const MESI_DI_CONFRONTO = 6;
+
 const ANDAMENTI: readonly string[] = ['su', 'giu', 'stabile', 'nuovo'];
 
 /** I campi che le tre funzioni hanno in comune. Gli importi sono `text`. */
@@ -60,6 +68,24 @@ export type Segno = {
   tono: 'su' | 'giu' | 'neutro';
   /** La frase per il lettore di schermo e per il `title`. */
   descrizione: string;
+  /**
+   * Il mese tipico e' stato calcolato su **pochi** mesi.
+   *
+   * `mesi_di_confronto` conta i mesi in cui quella voce e' comparsa, non i mesi
+   * guardati: una spesa presente in due mesi su sei ha una mediana costruita su
+   * quei due, cioe' «un mese tipico **fra quelli in cui e' successo**» — che non
+   * e' un mese tipico.
+   *
+   * Sui dati veri il caso c'e': `investimento / personale` a zero contro un
+   * tipico di 500 € visto in due mesi su sei da' un **−100%** che si legge come
+   * un crollo, mentre e' una spesa che semplicemente non capita tutti i mesi.
+   * E' la stessa lezione della Fase 5, quando estrapolare da una mediana su una
+   * serie rada dichiarava 8.966 €/mese di spesa inesistente.
+   *
+   * Non si nasconde la freccia — il numero e' vero — ma si smette di darle un
+   * tono, e la descrizione dice su quanti mesi e' fatta.
+   */
+  parziale: boolean;
 };
 
 /**
@@ -69,7 +95,7 @@ export type Segno = {
  * quando e' un investimento. Dire a qualcuno se ha fatto bene non e' compito di
  * un cruscotto — questa applicazione misura, non prescrive.
  */
-export function segnoDi(riga: Variazione): Segno | null {
+export function segnoDi(riga: Variazione, mesiGuardati = MESI_DI_CONFRONTO): Segno | null {
   if (!ANDAMENTI.includes(riga.andamento)) return null;
   const andamento = riga.andamento as Andamento;
 
@@ -79,8 +105,16 @@ export function segnoDi(riga: Variazione): Segno | null {
       testo: 'nuovo',
       tono: 'neutro',
       descrizione: 'non c’era nei mesi precedenti, quindi non c’è un confronto',
+      parziale: false,
     };
   }
+
+  // Meno della metà dei mesi guardati: il riferimento è la mediana di una serie
+  // rada, e vale meno di quanto la freccia lasci credere.
+  const parziale = riga.mesi_di_confronto > 0 && riga.mesi_di_confronto * 2 < mesiGuardati;
+  const suQuantiMesi = `, su ${riga.mesi_di_confronto} ${
+    riga.mesi_di_confronto === 1 ? 'mese' : 'mesi'
+  } su ${mesiGuardati} in cui è successo`;
 
   const pct = percentualeIntera(riga.variazione_pct);
   const testo = pct === null ? '' : `${pct > 0 ? '+' : ''}${pct}%`;
@@ -90,18 +124,23 @@ export function segnoDi(riga: Variazione): Segno | null {
       simbolo: '▬',
       testo: testo === '' ? 'stabile' : testo,
       tono: 'neutro',
-      descrizione: 'come il solito, sotto il 5% di scarto',
+      descrizione: `come il solito, sotto il 5% di scarto${parziale ? suQuantiMesi : ''}`,
+      parziale,
     };
   }
+
+  const quanto =
+    testo === ''
+      ? `hai speso ${andamento === 'su' ? 'più' : 'meno'} del mese tipico`
+      : `${testo} rispetto al mese tipico`;
 
   return {
     simbolo: andamento === 'su' ? '▲' : '▼',
     testo,
-    tono: andamento,
-    descrizione:
-      testo === ''
-        ? `hai speso ${andamento === 'su' ? 'più' : 'meno'} del mese tipico`
-        : `${testo} rispetto al mese tipico`,
+    // Una serie rada non merita un tono: il numero resta, l'enfasi no.
+    tono: parziale ? 'neutro' : andamento,
+    descrizione: parziale ? `${quanto}${suQuantiMesi}` : quanto,
+    parziale,
   };
 }
 

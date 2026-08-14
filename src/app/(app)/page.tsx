@@ -349,7 +349,9 @@ export default async function CruscottoPage({
             {spiegaIlConfronto !== null && (
               <p className="text-xs text-neutral-500">
                 {spiegaIlConfronto} Il termine di paragone &egrave; la mediana{' '}
-                <strong>scelta</strong> — un mese realmente osservato, non una media.
+                <strong>scelta</strong> — un mese realmente osservato, non una media. Le frecce con
+                un asterisco poggiano su meno della met&agrave; dei mesi guardati: la spesa non
+                capita tutti i mesi, quindi il confronto vale meno.
               </p>
             )}
           </div>

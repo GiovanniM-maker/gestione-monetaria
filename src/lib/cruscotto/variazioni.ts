@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { giornoDelMese } from './confronto';
+import { MESI_DI_CONFRONTO } from '@/lib/cruscotto/andamento';
 import type {
   VariazioneCategoria,
   VariazioneClasse,
@@ -35,15 +36,8 @@ import type {
  */
 export type Variazioni<T> = { righe: readonly T[]; errore: string | null };
 
-/**
- * Quanti mesi indietro guardare per trovare il mese tipico.
- *
- * Sei e' un compromesso misurato: meno di tre mesi e la mediana non e' una
- * mediana, piu' di dodici e ci si confronta con abitudini che non si hanno
- * piu'. Su questo conto lo storico comincia il 23 settembre 2025, quindi sei
- * mesi sono quasi sempre sei mesi veri.
- */
-const MESI_DI_CONFRONTO = 6;
+// La costante vive in `andamento.ts`, che e' puro: la usa anche chi disegna la
+// freccia, per sapere su quanti mesi e' fatto il confronto.
 
 /**
  * La finestra si dichiara sempre.

@@ -100,3 +100,50 @@ describe('comeSiConfronta', () => {
     expect(comeSiConfronta(undefined)).toBeNull();
   });
 });
+
+/**
+ * Il caso trovato sui dati veri, il 14 agosto 2026.
+ *
+ * `investimento / personale` a zero contro un tipico di 500 € — ma quel 500 è
+ * la mediana di **due mesi su sei**. Il `−100%` è aritmeticamente vero e come
+ * informazione è fuorviante: non è una spesa crollata, è una spesa che non
+ * capita tutti i mesi. È la stessa lezione della Fase 5, dove estrapolare da
+ * una mediana su una serie rada dichiarava 8.966 €/mese di spesa inesistente.
+ */
+describe('confronti su pochi mesi', () => {
+  it('due mesi su sei: la freccia resta, il tono no', () => {
+    const s = segnoDi(
+      riga({
+        spesa: '0',
+        tipico: '-500.00',
+        variazione_pct: '-100.0',
+        andamento: 'giu',
+        mesi_di_confronto: 2,
+      }),
+    );
+    expect(s?.testo).toBe('-100%');
+    expect(s?.parziale).toBe(true);
+    expect(s?.tono).toBe('neutro');
+    expect(s?.descrizione).toContain('2 mesi su 6');
+  });
+
+  it('sei mesi su sei: il tono resta quello della spesa', () => {
+    const s = segnoDi(riga({ mesi_di_confronto: 6 }));
+    expect(s?.parziale).toBe(false);
+    expect(s?.tono).toBe('su');
+    expect(s?.descrizione).not.toContain('su 6 in cui');
+  });
+
+  it('la metà esatta non è «pochi»: tre mesi su sei bastano', () => {
+    expect(segnoDi(riga({ mesi_di_confronto: 3 }))?.parziale).toBe(false);
+    expect(segnoDi(riga({ mesi_di_confronto: 2 }))?.parziale).toBe(true);
+  });
+
+  it('«nuovo» non è mai parziale: lì il confronto non c’è proprio', () => {
+    const s = segnoDi(
+      riga({ andamento: 'nuovo', tipico: null, variazione_pct: null, mesi_di_confronto: 0 }),
+    );
+    expect(s?.parziale).toBe(false);
+    expect(s?.testo).toBe('nuovo');
+  });
+});

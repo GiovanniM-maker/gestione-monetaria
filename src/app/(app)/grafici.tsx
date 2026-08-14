@@ -76,6 +76,9 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
   return (
     <span className={`ml-2 text-xs whitespace-nowrap tabular-nums ${colore}`} title={s.descrizione}>
       <span aria-hidden="true">{s.simbolo}</span> {s.testo}
+      {/* Il puntino dice «questo confronto poggia su pochi mesi». Non toglie il
+          numero, che e' vero: toglie l'enfasi, che sarebbe eccessiva. */}
+      {s.parziale && <span aria-hidden="true">*</span>}
       <span className="sr-only"> {s.descrizione}</span>
     </span>
   );
