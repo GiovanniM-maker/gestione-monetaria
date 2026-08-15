@@ -19,6 +19,7 @@ export const metadata: Metadata = { title: 'Categorie' };
  */
 export default async function CategoriePage() {
   const albero = await leggiAlbero();
+  const senzaConteggi = albero.some((c) => c.esercenti === null);
 
   return (
     <div className="space-y-5">
@@ -29,6 +30,14 @@ export default async function CategoriePage() {
           sposta e si vede quanto pesa nel mese.
         </p>
       </div>
+      {senzaConteggi && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          Non riesco a leggere <code>v_categorie_uso</code>, quindi accanto a ogni categoria trovi
+          un trattino invece di quanti esercenti e movimenti contiene.{' '}
+          <strong>Zero sarebbe una risposta</strong>, e sarebbe falsa proprio accanto al bottone che
+          elimina. Si sistema eseguendo la migration <code>0039</code>.
+        </p>
+      )}
       <PannelloCategorie albero={albero} />
     </div>
   );

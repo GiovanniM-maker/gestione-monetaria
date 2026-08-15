@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { assertCronRequest, CronAuthError } from '@/lib/auth/cron';
 import { eseguiSincronizzazioneQuotidiana } from '@/lib/sync/quotidiano';
+import { scadeTutto } from '@/lib/supabase/cache';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     assertCronRequest(request);
   } catch (errore) {
     if (errore instanceof CronAuthError) {
-      return NextResponse.json({ error: errore.message }, { status: errore.status });
+      return risposta({ error: errore.message }, { status: errore.status });
     }
     throw errore;
   }
@@ -42,5 +43,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // 200 anche con errori: lo scheduler non ha modo di reagire a un 500 se non
   // ritentando, e ritentare uno scarico gia' fatto a meta' non aiuta — il
   // cursore e' salvato e il giro dopo riprende da solo.
-  return NextResponse.json(esito);
+  return risposta(esito);
+}
+
+/**
+ * Ogni risposta di questa route butta la cache dei dati.
+ *
+ * Anche quelle di errore, ed e' voluto: invalidare di troppo costa una query,
+ * invalidare di meno costa un numero vecchio mostrato come fresco. Nel dubbio
+ * si butta.
+ */
+function risposta(corpo: unknown, opzioni?: ResponseInit): NextResponse {
+  scadeTutto();
+  return NextResponse.json(corpo, opzioni);
 }

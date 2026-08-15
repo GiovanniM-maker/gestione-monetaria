@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
+import { scadeTutto } from '@/lib/supabase/cache';
 import {
   aggiornaGiudizio,
   GiudizioNonValido,
@@ -23,16 +24,16 @@ export const maxDuration = 120;
 
 async function protetta(azione: () => Promise<unknown>): Promise<NextResponse> {
   if ((await getAuthorizedUser()) === null) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return risposta({ error: 'unauthorized' }, { status: 401 });
   }
 
   try {
-    return NextResponse.json(await azione());
+    return risposta(await azione());
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     const stato = errore instanceof GiudizioNonValido ? 400 : 500;
     if (stato === 500) console.error('[abbonamenti] operazione fallita:', messaggio);
-    return NextResponse.json({ error: messaggio }, { status: stato });
+    return risposta({ error: messaggio }, { status: stato });
   }
 }
 
@@ -51,7 +52,19 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
   try {
     corpo = (await request.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: 'Corpo della richiesta non leggibile.' }, { status: 400 });
+    return risposta({ error: 'Corpo della richiesta non leggibile.' }, { status: 400 });
   }
   return protetta(() => aggiornaGiudizio(corpo as unknown as RichiestaGiudizio));
+}
+
+/**
+ * Ogni risposta di questa route butta la cache dei dati.
+ *
+ * Anche quelle di errore, ed e' voluto: invalidare di troppo costa una query,
+ * invalidare di meno costa un numero vecchio mostrato come fresco. Nel dubbio
+ * si butta.
+ */
+function risposta(corpo: unknown, opzioni?: ResponseInit): NextResponse {
+  scadeTutto();
+  return NextResponse.json(corpo, opzioni);
 }

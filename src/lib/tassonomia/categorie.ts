@@ -124,8 +124,15 @@ export type NodoAlbero = {
   profondita: number;
   discrezionalita_predefinita: string | null;
   archiviata: boolean;
-  esercenti: number;
-  movimenti: number;
+  /**
+   * `null` quando `v_categorie_uso` non risponde.
+   *
+   * Non zero: uno zero e' una risposta — «qui non c'e' niente» — e sarebbe una
+   * bugia detta con sicurezza proprio davanti al bottone che elimina. La
+   * schermata mostra un trattino e lo dice.
+   */
+  esercenti: number | null;
+  movimenti: number | null;
 };
 
 /**
@@ -142,19 +149,28 @@ export type NodoAlbero = {
  */
 export async function leggiAlbero(): Promise<readonly NodoAlbero[]> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: albero }, { data: uso }] = await Promise.all([
+  const [{ data: albero }, { data: uso, error }] = await Promise.all([
     supabase.from('v_categorie_albero').select('*').order('percorso'),
     supabase.from('v_categorie_uso').select('id, esercenti, movimenti'),
   ]);
 
-  const conteggi = new Map(
-    comeArray<{ id: string; esercenti: number; movimenti: number }>(uso).map((r) => [r.id, r]),
-  );
+  // Se la vista non risponde — migration non ancora applicata — i conteggi
+  // restano `null`. Zero direbbe «vuota» a una categoria piena, e lo direbbe
+  // accanto al bottone «elimina».
+  const conteggi =
+    error !== null
+      ? null
+      : new Map(
+          comeArray<{ id: string; esercenti: number; movimenti: number }>(uso).map((r) => [
+            r.id,
+            r,
+          ]),
+        );
 
   return comeArray<Omit<NodoAlbero, 'esercenti' | 'movimenti'>>(albero).map((c) => ({
     ...c,
-    esercenti: conteggi.get(c.id)?.esercenti ?? 0,
-    movimenti: conteggi.get(c.id)?.movimenti ?? 0,
+    esercenti: conteggi === null ? null : (conteggi.get(c.id)?.esercenti ?? 0),
+    movimenti: conteggi === null ? null : (conteggi.get(c.id)?.movimenti ?? 0),
   }));
 }
 

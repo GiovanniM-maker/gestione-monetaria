@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { creaBackfill, eseguiFettaBackfill } from '@/lib/sync/backfill';
 import { comeArray } from '@/lib/enablebanking/redact';
 import type { AccountRow, BankConnectionRow } from '@/lib/db/types';
+import { scadeTutto } from '@/lib/supabase/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ const GIORNO = /^\d{4}-\d{2}-\d{2}$/;
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if ((await getAuthorizedUser()) === null) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return risposta({ error: 'unauthorized' }, { status: 401 });
   }
 
   const parametri = request.nextUrl.searchParams;
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     if (runIdEsistente !== null) {
       const esito = await eseguiFettaBackfill(runIdEsistente, budget);
-      return NextResponse.json(esito, { status: esito.status === 'failed' ? 502 : 200 });
+      return risposta(esito, { status: esito.status === 'failed' ? 502 : 200 });
     }
 
     const dateFrom = parametri.get('date_from');
@@ -68,10 +69,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ['date_to', dateTo],
     ] as const) {
       if (valore !== null && !GIORNO.test(valore)) {
-        return NextResponse.json(
-          { error: `${nome} deve essere nel formato YYYY-MM-DD` },
-          { status: 400 },
-        );
+        return risposta({ error: `${nome} deve essere nel formato YYYY-MM-DD` }, { status: 400 });
       }
     }
 
@@ -88,7 +86,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       richiesta !== null ? elenco.find((c) => c.id === richiesta) : (elenco[0] ?? undefined);
 
     if (connessione === undefined) {
-      return NextResponse.json(
+      return risposta(
         { error: 'Nessuna connessione registrata. Lancia prima /api/admin/sync-accounts.' },
         { status: 409 },
       );
@@ -102,10 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const uids = comeArray<AccountRow>(conti).map((c) => c.eb_account_uid);
     if (uids.length === 0) {
-      return NextResponse.json(
-        { error: 'Nessun conto attivo per questa connessione.' },
-        { status: 409 },
-      );
+      return risposta({ error: 'Nessun conto attivo per questa connessione.' }, { status: 409 });
     }
 
     const run = await creaBackfill({
@@ -116,10 +111,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const esito = await eseguiFettaBackfill(run.id, budget);
-    return NextResponse.json(esito, { status: esito.status === 'failed' ? 502 : 200 });
+    return risposta(esito, { status: esito.status === 'failed' ? 502 : 200 });
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     console.error('[backfill] errore:', messaggio);
-    return NextResponse.json({ error: messaggio }, { status: 500 });
+    return risposta({ error: messaggio }, { status: 500 });
   }
+}
+
+/**
+ * Ogni risposta di questa route butta la cache dei dati.
+ *
+ * Anche quelle di errore, ed e' voluto: invalidare di troppo costa una query,
+ * invalidare di meno costa un numero vecchio mostrato come fresco. Nel dubbio
+ * si butta.
+ */
+function risposta(corpo: unknown, opzioni?: ResponseInit): NextResponse {
+  scadeTutto();
+  return NextResponse.json(corpo, opzioni);
 }

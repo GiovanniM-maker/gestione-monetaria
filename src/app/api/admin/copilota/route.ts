@@ -3,6 +3,7 @@ import { getAuthorizedUser } from '@/lib/auth/session';
 import { aiConfigurata, ConfigurazioneAiMancante } from '@/lib/ai/modello';
 import { applicaProposta, chiedi, PropostaNonTrovata } from '@/lib/copilota/conversazione';
 import { ArgomentoNonValido } from '@/lib/copilota/strumenti';
+import { scadeTutto } from '@/lib/supabase/cache';
 
 /**
  * Le due azioni del copilot: chiedere, e applicare una proposta.
@@ -21,14 +22,14 @@ export const maxDuration = 120;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if ((await getAuthorizedUser()) === null) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return risposta({ error: 'unauthorized' }, { status: 401 });
   }
 
   let corpo: Record<string, unknown>;
   try {
     corpo = (await request.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: 'Corpo della richiesta non leggibile.' }, { status: 400 });
+    return risposta({ error: 'Corpo della richiesta non leggibile.' }, { status: 400 });
   }
 
   try {
@@ -36,10 +37,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const messaggioId = String(corpo['messaggioId'] ?? '');
       const indice = Number(corpo['indice']);
       if (messaggioId === '' || !Number.isInteger(indice) || indice < 0) {
-        return NextResponse.json({ error: 'Proposta non indicata.' }, { status: 400 });
+        return risposta({ error: 'Proposta non indicata.' }, { status: 400 });
       }
       const proposta = await applicaProposta(messaggioId, indice);
-      return NextResponse.json({ ok: true, descrizione: proposta.descrizione });
+      return risposta({ ok: true, descrizione: proposta.descrizione });
     }
 
     if (!aiConfigurata()) {
@@ -52,11 +53,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const conversazioneId = String(corpo['conversazioneId'] ?? '');
     const domanda = String(corpo['domanda'] ?? '');
     if (conversazioneId === '') {
-      return NextResponse.json({ error: 'Conversazione non indicata.' }, { status: 400 });
+      return risposta({ error: 'Conversazione non indicata.' }, { status: 400 });
     }
 
     const turno = await chiedi(conversazioneId, domanda);
-    return NextResponse.json(turno);
+    return risposta(turno);
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     const atteso =
@@ -65,6 +66,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       errore instanceof ConfigurazioneAiMancante;
 
     if (!atteso) console.error('[copilota] richiesta fallita:', messaggio);
-    return NextResponse.json({ error: messaggio }, { status: atteso ? 400 : 500 });
+    return risposta({ error: messaggio }, { status: atteso ? 400 : 500 });
   }
+}
+
+/**
+ * Ogni risposta di questa route butta la cache dei dati.
+ *
+ * Anche quelle di errore, ed e' voluto: invalidare di troppo costa una query,
+ * invalidare di meno costa un numero vecchio mostrato come fresco. Nel dubbio
+ * si butta.
+ */
+function risposta(corpo: unknown, opzioni?: ResponseInit): NextResponse {
+  scadeTutto();
+  return NextResponse.json(corpo, opzioni);
 }

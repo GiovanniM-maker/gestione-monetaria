@@ -78,10 +78,17 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
           ? null
           : (albero.find((c) => c.id === spostaSu)?.nome ?? null);
 
+  // Conteggi ignoti: si esige comunque una destinazione. Nel dubbio si chiede,
+  // invece di lasciar credere che non ci sia niente da spostare.
+  const contenuto =
+    daEliminare === null
+      ? 0
+      : daEliminare.esercenti === null || daEliminare.movimenti === null
+        ? null
+        : daEliminare.esercenti + daEliminare.movimenti;
+
   const serveDestinazione =
-    daEliminare !== null &&
-    daEliminare.parent_id === null &&
-    daEliminare.esercenti + daEliminare.movimenti > 0;
+    daEliminare !== null && daEliminare.parent_id === null && contenuto !== 0;
 
   return (
     <div className="space-y-6">
@@ -165,8 +172,14 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
                 <Link href={`/categoria/${c.id}`} className="min-w-0 flex-1 py-2">
                   <span className="block truncate text-sm">{c.nome}</span>
                   <span className="block text-xs text-neutral-500">
-                    {c.esercenti} {c.esercenti === 1 ? 'esercente' : 'esercenti'} · {c.movimenti}{' '}
-                    {c.movimenti === 1 ? 'movimento' : 'movimenti'}
+                    {c.esercenti === null || c.movimenti === null ? (
+                      <span title="conteggi non disponibili">— · —</span>
+                    ) : (
+                      <>
+                        {c.esercenti} {c.esercenti === 1 ? 'esercente' : 'esercenti'} ·{' '}
+                        {c.movimenti} {c.movimenti === 1 ? 'movimento' : 'movimenti'}
+                      </>
+                    )}
                     {c.discrezionalita_predefinita !== null &&
                       ` · di norma ${c.discrezionalita_predefinita}`}
                   </span>
@@ -193,13 +206,22 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
         <section className="space-y-3 rounded-lg border border-red-300 p-3 dark:border-red-900">
           <h2 className="text-sm font-medium">Elimino «{daEliminare.nome}»?</h2>
           <p className="text-xs text-neutral-600 dark:text-neutral-400">
-            Ci sono appesi <strong>{daEliminare.esercenti}</strong> esercenti e{' '}
-            <strong>{daEliminare.movimenti}</strong> movimenti.{' '}
-            {daEliminare.esercenti + daEliminare.movimenti === 0
-              ? 'Non si sposta niente.'
-              : destinazione !== null
-                ? `Passeranno a «${destinazione}», insieme alle eventuali sottocategorie.`
-                : 'È di primo livello e non ha un genitore: scegli dove spostarli.'}
+            {contenuto === null ? (
+              <>
+                <strong>Non so quanto contiene</strong> — i conteggi non sono disponibili. Quello
+                che c&rsquo;è verrà spostato dove indichi qui sotto.
+              </>
+            ) : (
+              <>
+                Ci sono appesi <strong>{daEliminare.esercenti}</strong> esercenti e{' '}
+                <strong>{daEliminare.movimenti}</strong> movimenti.{' '}
+                {contenuto === 0
+                  ? 'Non si sposta niente.'
+                  : destinazione !== null
+                    ? `Passeranno a «${destinazione}», insieme alle eventuali sottocategorie.`
+                    : 'È di primo livello e non ha un genitore: scegli dove spostarli.'}
+              </>
+            )}
           </p>
 
           {serveDestinazione && (
