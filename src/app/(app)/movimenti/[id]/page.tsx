@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { leggiMovimento } from '@/lib/movimenti/cerca';
-import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
+import { centesimiDi, formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
+import { BOTTONE_MINORE } from '@/lib/ui/controlli';
+import { COLORE_CLASSE } from '../../grafici';
+import { TestataLivello } from '../../livello';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { SpostaMovimento } from './sposta';
@@ -60,20 +63,29 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6">
-      <Link href="/movimenti" className="inline-flex min-h-11 items-center text-sm underline">
-        ← tutti i movimenti
-      </Link>
-
-      <div>
-        <p className="text-3xl font-semibold tabular-nums">{euro(m.amount_eur ?? m.amount)}</p>
-        <h1 className="mt-1 text-lg">
-          {m.esercente ?? m.raw_description ?? '(senza descrizione)'}
-        </h1>
-        <p className="mt-1 text-sm text-testo-2">
-          {m.booking_date}
-          {m.conto !== null && ` · ${m.conto}`}
-        </p>
-      </div>
+      <TestataLivello
+        ritorno={{ href: '/movimenti', testo: 'tutti i movimenti' }}
+        titolo={m.esercente ?? m.raw_description ?? '(senza descrizione)'}
+        sottotitolo={`${m.booking_date}${m.conto === null ? '' : ` · ${m.conto}`}`}
+        importo={centesimiDi(m.amount_eur ?? m.amount)}
+        tinta={m.discrezionalita === null ? null : (COLORE_CLASSE[m.discrezionalita] ?? null)}
+        nota={m.categoria}
+        azioni={
+          m.merchant_id === null ? undefined : (
+            <>
+              <Link className={BOTTONE_MINORE} href={`/esercente/${m.merchant_id}`}>
+                la scheda di {m.esercente}
+              </Link>
+              <Link
+                className={BOTTONE_MINORE}
+                href={`/movimenti?esercente=${m.merchant_id}&tipo=tutti`}
+              >
+                tutti i suoi movimenti
+              </Link>
+            </>
+          )
+        }
+      />
 
       {/* Perche' questa riga non e' nella spesa reale. E' la prima cosa da
           sapere quando si e' arrivati qui perche' un totale non tornava. */}
@@ -99,19 +111,11 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
           valore={m.manually_categorized ? 'sì — l’automatismo non lo tocca più' : 'no'}
         />
         {m.note !== null && <Voce nome="note" valore={m.note} />}
-        {m.merchant_id !== null && (
-          <div className="pt-1">
-            <Link
-              className="inline-flex min-h-11 items-center text-sm underline"
-              href={`/movimenti?esercente=${m.merchant_id}&tipo=tutti`}
-            >
-              tutti i movimenti di {m.esercente} →
-            </Link>
-          </div>
-        )}
       </Blocco>
 
-      <Blocco titolo="Come l’ha mandato la banca">
+      {/* I campi grezzi sono diagnostica: servono quando una riga non si
+          riconosce, cioe' raramente, e aperti sono due terzi della schermata. */}
+      <Blocco titolo="Come l’ha mandato la banca" chiuso>
         <Voce nome="causale" valore={m.raw_description} />
         <Voce nome="controparte" valore={m.counterparty_raw} />
         <Voce nome="codice operazione" valore={m.bank_code} />
@@ -122,7 +126,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         {m.currency !== 'EUR' && <Voce nome="importo in euro" valore={euro(m.amount_eur)} />}
       </Blocco>
 
-      <Blocco titolo="Esclusioni">
+      <Blocco titolo="Esclusioni" chiuso>
         <Voce nome="giroconto" valore={m.is_transfer ? 'sì' : 'no'} />
         <Voce nome="rimborso" valore={m.is_refund ? 'sì' : 'no'} />
         <Voce nome="escluso dall’analisi" valore={m.excluded_from_analysis ? 'sì' : 'no'} />
@@ -168,18 +172,41 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
   );
 }
 
-function Blocco({ titolo, children }: { titolo: string; children: React.ReactNode }) {
+function Blocco({
+  titolo,
+  chiuso,
+  children,
+}: {
+  titolo: string;
+  /** Sotto un «apri»: vale per cio' che si guarda solo quando qualcosa non torna. */
+  chiuso?: boolean;
+  children: React.ReactNode;
+}) {
+  const dentro = <dl className="space-y-1.5 pt-1">{children}</dl>;
+  if (chiuso !== true) {
+    return (
+      <section className="scheda p-4">
+        <h2 className="text-[15px] font-medium">{titolo}</h2>
+        {dentro}
+      </section>
+    );
+  }
   return (
-    <section className="scheda p-3">
-      <h2 className="mb-2 text-sm font-medium">{titolo}</h2>
-      <dl className="space-y-1">{children}</dl>
-    </section>
+    <details className="scheda p-4">
+      <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px] font-medium">
+        {titolo}
+        <span aria-hidden="true" className="text-testo-3">
+          ›
+        </span>
+      </summary>
+      {dentro}
+    </details>
   );
 }
 
 function Voce({ nome, valore }: { nome: string; valore: string | null }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-[14px]">
       <dt className="text-testo-2">{nome}</dt>
       <dd className="min-w-0 text-right break-words">{valore ?? '—'}</dd>
     </div>

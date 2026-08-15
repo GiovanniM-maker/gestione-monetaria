@@ -7,6 +7,7 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import type { RigaDaConfermare } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { COLORE_CLASSE } from '../grafici';
+import { Foglio } from '../foglio';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -120,33 +121,35 @@ export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[]
           <li key={r.id} className="scheda p-4">
             <Carta riga={r} />
 
-            {aperta === r.id ? (
-              <Correzione
-                riga={r}
-                occupato={occupato}
-                onAnnulla={() => setAperta(null)}
-                onSalva={(corpo) => void scrivi({ id: r.id, ...corpo }, r.id)}
-              />
-            ) : (
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  disabled={occupato}
-                  onClick={() => void scrivi({ id: r.id }, r.id)}
-                  className={`${BOTTONE} flex-1`}
-                >
-                  {inCorso === r.id ? '…' : 'Va bene'}
-                </button>
-                <button
-                  type="button"
-                  disabled={occupato}
-                  onClick={() => setAperta(r.id)}
-                  className={`${BOTTONE_MINORE} flex-1`}
-                >
-                  Correggi
-                </button>
-              </div>
-            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                disabled={occupato}
+                onClick={() => void scrivi({ id: r.id }, r.id)}
+                className={`${BOTTONE} flex-1`}
+              >
+                {inCorso === r.id ? '…' : 'Va bene'}
+              </button>
+              <button
+                type="button"
+                disabled={occupato}
+                onClick={() => setAperta(r.id)}
+                className={`${BOTTONE_MINORE} flex-1`}
+              >
+                Correggi
+              </button>
+            </div>
+
+            {/* La correzione sale dal basso invece di aprirsi dentro la carta:
+                aperta in linea spingeva giu' tutte le altre e la riga che si
+                stava guardando finiva fuori schermo. */}
+            <Correzione
+              riga={r}
+              aperta={aperta === r.id}
+              occupato={occupato}
+              onAnnulla={() => setAperta(null)}
+              onSalva={(corpo) => void scrivi({ id: r.id, ...corpo }, r.id)}
+            />
           </li>
         ))}
       </ul>
@@ -243,11 +246,13 @@ function Carta({ riga: r }: { riga: RigaDaConfermare }) {
 
 function Correzione({
   riga,
+  aperta,
   occupato,
   onAnnulla,
   onSalva,
 }: {
   riga: RigaDaConfermare;
+  aperta: boolean;
   occupato: boolean;
   onAnnulla: () => void;
   onSalva: (corpo: Record<string, unknown>) => void;
@@ -257,9 +262,14 @@ function Correzione({
   const [note, setNote] = useState(riga.note ?? '');
 
   return (
-    <div className="mt-4 space-y-3 border-t border-filo pt-4">
-      <p className="text-[12px] text-testo-3">
-        Vale solo per questa spesa. La categoria resta quella dell&rsquo;esercente: si cambia da{' '}
+    <Foglio
+      aperto={aperta}
+      titolo={riga.esercente ?? 'Questa spesa'}
+      nota="Vale solo per questa spesa, e la marca come corretta a mano."
+      onChiudi={onAnnulla}
+    >
+      <p className="mb-3 text-[12px] text-testo-3">
+        La categoria resta quella dell&rsquo;esercente: si cambia da{' '}
         <Link className="text-essenziale" href="/revisione">
           revisione
         </Link>
@@ -303,10 +313,10 @@ function Correzione({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="perché fa eccezione (facoltativo)"
-        className={CAMPO_PIENO}
+        className={`${CAMPO_PIENO} mt-2`}
         disabled={occupato}
       />
-      <div className="flex gap-2">
+      <div className="mt-4 flex gap-2">
         <button
           type="button"
           disabled={occupato}
@@ -325,6 +335,6 @@ function Correzione({
           Annulla
         </button>
       </div>
-    </div>
+    </Foglio>
   );
 }

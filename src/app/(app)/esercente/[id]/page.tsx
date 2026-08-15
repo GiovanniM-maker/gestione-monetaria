@@ -3,9 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
-import { etichettaBreve, meseDaData, quotaPercentuale } from '@/lib/cruscotto/mesi';
+import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
+import { meseDaData } from '@/lib/cruscotto/mesi';
+import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
+import { COLORE_CLASSE } from '../../grafici';
+import { MesePerMese, TestataLivello } from '../../livello';
 import { CorreggiEsercente } from '../../correggi';
 import { Interruttore } from '../../esercenti/interruttore';
 
@@ -48,11 +51,6 @@ type Esercente = {
   totale: string;
   ultima: string | null;
 };
-
-function centesimi(valore: string | null): bigint {
-  const { totale, nonLetti } = sommaCosti([valore]);
-  return nonLetti > 0 ? 0n : totale;
-}
 
 const ORIGINI: Record<string, string> = {
   alias: 'da un alias deterministico',
@@ -99,10 +97,6 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
     ...r,
     mese: meseDaData(r.mese) ?? r.mese,
   }));
-  const massimo = mesi.reduce((max, r) => {
-    const v = centesimi(r.spesa);
-    return v < max ? v : max;
-  }, 0n);
 
   const albero = comeArray<{
     id: string;
@@ -117,32 +111,61 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6">
-      <Link href="/" className="inline-flex min-h-11 items-center text-sm underline">
-        ← cruscotto
-      </Link>
+      <TestataLivello
+        ritorno={{ href: '/', testo: 'cruscotto' }}
+        titolo={m.canonical_name}
+        sottotitolo={`${m.movimenti} ${m.movimenti === 1 ? 'movimento' : 'movimenti'}${
+          m.ultima === null ? '' : ` · ultimo il ${m.ultima}`
+        }`}
+        importo={centesimiDi(m.totale)}
+        tinta={m.discretion === null ? null : (COLORE_CLASSE[m.discretion] ?? null)}
+        nota="speso in tutto lo storico"
+        azioni={
+          <>
+            <Link className={BOTTONE_MINORE} href={`/movimenti?esercente=${m.id}&tipo=tutti`}>
+              tutti i movimenti
+            </Link>
+            <Link className={BOTTONE_MINORE} href="/revisione">
+              tutti quelli da rivedere
+            </Link>
+          </>
+        }
+      />
 
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{m.canonical_name}</h1>
-        <p className="mt-1 text-sm text-testo-2">
-          {m.movimenti} {m.movimenti === 1 ? 'movimento' : 'movimenti'}
-          {m.ultima !== null && ` · ultimo il ${m.ultima}`}
-        </p>
-        <p className="mt-2 text-3xl font-semibold tabular-nums">
-          {formattaEuro(centesimi(m.totale))}
-        </p>
-        <p className="text-xs text-testo-2">speso in tutto lo storico</p>
-      </div>
+      {/* Ogni mese porta ai **suoi** movimenti, non al cruscotto di quel mese
+          come faceva prima: da qui la domanda e' «cosa ho comprato da loro a
+          maggio», e il cruscotto la perdeva per strada. */}
+      <MesePerMese
+        righe={mesi.map((r) => ({ mese: r.mese, valore: centesimiDi(r.spesa) }))}
+        href={(mese) => {
+          const e = estremiDelMese(mese);
+          return e === null
+            ? `/movimenti?esercente=${m.id}&tipo=tutti`
+            : `/movimenti?esercente=${m.id}&tipo=tutti&da=${e.da}&a=${e.a}`;
+        }}
+      />
 
-      <div className="flex flex-wrap gap-2">
-        <Link className={BOTTONE_MINORE} href={`/movimenti?esercente=${m.id}&tipo=tutti`}>
-          tutti i movimenti
-        </Link>
-        <Link className={BOTTONE_MINORE} href="/revisione">
-          tutti quelli da rivedere
-        </Link>
-      </div>
+      {ricorrenza !== null && (
+        <section className="scheda p-3 text-sm">
+          <h2 className="mb-2 text-sm font-medium">Ricorrenza</h2>
+          <p>
+            Rilevata come <strong>{(ricorrenza as { tipo: string }).tipo}</strong>, cadenza{' '}
+            {(ricorrenza as { cadence: string }).cadence}, costo mensile{' '}
+            <strong className="tabular-nums">
+              {formattaEuro(centesimiDi((ricorrenza as { costo_mensile: string }).costo_mensile))}
+            </strong>
+            .{' '}
+            {(ricorrenza as { nella_metrica: boolean }).nella_metrica
+              ? 'Entra nel costo ricorrente.'
+              : 'Non entra nel costo ricorrente.'}
+          </p>
+          <Link className="mt-2 inline-flex min-h-11 items-center underline" href="/abbonamenti">
+            vedi tutte le ricorrenze →
+          </Link>
+        </section>
+      )}
 
-      <section className="space-y-3 scheda p-3">
+      <section className="scheda space-y-3 p-4">
         <h2 className="text-sm font-medium">Come si classificano le sue spese</h2>
         <Interruttore id={m.id} variabile={m.classificazione_variabile} />
       </section>
@@ -176,58 +199,6 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         abbonamento={m.is_subscription}
         categorie={sceglibili}
       />
-
-      {ricorrenza !== null && (
-        <section className="scheda p-3 text-sm">
-          <h2 className="mb-2 text-sm font-medium">Ricorrenza</h2>
-          <p>
-            Rilevata come <strong>{(ricorrenza as { tipo: string }).tipo}</strong>, cadenza{' '}
-            {(ricorrenza as { cadence: string }).cadence}, costo mensile{' '}
-            <strong className="tabular-nums">
-              {formattaEuro(centesimi((ricorrenza as { costo_mensile: string }).costo_mensile))}
-            </strong>
-            .{' '}
-            {(ricorrenza as { nella_metrica: boolean }).nella_metrica
-              ? 'Entra nel costo ricorrente.'
-              : 'Non entra nel costo ricorrente.'}
-          </p>
-          <Link className="mt-2 inline-flex min-h-11 items-center underline" href="/abbonamenti">
-            vedi tutte le ricorrenze →
-          </Link>
-        </section>
-      )}
-
-      {mesi.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-medium">Mese per mese</h2>
-          <ul className="space-y-1">
-            {mesi.map((r) => {
-              const valore = centesimi(r.spesa);
-              return (
-                <li key={r.mese}>
-                  <Link
-                    href={`/?mese=${r.mese}`}
-                    className="flex min-h-11 items-center gap-3 text-sm sm:min-h-0 sm:py-0.5"
-                  >
-                    <span className="w-12 shrink-0 text-xs text-testo-2 sm:w-16">
-                      {etichettaBreve(r.mese)}
-                    </span>
-                    <span className="h-3 flex-1 overflow-hidden rounded-sm bg-s3">
-                      <span
-                        className="block h-full bg-testo-3"
-                        style={{ width: `${quotaPercentuale(valore, massimo)}%` }}
-                      />
-                    </span>
-                    <span className="w-24 shrink-0 text-right text-xs tabular-nums sm:w-28">
-                      {formattaEuro(valore)}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

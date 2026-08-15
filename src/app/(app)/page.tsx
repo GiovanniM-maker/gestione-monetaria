@@ -31,6 +31,7 @@ import {
   ORDINE_CLASSI,
   type FettaCategoria,
 } from './grafici';
+import { MesePerMese } from './livello';
 import {
   ScheletroCiambella,
   ScheletroCoppia,
@@ -135,10 +136,6 @@ export default async function CruscottoPage({
   );
 
   const andamento = totali.slice(-MESI_ANDAMENTO);
-  const piuAlto = andamento.reduce((max, r) => {
-    const v = centesimi(r.spesa);
-    return v < max ? v : max;
-  }, 0n);
 
   return (
     <div className="space-y-8">
@@ -197,18 +194,12 @@ export default async function CruscottoPage({
 
       {/* L'andamento non ha bisogno di nessuna query in piu': i totali di tutti
           i mesi sono gia' quelli che hanno deciso quale mese mostrare. */}
-      {andamento.length > 1 && (
-        <section className="space-y-3">
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Andamento</h2>
-          <div className="scheda px-4">
-            <ul className="elenco">
-              {andamento.map((r) => (
-                <Andamento key={r.mese} riga={r} massimo={piuAlto} corrente={r.mese === mese} />
-              ))}
-            </ul>
-          </div>
-        </section>
-      )}
+      <MesePerMese
+        titolo="Andamento"
+        righe={andamento.map((r) => ({ mese: r.mese, valore: centesimi(r.spesa) }))}
+        corrente={mese}
+        href={(m) => `/?mese=${m}`}
+      />
 
       <Suspense fallback={<ScheletroCiambella />}>
         <InCosa mese={mese} />
@@ -660,50 +651,6 @@ async function DaChi({ mese }: { mese: string }) {
         </ul>
       </div>
     </section>
-  );
-}
-
-function Andamento({
-  riga,
-  massimo,
-  corrente,
-}: {
-  riga: RigaTotaleMese;
-  massimo: bigint;
-  corrente: boolean;
-}) {
-  const valore = centesimi(riga.spesa);
-  return (
-    <li>
-      {/* Tutta la riga e' il bersaglio, non la sola etichetta del mese: quattro
-          caratteri alti sedici pixel si sbagliano col pollice, una riga alta
-          quarantaquattro no. */}
-      <Link href={`/?mese=${riga.mese}`} className="flex min-h-12 items-center gap-3">
-        <span
-          className={`w-12 shrink-0 text-[13px] sm:w-16 ${
-            corrente ? 'font-semibold text-testo' : 'text-testo-2'
-          }`}
-        >
-          {etichettaBreve(riga.mese)}
-        </span>
-        <span className="h-2 flex-1 overflow-hidden rounded-full bg-s3">
-          <span
-            className="block h-full rounded-full"
-            style={{
-              width: `${quotaPercentuale(valore, massimo)}%`,
-              background: corrente ? 'var(--testo)' : 'var(--testo-3)',
-            }}
-          />
-        </span>
-        <span
-          className={`cifra w-24 shrink-0 text-right text-[13px] sm:w-28 ${
-            corrente ? 'font-semibold' : 'text-testo-2'
-          }`}
-        >
-          {formattaEuro(valore)}
-        </span>
-      </Link>
-    </li>
   );
 }
 

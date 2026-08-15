@@ -95,6 +95,25 @@ export function sommaCosti(valori: readonly unknown[]): Somma {
 }
 
 /**
+ * Un solo importo, in centesimi, con lo zero come risposta a cio' che non si
+ * legge.
+ *
+ * Era copiata in sei schermate — cruscotto, categoria, esercente, movimenti,
+ * movimento, revisione — identica sei volte. Non e' un caso: e' il primo gesto
+ * di ogni componente che riceve un importo da PostgREST, che arriva come
+ * stringa apposta per non passare da un float.
+ *
+ * Lo zero e' una scelta: un importo illeggibile che diventasse `NaN`
+ * spargerebbe `NaN` su tutta la somma, mentre a zero **si vede** che manca
+ * qualcosa senza portarsi via il resto della schermata. Dove il conteggio di
+ * cio' che non si legge conta davvero — i totali mensili — si usa `sommaCosti`
+ * e si guarda `nonLetti`.
+ */
+export function centesimiDi(valore: unknown): bigint {
+  return parseCentesimiTollerante(valore) ?? 0n;
+}
+
+/**
  * Da centesimi a `1.234,56 €`.
  *
  * Costruita a mano dalla rappresentazione intera e non con

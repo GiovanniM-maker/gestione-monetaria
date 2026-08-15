@@ -3,14 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
-import {
-  etichettaBreve,
-  etichettaMese,
-  meseDaData,
-  meseValido,
-  quotaPercentuale,
-} from '@/lib/cruscotto/mesi';
+import { centesimiDi } from '@/lib/abbonamenti/formato';
+import { etichettaMese, meseDaData, meseValido } from '@/lib/cruscotto/mesi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import {
@@ -19,7 +13,8 @@ import {
   leggiVariazioniEsercenti,
 } from '@/lib/cruscotto/variazioni';
 import { comeSiConfronta, type Variazione } from '@/lib/cruscotto/andamento';
-import { Freccia } from '../../grafici';
+import { COLORE_CLASSE } from '../../grafici';
+import { MesePerMese, Ripartizione, TestataLivello } from '../../livello';
 import { CorreggiCategoria } from '../../correggi';
 import { genitoriPossibili } from '@/lib/tassonomia/categorie';
 
@@ -60,11 +55,6 @@ type RigaMerc = {
   spesa: string;
   movimenti: number;
 };
-
-function centesimi(valore: string | null): bigint {
-  const { totale, nonLetti } = sommaCosti([valore]);
-  return nonLetti > 0 ? 0n : totale;
-}
 
 export default async function CategoriaPage({
   params,
@@ -108,11 +98,6 @@ export default async function CategoriaPage({
   const mesi = comeArray<RigaCat>(serie).map((r) => ({ ...r, mese: meseDaData(r.mese) ?? r.mese }));
   const mese = meseChiesto ?? mesi[0]?.mese ?? null;
   const delMese = mesi.find((r) => r.mese === mese) ?? null;
-
-  const massimo = mesi.reduce((max, r) => {
-    const v = centesimi(r.spesa);
-    return v < max ? v : max;
-  }, 0n);
 
   // Figli diretti e esercenti appesi a questo nodo, nel mese scelto.
   const [{ data: figli }, { data: esercenti }] =
@@ -162,35 +147,64 @@ export default async function CategoriaPage({
       : `/movimenti?categoria=${id}&da=${estremi.da}&a=${estremi.a}`;
 
   return (
-    <div className="space-y-6">
-      <Link
-        href={mese === null ? '/' : `/?mese=${mese}`}
-        className="inline-flex min-h-11 items-center text-sm underline"
-      >
-        ← cruscotto
-      </Link>
+    <div className="space-y-8">
+      <TestataLivello
+        ritorno={{ href: mese === null ? '/' : `/?mese=${mese}`, testo: 'cruscotto' }}
+        titolo={cat.name}
+        sottotitolo={mese === null ? null : etichettaMese(mese)}
+        importo={centesimiDi(delMese?.spesa)}
+        variazione={perCategoria.get(id)}
+        tinta={
+          cat.default_discretion === null ? null : (COLORE_CLASSE[cat.default_discretion] ?? null)
+        }
+        nota={`${delMese?.movimenti ?? 0} movimenti, sottocategorie comprese${
+          spiegaIlConfronto === null ? '' : ` · ${spiegaIlConfronto}`
+        }`}
+        azioni={
+          <Link className={BOTTONE_MINORE} href={versoMovimenti}>
+            tutti i movimenti del ramo
+          </Link>
+        }
+      />
 
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{cat.name}</h1>
-        {mese !== null && <p className="mt-1 text-sm text-testo-2">{etichettaMese(mese)}</p>}
-        <p className="mt-2 text-3xl font-semibold tabular-nums">
-          {formattaEuro(centesimi(delMese?.spesa ?? null))}
-          <Freccia riga={perCategoria.get(id)} />
-        </p>
-        <p className="text-xs text-testo-2">
-          {delMese?.movimenti ?? 0} movimenti, sottocategorie comprese
-        </p>
-        {spiegaIlConfronto !== null && (
-          <p className="mt-1 text-xs text-testo-2">{spiegaIlConfronto}</p>
-        )}
-      </div>
+      <Ripartizione
+        titolo="Sottocategorie"
+        voci={comeArray<RigaCat>(figli).map((f) => ({
+          chiave: f.category_id,
+          etichetta: f.categoria,
+          dettaglio: `${f.movimenti} ${f.movimenti === 1 ? 'movimento' : 'movimenti'}`,
+          valore: centesimiDi(f.spesa),
+          href: `/categoria/${f.category_id}${mese === null ? '' : `?mese=${mese}`}`,
+          variazione: perCategoria.get(f.category_id),
+        }))}
+      />
 
-      <div className="flex flex-wrap gap-2">
-        <Link className={BOTTONE_MINORE} href={versoMovimenti}>
-          tutti i movimenti del ramo
-        </Link>
-      </div>
+      <Ripartizione
+        titolo="Esercenti di questo nodo"
+        nota={
+          <>
+            Solo quelli assegnati direttamente a <strong>{cat.name}</strong>: quelli delle
+            sottocategorie stanno nelle rispettive schede, e il totale in cima li comprende tutti.
+          </>
+        }
+        voci={comeArray<RigaMerc>(esercenti).map((e, i) => ({
+          chiave: `${e.merchant_id ?? 'x'}-${i}`,
+          etichetta: e.esercente,
+          dettaglio: `${e.movimenti} ${e.movimenti === 1 ? 'movimento' : 'movimenti'}`,
+          valore: centesimiDi(e.spesa),
+          href: e.merchant_id === null ? null : `/esercente/${e.merchant_id}`,
+          variazione: e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id),
+        }))}
+      />
 
+      <MesePerMese
+        righe={mesi.map((r) => ({ mese: r.mese, valore: centesimiDi(r.spesa) }))}
+        corrente={mese}
+        href={(m) => `/categoria/${id}?mese=${m}`}
+      />
+
+      {/* La correzione sta in fondo: si apre questa scheda per **leggere** un
+          numero, e si corregge solo quando quel numero non torna. */}
       <CorreggiCategoria
         id={cat.id}
         nome={cat.name}
@@ -198,104 +212,6 @@ export default async function CategoriaPage({
         parentId={cat.parent_id}
         genitoriPossibili={await genitoriPossibili(cat.id)}
       />
-
-      {comeArray<RigaCat>(figli).length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-medium">Sottocategorie</h2>
-          <ul className="divide-y divide-filo">
-            {comeArray<RigaCat>(figli).map((f) => (
-              <li key={f.category_id}>
-                <Link
-                  href={`/categoria/${f.category_id}${mese === null ? '' : `?mese=${mese}`}`}
-                  className="flex min-h-11 items-center justify-between gap-3 text-sm"
-                >
-                  <span className="min-w-0 truncate">{f.categoria}</span>
-                  <span className="shrink-0 tabular-nums whitespace-nowrap">
-                    {formattaEuro(centesimi(f.spesa))}
-                    <Freccia riga={perCategoria.get(f.category_id)} />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {comeArray<RigaMerc>(esercenti).length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-medium">Esercenti di questo nodo</h2>
-          <p className="text-xs text-testo-2">
-            Solo quelli assegnati direttamente a <strong>{cat.name}</strong>: quelli delle
-            sottocategorie stanno nelle rispettive schede, e il totale in cima li comprende tutti.
-          </p>
-          <ul className="divide-y divide-filo">
-            {comeArray<RigaMerc>(esercenti).map((e, i) => (
-              <li key={`${e.merchant_id ?? 'x'}-${i}`}>
-                {e.merchant_id === null ? (
-                  <span className="flex min-h-11 items-center justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate">{e.esercente}</span>
-                    <span className="shrink-0 tabular-nums whitespace-nowrap">
-                      {formattaEuro(centesimi(e.spesa))}
-                      <Freccia
-                        riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
-                      />
-                    </span>
-                  </span>
-                ) : (
-                  <Link
-                    href={`/esercente/${e.merchant_id}`}
-                    className="flex min-h-11 items-center justify-between gap-3 text-sm"
-                  >
-                    <span className="min-w-0 truncate">{e.esercente}</span>
-                    <span className="shrink-0 tabular-nums whitespace-nowrap">
-                      {formattaEuro(centesimi(e.spesa))}
-                      <Freccia
-                        riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
-                      />
-                    </span>
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {mesi.length > 1 && (
-        <section className="space-y-2">
-          <h2 className="font-medium">Mese per mese</h2>
-          <ul className="space-y-1">
-            {mesi.map((r) => {
-              const valore = centesimi(r.spesa);
-              return (
-                <li key={r.mese}>
-                  <Link
-                    href={`/categoria/${id}?mese=${r.mese}`}
-                    className="flex min-h-11 items-center gap-3 text-sm sm:min-h-0 sm:py-0.5"
-                  >
-                    <span
-                      className={`w-12 shrink-0 text-xs sm:w-16 ${
-                        r.mese === mese ? 'font-semibold' : 'text-testo-2'
-                      }`}
-                    >
-                      {etichettaBreve(r.mese)}
-                    </span>
-                    <span className="h-3 flex-1 overflow-hidden rounded-sm bg-s3">
-                      <span
-                        className={`block h-full ${r.mese === mese ? 'bg-testo' : 'bg-testo-3'}`}
-                        style={{ width: `${quotaPercentuale(valore, massimo)}%` }}
-                      />
-                    </span>
-                    <span className="w-24 shrink-0 text-right text-xs tabular-nums sm:w-28">
-                      {formattaEuro(valore)}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Foglio } from './foglio';
 
 /**
  * Il selettore di categoria dentro una riga di elenco.
@@ -11,7 +12,20 @@ import { useRouter } from 'next/navigation';
  * e sistemarne tre. Qui si cambia dove si guarda.
  *
  * ---------------------------------------------------------------------------
- * La portata dipende dall'esercente, e sta scritta sotto il controllo
+ * Un foglio dal basso al posto di un `<select>`
+ * ---------------------------------------------------------------------------
+ * Era un menu a tendina nativo con trentacinque voci, ognuna un percorso intero
+ * (`Ristorazione > Ristoranti`). Su un telefono quella tendina e' una colonna
+ * di righe alte venti pixel con i nomi troncati, e per arrivare a «Trasporti»
+ * si scorre alla cieca. Il foglio ha righe alte quarantaquattro, i percorsi per
+ * intero, la categoria attuale segnata, e **una casella di ricerca**: con
+ * trentacinque voci scrivere tre lettere e' sempre piu' veloce che scorrere.
+ *
+ * Il filtro e' in memoria e non una query: le categorie sono gia' tutte qui,
+ * arrivano con la pagina.
+ *
+ * ---------------------------------------------------------------------------
+ * La portata dipende dall'esercente, e sta scritta sul bottone
  * ---------------------------------------------------------------------------
  * E' un controllo solo, ma fa due cose diverse — ed e' voluto, perche' la cosa
  * giusta da fare dipende dal caso e non dallo schermo su cui si e':
@@ -23,13 +37,25 @@ import { useRouter } from 'next/navigation';
  *   esercente **variabile** -> cambia **questa riga**, e la marca come corretta
  *                              a mano. E' il computer comprato da Amazon.
  *
- * Il testo sotto lo dice ogni volta. Un controllo che a volte tocca una riga e
- * a volte trecento senza avvisare sarebbe la cosa piu' pericolosa
- * dell'applicazione.
+ * Due parole accanto al controllo e la frase intera nel foglio. Un controllo
+ * che a volte tocca una riga e a volte trecento senza dirlo sarebbe la cosa
+ * piu' pericolosa dell'applicazione.
  */
 
 export type Ambito =
   { tipo: 'esercente'; merchantId: string } | { tipo: 'movimento'; movimentoId: string };
+
+const PORTATA: Record<Ambito['tipo'], { breve: string; intera: string }> = {
+  esercente: {
+    breve: 'tutte le sue',
+    intera: 'Vale per tutte le spese di questo esercente, anche quelle dei mesi già chiusi.',
+  },
+  movimento: {
+    breve: 'solo questa',
+    intera:
+      'Vale solo per questa riga, e la marca come corretta a mano: da lì in poi nessun automatismo la tocca.',
+  },
+};
 
 export function SceltaCategoria({
   ambito,
@@ -40,17 +66,26 @@ export function SceltaCategoria({
   ambito: Ambito;
   categoriaId: string | null;
   categorie: readonly { id: string; percorso: string }[];
-  /** Se `true` mostra sotto una riga che dice fin dove arriva il cambio. */
+  /** Se `true` mostra accanto al bottone fin dove arriva il cambio. */
   etichetta?: boolean;
 }) {
   const router = useRouter();
   const [valore, setValore] = useState(categoriaId ?? '');
+  const [aperto, setAperto] = useState(false);
+  const [cerca, setCerca] = useState('');
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+
+  const attuale = categorie.find((c) => c.id === valore)?.percorso ?? null;
+  const ago = cerca.trim().toLowerCase();
+  const viste =
+    ago === '' ? categorie : categorie.filter((c) => c.percorso.toLowerCase().includes(ago));
 
   async function cambia(nuovo: string) {
     const prima = valore;
     setValore(nuovo);
+    setAperto(false);
+    setCerca('');
     setInCorso(true);
     setErrore(null);
     try {
@@ -91,43 +126,106 @@ export function SceltaCategoria({
 
   return (
     <div className="w-full">
-      {/* La portata sta **accanto** al controllo e non sotto: sotto era una riga
-          di testo per ogni movimento dell'elenco, cioe' cinquanta ripetizioni
-          della stessa frase in una schermata. Accanto costa due parole, e la
-          frase intera resta nel titolo per chi la sfiora. */}
       <div className="flex items-center gap-2">
-        <select
-          value={valore}
-          onChange={(e) => void cambia(e.target.value)}
+        <button
+          type="button"
+          onClick={() => setAperto(true)}
           disabled={inCorso}
-          aria-label="categoria"
-          className={`min-h-11 min-w-0 flex-1 rounded-controllo bg-s3 px-2.5 text-[13px] sm:min-h-9 ${
+          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-controllo bg-s3 px-3 text-left text-[13px] sm:min-h-9 ${
             inCorso ? 'opacity-60' : ''
           }`}
         >
-          <option value="">— senza categoria —</option>
-          {categorie.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.percorso}
-            </option>
-          ))}
-        </select>
+          <span className={`min-w-0 flex-1 truncate ${attuale === null ? 'text-testo-3' : ''}`}>
+            {attuale ?? 'senza categoria'}
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-testo-3">
+            ›
+          </span>
+        </button>
 
         {etichetta === true && (
-          <span
-            className="shrink-0 text-[11px] text-testo-3"
-            title={
-              ambito.tipo === 'esercente'
-                ? 'vale per tutte le spese di questo esercente'
-                : 'vale solo per questa riga, e la marca come corretta a mano'
-            }
-          >
-            {ambito.tipo === 'esercente' ? 'tutte le sue' : 'solo questa'}
+          <span className="shrink-0 text-[11px] text-testo-3" title={PORTATA[ambito.tipo].intera}>
+            {PORTATA[ambito.tipo].breve}
           </span>
         )}
       </div>
 
       {errore !== null && <p className="nota nota-errore mt-1 text-[11px]">{errore}</p>}
+
+      <Foglio
+        aperto={aperto}
+        titolo="In che categoria"
+        nota={PORTATA[ambito.tipo].intera}
+        onChiudi={() => {
+          setAperto(false);
+          setCerca('');
+        }}
+      >
+        <input
+          type="search"
+          value={cerca}
+          onChange={(e) => setCerca(e.target.value)}
+          placeholder="cerca una categoria"
+          className="mb-2 min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
+        />
+
+        <ul className="elenco text-[15px]">
+          <Riga
+            testo="senza categoria"
+            scelta={valore === ''}
+            spenta
+            onScegli={() => void cambia('')}
+          />
+          {viste.map((c) => (
+            <Riga
+              key={c.id}
+              testo={c.percorso}
+              scelta={c.id === valore}
+              onScegli={() => void cambia(c.id)}
+            />
+          ))}
+        </ul>
+
+        {viste.length === 0 && (
+          <p className="py-6 text-center text-[14px] text-testo-2">
+            Nessuna categoria con questo nome.
+          </p>
+        )}
+      </Foglio>
     </div>
+  );
+}
+
+function Riga({
+  testo,
+  scelta,
+  spenta,
+  onScegli,
+}: {
+  testo: string;
+  scelta: boolean;
+  spenta?: boolean;
+  onScegli: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onScegli}
+        aria-current={scelta ? 'true' : undefined}
+        className={`flex min-h-12 w-full items-center gap-3 text-left ${
+          spenta === true ? 'text-testo-2' : ''
+        }`}
+      >
+        <span className="min-w-0 flex-1">{testo}</span>
+        {/* Il segno di spunta e non un pallino: dice «questa» senza dover essere
+            un controllo a sua volta. */}
+        {scelta && (
+          <span aria-hidden="true" className="shrink-0 text-essenziale">
+            ✓
+          </span>
+        )}
+      </button>
+    </li>
   );
 }

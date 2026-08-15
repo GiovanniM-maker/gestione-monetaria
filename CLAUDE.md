@@ -834,10 +834,54 @@ trasformano la lista della sera in quindici righe identiche, e una lista di arre
 smaltisce — si chiude. Non tocca `manually_categorized`, come la conferma singola: approvare in
 blocco non è una scorciatoia per incidere in blocco.
 
+#### Il foglio dal basso, e non un menu a tendina
+
+Il selettore di categoria era un `<select>` nativo con trentacinque voci, ognuna un percorso intero
+(`Ristorazione > Ristoranti`). Su un telefono quella tendina è una colonna di righe alte venti pixel
+coi nomi troncati, e per arrivare a «Trasporti» si scorre alla cieca.
+
+`Foglio` è un `<dialog>` vero, e `showModal()` porta gratis quattro cose che scritte a mano si
+sbagliano: il fuoco resta dentro, Esc chiude, il resto della pagina diventa inerte per i lettori di
+schermo, e sta sopra tutto senza una gara di `z-index` con la barra in basso. Quel che resta da
+scrivere è poco e sta in un posto solo: il fondo che si tocca per chiudere (confrontando
+`event.target` con l'elemento, o si chiuderebbe anche trascinando il dito da dentro a fuori),
+`env(safe-area-inset-bottom)`, e l'altezza massima all'85% con lo scorrimento **dentro** il foglio.
+
+Dentro: righe da 44 px, i percorsi per intero, la categoria attuale con un segno di spunta, e una
+casella di ricerca — con trentacinque voci, scrivere tre lettere è sempre più veloce che scorrere.
+Il filtro è in memoria, non una query: le categorie arrivano già con la pagina.
+
+Lo usa anche la correzione su `/da-confermare`. Aperta dentro la carta spingeva giù tutte le altre,
+e la riga che si stava guardando finiva fuori schermo.
+
+#### «Dove» è una schermata sola, in quattro istanze
+
+Scendere dal totale a un movimento passa per quattro schermate — classe, categoria, esercente,
+movimento — che rispondono tutte alla **stessa domanda**: quanto qui, com'è cambiato, di cosa è
+fatto, dove si tocca per scendere ancora. Erano scritte quattro volte, e si vedeva: il numerone
+aveva tre dimensioni diverse, «mese per mese» esisteva in **tre copie** con tre altezze di barra, e
+l'elenco delle sottocategorie e quello degli esercenti erano lo stesso codice con due nomi.
+
+`livello.tsx` ne tiene tre pezzi — `TestataLivello`, `Ripartizione`, `MesePerMese` — e le quattro
+pagine diventano composizioni. Quattro copie della stessa cosa divergono alla prima modifica, e la
+schermata che resta indietro è sempre quella che si usa meno.
+
+Il massimo delle barre lo calcola `MesePerMese` e non chi la chiama: è il più **negativo** della
+serie, e ogni copia che se lo ricavava da sola era un'occasione per confondere il minimo col massimo
+su numeri che sono tutti sotto zero.
+
+Due cose sono cambiate nel merito, non nella forma: sulla scheda di un esercente ogni mese porta ai
+**suoi** movimenti invece che al cruscotto di quel mese — da lì la domanda è «cosa ho comprato da
+loro a maggio», e il cruscotto la perdeva per strada — e sulla scheda di un movimento i campi grezzi
+della banca sono finiti sotto un «apri»: sono diagnostica, si guardano quando una riga non si
+riconosce, e aperti erano due terzi della schermata.
+
 #### Misurato dopo, a 390 px, in tutti e due i temi
 
 Nessuna schermata sborda di lato; tre bersagli sotto i 44 px in tutta l'applicazione (erano 313 solo
-su `/revisione`); il cruscotto scende da 4.924 a 4.063 px e `/movimenti` da 7.163 a 6.057.
+su `/revisione`); il cruscotto scende da 4.924 a 4.063 px e `/movimenti` da 7.163 a 6.057. I quattro
+livelli della discesa stanno in una schermata e mezza: categoria 1.359 px, esercente 994,
+movimento 1.213.
 
 ### Le decisioni della Fase 6-bis
 
