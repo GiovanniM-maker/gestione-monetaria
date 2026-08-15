@@ -7,6 +7,7 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { etichettaBreve, meseDaData, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import { CorreggiEsercente } from '../../correggi';
+import { Interruttore } from '../../esercenti/interruttore';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Esercente' };
@@ -39,6 +40,7 @@ type Esercente = {
   discretion: string | null;
   context: string | null;
   is_subscription: boolean;
+  classificazione_variabile: boolean;
   origine: string | null;
   confermato_at: string | null;
   motivazione: string | null;
@@ -68,7 +70,8 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         .from('v_merchant_totals')
         .select(
           'id, canonical_name, category_id, discretion, context, is_subscription, origine, ' +
-            'confermato_at, motivazione, movimenti, totale::text, ultima',
+            'confermato_at, motivazione, movimenti, totale::text, ultima, ' +
+            'classificazione_variabile',
         )
         .eq('id', id)
         .maybeSingle(),
@@ -78,7 +81,10 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         .eq('merchant_id', id)
         .order('mese', { ascending: false })
         .limit(18),
-      supabase.from('v_categorie_albero').select('id, nome, percorso, archiviata').order('percorso'),
+      supabase
+        .from('v_categorie_albero')
+        .select('id, nome, percorso, archiviata')
+        .order('percorso'),
       supabase
         .from('v_subscriptions')
         .select('id, tipo, cadence, costo_mensile::text, nella_metrica, status')
@@ -135,6 +141,11 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           tutti quelli da rivedere
         </Link>
       </div>
+
+      <section className="space-y-3 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+        <h2 className="text-sm font-medium">Come si classificano le sue spese</h2>
+        <Interruttore id={m.id} variabile={m.classificazione_variabile} />
+      </section>
 
       <section className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
         <h2 className="mb-2 text-sm font-medium">Classificazione</h2>

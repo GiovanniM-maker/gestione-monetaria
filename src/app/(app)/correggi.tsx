@@ -154,24 +154,35 @@ const comeOpzioni = (valori: readonly string[]) => valori.map((v) => ({ id: v, t
  */
 export function CorreggiMovimento({
   id,
+  categoriaId,
   discrezionalita,
   contesto,
   note,
+  variabile,
+  categorie,
 }: {
   id: string;
+  categoriaId: string | null;
   discrezionalita: string | null;
   contesto: string | null;
   note: string | null;
+  /** Se l'esercente e' dichiarato variabile, qui si cambia anche la categoria. */
+  variabile: boolean;
+  categorie: readonly { id: string; percorso: string }[];
 }) {
   const [aperto, setAperto] = useState(false);
   const { inCorso, errore, scrivi } = useScrittura(() => setAperto(false));
 
+  const [cat, setCat] = useState(categoriaId ?? '');
   const [d, setD] = useState(discrezionalita ?? '');
   const [c, setC] = useState(contesto ?? '');
   const [n, setN] = useState(note ?? '');
 
   const cambiato =
-    d !== (discrezionalita ?? '') || c !== (contesto ?? '') || n.trim() !== (note ?? '').trim();
+    (variabile && cat !== (categoriaId ?? '')) ||
+    d !== (discrezionalita ?? '') ||
+    c !== (contesto ?? '') ||
+    n.trim() !== (note ?? '').trim();
 
   return (
     <Pannello
@@ -188,6 +199,25 @@ export function CorreggiMovimento({
       chiudi={() => setAperto(false)}
       errore={errore}
     >
+      {/* La categoria per riga compare **solo** sugli esercenti variabili. Su un
+          esercente fisso cambiarla qui sarebbe una scelta che vale una volta e
+          si dimentica: la sua sede giusta e' la scheda dell'esercente, dove
+          vale per tutte le sue spese. */}
+      {variabile ? (
+        <Scelta
+          valore={cat}
+          cambia={setCat}
+          vuoto="— senza categoria —"
+          opzioni={categorie.map((x) => ({ id: x.id, testo: x.percorso }))}
+          disabilitato={inCorso}
+        />
+      ) : (
+        <p className="text-xs text-neutral-500">
+          La <strong>categoria</strong> qui non si cambia: questo esercente è dichiarato{' '}
+          <em>fisso</em>, quindi la sua categoria vale per tutte le sue spese. Per farla decidere
+          riga per riga, marcalo <em>variabile</em> dalla sua scheda.
+        </p>
+      )}
       <div className="grid gap-2 sm:grid-cols-2">
         <Scelta
           valore={d}
@@ -216,8 +246,9 @@ export function CorreggiMovimento({
         className={BOTTONE}
         disabled={inCorso || !cambiato}
         onClick={() =>
-          void scrivi('/api/admin/conferma', 'POST', {
+          void scrivi('/api/admin/movimenti/classifica', 'POST', {
             id,
+            categoriaId: variabile && cat !== '' ? cat : null,
             discrezionalita: d === '' ? null : d,
             contesto: c === '' ? null : c,
             note: n.trim() === '' ? null : n.trim(),

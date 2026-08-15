@@ -63,7 +63,107 @@ export async function aggiornaCategoria(a: AggiornamentoCategoria): Promise<void
   if (data !== true) throw new CategoriaNonValida('Questa categoria non esiste più.');
 }
 
+/**
+ * Crea una categoria, di primo o di secondo livello.
+ *
+ * Lo slug lo costruisce `crea_categoria` (0026) e non lo si chiede a chi
+ * chiama: e' un dettaglio dello schema, e uno slug scelto male resta li' per
+ * sempre. Rieseguire non duplica — un tocco ripetuto su un telefono non deve
+ * creare «Ristoranti» due volte.
+ */
+export async function creaCategoria(
+  nome: string,
+  padreId: string | null,
+  discrezionalita: string | null,
+): Promise<string> {
+  const n = typeof nome === 'string' ? nome.trim() : '';
+  if (n === '') throw new CategoriaNonValida('Il nome non puo’ essere vuoto.');
+  if (discrezionalita !== null && !DISCREZIONALITA.includes(discrezionalita as Discretion)) {
+    throw new CategoriaNonValida(`Discrezionalità non ammessa: ${discrezionalita}`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('crea_categoria', {
+    p_nome: n,
+    p_padre_id: padreId,
+    p_discrezionalita: discrezionalita,
+  });
+  if (error !== null) throw new CategoriaNonValida(error.message);
+  return String(data);
+}
+
+/**
+ * Elimina una categoria, dichiarando dove va il suo contenuto.
+ *
+ * `spostaSu` nullo significa «al genitore», che e' quasi sempre giusto:
+ * eliminando `Casa > Bollette` le sue spese risalgono in `Casa` e restano
+ * nell'albero. Su una radice con del contenuto la funzione SQL si ferma e lo
+ * dice, invece di scollegare centinaia di movimenti in silenzio.
+ */
+export async function eliminaCategoria(id: string, spostaSu: string | null): Promise<void> {
+  if (typeof id !== 'string' || id.trim() === '') {
+    throw new CategoriaNonValida('Categoria non indicata.');
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('elimina_categoria', {
+    p_id: id,
+    p_sposta_su: spostaSu,
+  });
+  if (error !== null) throw new CategoriaNonValida(error.message);
+  if (data !== true) throw new CategoriaNonValida('Questa categoria non esiste più.');
+}
+
 export type CategoriaSceglibile = { id: string; percorso: string };
+
+/** L'albero con quanto pesa ogni nodo: serve a sapere cosa si sta eliminando. */
+export type NodoAlbero = {
+  id: string;
+  parent_id: string | null;
+  nome: string;
+  percorso: string;
+  profondita: number;
+  discrezionalita_predefinita: string | null;
+  archiviata: boolean;
+  esercenti: number;
+  movimenti: number;
+};
+
+/**
+ * L'albero, con quanto sta appeso **direttamente** a ogni nodo.
+ *
+ * Diretto e non con il roll-up, di proposito: e' cio' che si sposta eliminando
+ * quel nodo, ed e' la domanda a cui serve rispondere prima di premere. La spesa
+ * dell'intero ramo la dice gia' il cruscotto.
+ *
+ * I conteggi si fanno qui e non in SQL perche' PostgREST non raggruppa: sono
+ * due elenchi di identificativi, poche migliaia di righe, e non e' una pagina
+ * che si apre di continuo. Se un giorno lo diventasse, e' una vista.
+ */
+export async function leggiAlbero(): Promise<readonly NodoAlbero[]> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: albero }, { data: esercenti }, { data: spese }] = await Promise.all([
+    supabase.from('v_categorie_albero').select('*').order('percorso'),
+    supabase.from('merchants').select('category_id').limit(2000),
+    supabase.from('v_expenses').select('category_id').limit(5000),
+  ]);
+
+  const conta = (righe: unknown): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (const r of comeArray<{ category_id: string | null }>(righe)) {
+      if (r.category_id !== null) m.set(r.category_id, (m.get(r.category_id) ?? 0) + 1);
+    }
+    return m;
+  };
+
+  const perEsercenti = conta(esercenti);
+  const perMovimenti = conta(spese);
+
+  return comeArray<Omit<NodoAlbero, 'esercenti' | 'movimenti'>>(albero).map((c) => ({
+    ...c,
+    esercenti: perEsercenti.get(c.id) ?? 0,
+    movimenti: perMovimenti.get(c.id) ?? 0,
+  }));
+}
 
 /**
  * Le categorie che possono fare da genitore a `id`.

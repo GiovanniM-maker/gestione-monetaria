@@ -7,6 +7,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { SpostaMovimento } from './sposta';
 import { CorreggiMovimento } from '../../correggi';
+import { esercenteVariabile } from '@/lib/movimenti/classifica';
+import { Interruttore } from '../../esercenti/interruttore';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimento' };
@@ -48,10 +50,10 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
   if (m === null) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const { data: albero } = await supabase
-    .from('v_categorie_albero')
-    .select('id, percorso, archiviata')
-    .order('percorso');
+  const [{ data: albero }, variabile] = await Promise.all([
+    supabase.from('v_categorie_albero').select('id, percorso, archiviata').order('percorso'),
+    esercenteVariabile(m.merchant_id),
+  ]);
   const categorie = comeArray<{ id: string; percorso: string; archiviata: boolean }>(albero)
     .filter((c) => !c.archiviata)
     .map((c) => ({ id: c.id, percorso: c.percorso }));
@@ -126,12 +128,26 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         <Voce nome="escluso dall’analisi" valore={m.excluded_from_analysis ? 'sì' : 'no'} />
       </Blocco>
 
+      {/* Il flag dell'esercente sta anche qui, e non solo sulla sua scheda:
+          ci si accorge che «Amazon» ospita cose diverse **guardando una sua
+          spesa**, non guardando l'elenco degli esercenti. Farlo da qui evita di
+          uscire, cambiare, e tornare a cercare la riga. */}
+      {m.merchant_id !== null && (
+        <section className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+          <h2 className="text-sm font-medium">{m.esercente ?? 'Questo esercente'}</h2>
+          <Interruttore id={m.merchant_id} variabile={variabile} />
+        </section>
+      )}
+
       <div className="space-y-3">
         <CorreggiMovimento
           id={m.id}
+          categoriaId={m.category_id ?? null}
           discrezionalita={m.discrezionalita}
           contesto={m.contesto}
           note={m.note}
+          variabile={variabile}
+          categorie={categorie}
         />
         <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />
       </div>
