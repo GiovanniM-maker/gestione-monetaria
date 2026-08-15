@@ -135,33 +135,26 @@ export type NodoAlbero = {
  * quel nodo, ed e' la domanda a cui serve rispondere prima di premere. La spesa
  * dell'intero ramo la dice gia' il cruscotto.
  *
- * I conteggi si fanno qui e non in SQL perche' PostgREST non raggruppa: sono
- * due elenchi di identificativi, poche migliaia di righe, e non e' una pagina
- * che si apre di continuo. Se un giorno lo diventasse, e' una vista.
+ * I conteggi arrivano da `v_categorie_uso` (0039). Prima si scaricavano 1.323
+ * righe di `v_expenses` e 300 di `merchants` — **74 KB** — per contarle in un
+ * ciclo e scriverne sessantasei. Le aggregazioni si fanno in SQL: e' la regola
+ * di CLAUDE.md, e qui era anche il quarto di secondo piu' facile da togliere.
  */
 export async function leggiAlbero(): Promise<readonly NodoAlbero[]> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: albero }, { data: esercenti }, { data: spese }] = await Promise.all([
+  const [{ data: albero }, { data: uso }] = await Promise.all([
     supabase.from('v_categorie_albero').select('*').order('percorso'),
-    supabase.from('merchants').select('category_id').limit(2000),
-    supabase.from('v_expenses').select('category_id').limit(5000),
+    supabase.from('v_categorie_uso').select('id, esercenti, movimenti'),
   ]);
 
-  const conta = (righe: unknown): Map<string, number> => {
-    const m = new Map<string, number>();
-    for (const r of comeArray<{ category_id: string | null }>(righe)) {
-      if (r.category_id !== null) m.set(r.category_id, (m.get(r.category_id) ?? 0) + 1);
-    }
-    return m;
-  };
-
-  const perEsercenti = conta(esercenti);
-  const perMovimenti = conta(spese);
+  const conteggi = new Map(
+    comeArray<{ id: string; esercenti: number; movimenti: number }>(uso).map((r) => [r.id, r]),
+  );
 
   return comeArray<Omit<NodoAlbero, 'esercenti' | 'movimenti'>>(albero).map((c) => ({
     ...c,
-    esercenti: perEsercenti.get(c.id) ?? 0,
-    movimenti: perMovimenti.get(c.id) ?? 0,
+    esercenti: conteggi.get(c.id)?.esercenti ?? 0,
+    movimenti: conteggi.get(c.id)?.movimenti ?? 0,
   }));
 }
 

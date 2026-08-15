@@ -1,7 +1,21 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { leggiCruscotto } from '@/lib/cruscotto/leggi';
-import type { RigaClasse, RigaCategoria, RigaTotaleMese } from '@/lib/cruscotto/leggi';
+import type { RigaCategoria, RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
+import {
+  leggiAvvisiNuovi,
+  leggiCategorie,
+  leggiClassi,
+  leggiConfronto,
+  leggiDaConfermare,
+  leggiEntrate,
+  leggiEsercenti,
+  leggiFinestra,
+  leggiRicorrente,
+  leggiStato,
+  leggiVariazioni,
+  scegliMese,
+} from '@/lib/cruscotto/letture';
 import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import { comeSiConfronta } from '@/lib/cruscotto/andamento';
 import type { Variazione } from '@/lib/cruscotto/andamento';
@@ -18,6 +32,12 @@ import {
   ORDINE_CLASSI,
   type FettaCategoria,
 } from './grafici';
+import {
+  ScheletroCiambella,
+  ScheletroCoppia,
+  ScheletroElenco,
+  ScheletroTestata,
+} from './scheletri';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -30,10 +50,24 @@ export const metadata: Metadata = { title: 'Cruscotto' };
  * muove nel tempo**, **in cosa**, **da chi**. Ogni blocco successivo spiega il
  * precedente, e si scende finche' la risposta e' azionabile.
  *
- * Il mese sta nell'indirizzo (`/?mese=2026-07`) e non in uno stato del
- * browser. Cosi' la pagina resta un componente server — nessun aggregato
- * attraversa la rete per essere ricalcolato in JavaScript — e un mese si puo'
- * mandare a se stessi come collegamento.
+ * ---------------------------------------------------------------------------
+ * Ogni blocco aspetta solo i propri dati
+ * ---------------------------------------------------------------------------
+ * Prima una funzione sola leggeva undici cose e la pagina compariva quando la
+ * piu' lenta aveva finito. Ora la pagina fa **una** query — quali mesi
+ * esistono — e da li' in poi ogni sezione arriva per conto suo, dentro il
+ * proprio `<Suspense>`, con al posto suo uno scheletro della forma giusta.
+ *
+ * Il tempo totale non cambia. Il tempo prima di vedere il numerone crolla, ed
+ * e' quello che si percepisce come velocita'.
+ *
+ * Le letture sono deduplicate con `cache()`: due sezioni che chiedono la stessa
+ * finestra di confronto fanno una query sola. Senza, spezzare avrebbe
+ * moltiplicato le query invece di riordinarle.
+ *
+ * Il mese sta nell'indirizzo (`/?mese=2026-07`) e non in uno stato del browser:
+ * la pagina resta un componente server e un mese si puo' mandare a se' stessi
+ * come collegamento.
  */
 
 /** Quanti mesi mostra l'andamento. Un anno e' il minimo per vedere una stagione. */
@@ -55,9 +89,6 @@ function sommaClassi(righe: readonly { spesa: string }[]): bigint {
  * «come si divide il mese fra le quattro classi», che ha sempre le stesse
  * quattro voci ed e' per questo che la sua forma si impara. La distinzione fra
  * i due contesti resta intera nell'elenco sotto, dove c'e' spazio per dirla.
- *
- * E' una somma di interi di centesimi, non una divisione: nessuna variazione si
- * ricalcola qui — quelle arrivano da SQL riga per riga.
  */
 function perLaBarra(classi: readonly RigaClasse[]) {
   const note = ORDINE_CLASSI.map((nome) => ({
@@ -70,89 +101,24 @@ function perLaBarra(classi: readonly RigaClasse[]) {
     : [...note, { chiave: 'non classificato', valore: sommaClassi(resto) }];
 }
 
+const perMese = (mese: string, extra: Record<string, string> = {}): string => {
+  const periodo = estremiDelMese(mese);
+  const p = new URLSearchParams(periodo === null ? {} : { da: periodo.da, a: periodo.a });
+  for (const [k, v] of Object.entries(extra)) p.set(k, v);
+  return `/movimenti?${p.toString()}`;
+};
+
 export default async function CruscottoPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const parametri = await searchParams;
-  const dati = await leggiCruscotto(meseValido(parametri['mese']));
-
-  const {
-    mese,
-    mesePrecedente,
-    mesiDisponibili,
-    totali,
-    classi,
-    variazioniClassi,
-    categorie,
-    variazioniCategorie,
-    esercenti,
-    variazioniEsercenti,
-    variazioniMancanti,
-    ricorrente,
-    entrate,
-    stato,
-    daConfermare,
-    avvisi,
-    confronto,
-    giorniCoperti,
-  } = dati;
-
-  // Gli estremi del mese servono a mandare ogni aggregato alla lista movimenti
-  // gia' filtrata: e' cio' che trasforma il cruscotto da fotografia a porta.
-  const periodo = estremiDelMese(mese);
-  const perMese = (extra: Record<string, string> = {}): string => {
-    const p = new URLSearchParams(periodo === null ? {} : { da: periodo.da, a: periodo.a });
-    for (const [k, v] of Object.entries(extra)) p.set(k, v);
-    return `/movimenti?${p.toString()}`;
-  };
-
-  const incassato = entrate === null ? null : centesimi(entrate.entrate);
-
-  const indice = mesiDisponibili.indexOf(mese);
-  const meseSuccessivo = indice >= 0 ? (mesiDisponibili[indice + 1] ?? null) : null;
-
-  const rigaMese = totali.find((t) => t.mese === mese) ?? null;
-
-  // Il totale del mese viene da `v_monthly_totals`, che e' la vista che lo
-  // definisce. Sommare le classi darebbe lo stesso numero — le due viste
-  // stanno entrambe su `v_expenses` — ma lo farebbe dipendere da una seconda
-  // lettura, e un totale non deve mai dipendere da piu' cose del necessario.
-  const speso = rigaMese === null ? sommaClassi(classi) : centesimi(rigaMese.spesa);
-
-  // Le variazioni, indicizzate: l'albero e l'elenco degli esercenti restano
-  // quelli delle viste — che portano `spesa_diretta`, lo slug, la
-  // discrezionalita' — e ci si aggancia accanto la freccia.
-  const perClasse = new Map(
-    variazioniClassi.map((v) => [`${v.discrezionalita}|${v.contesto}`, v as Variazione]),
+  // L'unica lettura che la pagina aspetta davvero: senza sapere quali mesi
+  // esistono non si sa nemmeno quale mostrare.
+  const { mese, totali, rigaMese, mesePrecedente, meseSuccessivo, inCorso } = await scegliMese(
+    meseValido(parametri['mese']),
   );
-  const perCategoria = new Map(variazioniCategorie.map((v) => [v.category_id, v as Variazione]));
-  const perEsercente = new Map(variazioniEsercenti.map((v) => [v.merchant_id, v as Variazione]));
-
-  // La ciambella disegna solo le **radici**: con il roll-up, la somma delle
-  // radici e' la spesa categorizzata del mese, esattamente una volta. Mettendoci
-  // anche le figlie ogni euro comparirebbe due volte e il giro non vorrebbe
-  // piu' dire niente.
-  const radici: FettaCategoria[] = categorie
-    .filter((c) => c.parent_id === null)
-    .map((c) => ({
-      chiave: c.category_id,
-      etichetta: c.categoria,
-      valore: centesimi(c.spesa),
-      href: `/categoria/${c.category_id}?mese=${mese}`,
-      variazione: perCategoria.get(c.category_id),
-    }))
-    .filter((f) => f.valore !== 0n);
-  const inCategoria = radici.reduce((s, r) => s + r.valore, 0n);
-
-  // Come e' fatto il confronto lo dice una riga sola, presa da una qualsiasi
-  // delle righe: la finestra e' la stessa per tutte, ed e' il punto della 0036.
-  const spiegaIlConfronto = comeSiConfronta(variazioniClassi[0]);
-
-  const vociRicorrenti = ordinaPerPeso(ricorrente);
-  const abbonamenti = totalePerTipo(vociRicorrenti, 'abbonamento');
-  const abitudini = totalePerTipo(vociRicorrenti, 'abitudine');
 
   const andamento = totali.slice(-MESI_ANDAMENTO);
   const piuAlto = andamento.reduce((max, r) => {
@@ -160,66 +126,14 @@ export default async function CruscottoPage({
     return v < max ? v : max;
   }, 0n);
 
-  // Solo i mesi civili sono un mese vero: l'ultimo disponibile e' quasi sempre
-  // in corso, e confrontarlo con un mese intero fa sembrare che la spesa sia
-  // crollata.
-  const inCorso = mese === mesiDisponibili[mesiDisponibili.length - 1];
-
   return (
     <div className="space-y-10">
-      {/* ---------------------------------------------------------------- */}
-      {/* LO STATO DEL SISTEMA                                              */}
-      {/* ---------------------------------------------------------------- */}
-      {stato.map((s) => (
-        <StatoSistema key={s.connection_id} riga={s} />
-      ))}
+      {/* Lo stato del sistema e gli avvisi non bloccano niente: se tardano,
+          tarda una riga grigia, non il numero del mese. */}
+      <Suspense fallback={null}>
+        <StatoEAvvisi />
+      </Suspense>
 
-      {/* Gli avvisi che il riquadro di stato non dice gia'. Al massimo tre:
-          una lista lunga di avvisi non e' piu' una lista di avvisi. */}
-      {avvisi.length > 0 && (
-        <div className="space-y-2">
-          {avvisi.slice(0, 3).map((a) => (
-            <Link
-              key={a.id}
-              href="/avvisi"
-              className={`block rounded-lg border p-3 text-sm ${
-                a.severity === 'critical'
-                  ? 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200'
-                  : a.severity === 'warning'
-                    ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
-                    : 'border-neutral-200 dark:border-neutral-800'
-              }`}
-            >
-              <span className="font-medium">{a.title}</span>
-              <span className="mt-0.5 block text-xs opacity-80">{a.body}</span>
-            </Link>
-          ))}
-          {avvisi.length > 3 && (
-            <Link className="text-xs text-neutral-500 underline" href="/avvisi">
-              altri {avvisi.length - 3} avvisi
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* Cosa richiede un gesto. Con il conteggio e non con un pallino: un
-          numero e' un invito, un pallino rosso e' un'ansia. */}
-      {daConfermare > 0 && (
-        <Link
-          href="/da-confermare"
-          className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700"
-        >
-          <span>
-            <strong>{daConfermare}</strong>{' '}
-            {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da confermare
-          </span>
-          <span className="shrink-0 text-neutral-500">→</span>
-        </Link>
-      )}
-
-      {/* ---------------------------------------------------------------- */}
-      {/* IL MESE                                                          */}
-      {/* ---------------------------------------------------------------- */}
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">
           {etichettaMese(mese)}
@@ -249,152 +163,10 @@ export default async function CruscottoPage({
         </nav>
       </div>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* QUANTO HO SPESO                                                  */}
-      {/* ---------------------------------------------------------------- */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <p className="text-3xl font-semibold tabular-nums sm:text-4xl">{formattaEuro(speso)}</p>
-        </div>
+      <Suspense fallback={<ScheletroTestata />}>
+        <QuantoHoSpeso mese={mese} rigaMese={rigaMese} />
+      </Suspense>
 
-        {confronto !== null && giorniCoperti !== null && (
-          <div className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
-            <p>
-              Nei <strong>primi {giorniCoperti} giorni</strong> del mese hai speso{' '}
-              <strong className="tabular-nums">{formattaEuro(confronto.corrente.spesa)}</strong>
-              {confronto.riferimento !== null && (
-                <>
-                  , contro{' '}
-                  <strong className="tabular-nums">{formattaEuro(confronto.riferimento)}</strong>{' '}
-                  negli stessi giorni dei mesi scorsi
-                  {confronto.scostamento !== null && (
-                    <>
-                      {' '}
-                      — {confronto.scostamento > 0 ? '+' : ''}
-                      {confronto.scostamento.toFixed(0)}%
-                    </>
-                  )}
-                </>
-              )}
-              .
-            </p>
-            {confronto.precedenti.length > 0 && (
-              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
-                {confronto.precedenti.map((p) => (
-                  <li key={p.mese} className="tabular-nums">
-                    {etichettaBreve(p.mese)} {formattaEuro(p.spesa)}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-2 text-xs text-neutral-500">
-              Finestre della stessa lunghezza, non una proiezione a fine mese: «a questo ritmo
-              spenderai X» sarebbe un&rsquo;estrapolazione travestita da informazione.
-            </p>
-          </div>
-        )}
-
-        <Link className={`${BOTTONE_MINORE} w-fit`} href={perMese()}>
-          vedi i {rigaMese?.movimenti ?? 0} movimenti del mese
-        </Link>
-
-        {classi.length === 0 ? (
-          <p className="text-sm text-neutral-500">Nessun movimento in questo mese.</p>
-        ) : (
-          <div className="space-y-3">
-            {/* Una barra sola, sempre con le stesse quattro voci nello stesso
-                ordine: e' la forma che si impara, e che fa riconoscere un mese
-                anomalo senza leggere un numero. */}
-            <BarraClassi voci={perLaBarra(classi)} />
-
-            <ul className="text-sm">
-              {classi.map((c) => (
-                <li
-                  key={`${c.discrezionalita}-${c.contesto}`}
-                  className="border-b border-neutral-100 dark:border-neutral-900"
-                >
-                  <Link
-                    href={perMese({ classe: c.discrezionalita })}
-                    className="flex min-h-11 items-center justify-between gap-3"
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{
-                          backgroundColor: COLORE_CLASSE[c.discrezionalita] ?? '#a3a3a3',
-                        }}
-                      />
-                      <span className="min-w-0 truncate">
-                        {c.discrezionalita}
-                        <span className="text-neutral-500"> · {c.contesto}</span>
-                      </span>
-                    </span>
-                    <span className="shrink-0 tabular-nums whitespace-nowrap">
-                      {formattaEuro(centesimi(c.spesa))}
-                      <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            {variazioniMancanti !== null && (
-              <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
-                <strong>Le cifre qui sopra sono corrette</strong> — vengono dalle viste, non dal
-                confronto. Motivo: {variazioniMancanti}
-              </p>
-            )}
-
-            {spiegaIlConfronto !== null && (
-              <p className="text-xs text-neutral-500">
-                {spiegaIlConfronto} Il termine di paragone &egrave; la mediana{' '}
-                <strong>scelta</strong> — un mese realmente osservato, non una media. Le frecce con
-                un asterisco poggiano su meno della met&agrave; dei mesi guardati: la spesa non
-                capita tutti i mesi, quindi il confronto vale meno.
-              </p>
-            )}
-          </div>
-        )}
-
-        {incassato !== null && incassato !== 0n && (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Entrate del mese <strong className="tabular-nums">{formattaEuro(incassato)}</strong> —
-            la spesa ne &egrave; <strong>{quotaPercentuale(speso, incassato).toFixed(0)}%</strong>.{' '}
-            <span className="text-neutral-500">
-              Escluse le entrate che sono giroconti: un rientro dal conto deposito non &egrave;
-              reddito.
-            </span>
-          </p>
-        )}
-
-        {rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0) && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            {rigaMese.senza_cambio > 0 && (
-              <>
-                <strong>{rigaMese.senza_cambio}</strong> movimenti in valuta senza tasso di cambio{' '}
-                <strong>non sono nel totale</strong>: convertirli a runtime darebbe due numeri
-                diversi in due schermate.{' '}
-              </>
-            )}
-            {rigaMese.senza_categoria > 0 && (
-              <>
-                <strong>{rigaMese.senza_categoria}</strong> movimenti per{' '}
-                {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma non in
-                nessuna categoria.{' '}
-                <Link className="underline" href="/revisione">
-                  Assegnali
-                </Link>
-                .
-              </>
-            )}
-          </p>
-        )}
-      </section>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* QUANTO DI QUESTO TORNA OGNI MESE                                 */}
-      {/* ---------------------------------------------------------------- */}
       <section className="space-y-2">
         <div className="flex items-baseline justify-between">
           <h2 className="font-medium">Di questo, quanto torna ogni mese</h2>
@@ -405,30 +177,13 @@ export default async function CruscottoPage({
             dettaglio →
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">Abbonamenti</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{formattaEuro(abbonamenti)}</p>
-            <p className="mt-1 text-xs text-neutral-500">Si disdicono. Il risparmio è certo.</p>
-          </div>
-          <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">Abitudini</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{formattaEuro(abitudini)}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Niente da disdire: si ripete perché lo si rifà.
-            </p>
-          </div>
-        </div>
-        <p className="text-xs text-neutral-500">
-          Sono tassi calcolati su tutto lo storico, non su {etichettaMese(mese)}: dicono quanto
-          costa ciò che si ripete, non quanto è uscito questo mese. Non si sommano fra loro perché
-          suggeriscono due azioni diverse.
-        </p>
+        <Suspense fallback={<ScheletroCoppia />}>
+          <Ricorrente mese={mese} />
+        </Suspense>
       </section>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* COME SI MUOVE                                                    */}
-      {/* ---------------------------------------------------------------- */}
+      {/* L'andamento non ha bisogno di nessuna query in piu': i totali di tutti
+          i mesi sono gia' quelli che hanno deciso quale mese mostrare. */}
       {andamento.length > 1 && (
         <section className="space-y-2">
           <h2 className="font-medium">Andamento</h2>
@@ -440,9 +195,294 @@ export default async function CruscottoPage({
         </section>
       )}
 
-      {/* ---------------------------------------------------------------- */}
-      {/* IN COSA                                                          */}
-      {/* ---------------------------------------------------------------- */}
+      <Suspense fallback={<ScheletroCiambella />}>
+        <InCosa mese={mese} />
+      </Suspense>
+
+      <Suspense fallback={<ScheletroElenco />}>
+        <DaChi mese={mese} />
+      </Suspense>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* I blocchi, ognuno con le sue letture                                        */
+/* -------------------------------------------------------------------------- */
+
+async function StatoEAvvisi() {
+  const [stato, avvisi, daConfermare] = await Promise.all([
+    leggiStato(),
+    leggiAvvisiNuovi(),
+    leggiDaConfermare(),
+  ]);
+
+  return (
+    <div className="space-y-4">
+      {stato.map((s) => (
+        <StatoSistema key={s.connection_id} riga={s} />
+      ))}
+
+      {/* Al massimo tre: una lista lunga di avvisi non e' piu' una lista di
+          avvisi. */}
+      {avvisi.length > 0 && (
+        <div className="space-y-2">
+          {avvisi.slice(0, 3).map((a) => (
+            <Link
+              key={a.id}
+              href="/avvisi"
+              className={`block rounded-lg border p-3 text-sm ${
+                a.severity === 'critical'
+                  ? 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200'
+                  : a.severity === 'warning'
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                    : 'border-neutral-200 dark:border-neutral-800'
+              }`}
+            >
+              <span className="font-medium">{a.title}</span>
+              <span className="mt-0.5 block text-xs opacity-80">{a.body}</span>
+            </Link>
+          ))}
+          {avvisi.length > 3 && (
+            <Link className="text-xs text-neutral-500 underline" href="/avvisi">
+              altri {avvisi.length - 3} avvisi
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Con il conteggio e non con un pallino: un numero e' un invito, un
+          pallino rosso e' un'ansia. */}
+      {daConfermare > 0 && (
+        <Link
+          href="/da-confermare"
+          className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700"
+        >
+          <span>
+            <strong>{daConfermare}</strong>{' '}
+            {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da confermare
+          </span>
+          <span className="shrink-0 text-neutral-500">→</span>
+        </Link>
+      )}
+    </div>
+  );
+}
+
+async function QuantoHoSpeso({
+  mese,
+  rigaMese,
+}: {
+  mese: string;
+  rigaMese: RigaTotaleMese | null;
+}) {
+  const [classi, variazioni, confronto, { giorniCoperti }, entrate] = await Promise.all([
+    leggiClassi(mese),
+    leggiVariazioni(mese),
+    leggiConfronto(mese),
+    leggiFinestra(mese),
+    leggiEntrate(mese),
+  ]);
+
+  // Il totale viene da `v_monthly_totals`, la vista che lo definisce. Le classi
+  // darebbero lo stesso numero, ma farlo dipendere da due letture invece che da
+  // una non porta niente.
+  const speso = rigaMese === null ? sommaClassi(classi) : centesimi(rigaMese.spesa);
+  const incassato = entrate === null ? null : centesimi(entrate.entrate);
+  const perClasse = new Map(
+    variazioni.classi.map((v) => [`${v.discrezionalita}|${v.contesto}`, v as Variazione]),
+  );
+  const spiegaIlConfronto = comeSiConfronta(variazioni.classi[0]);
+
+  return (
+    <section className="space-y-4">
+      <p className="text-3xl font-semibold tabular-nums sm:text-4xl">{formattaEuro(speso)}</p>
+
+      {confronto !== null && giorniCoperti !== null && (
+        <div className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
+          <p>
+            Nei <strong>primi {giorniCoperti} giorni</strong> del mese hai speso{' '}
+            <strong className="tabular-nums">{formattaEuro(confronto.corrente.spesa)}</strong>
+            {confronto.riferimento !== null && (
+              <>
+                , contro{' '}
+                <strong className="tabular-nums">{formattaEuro(confronto.riferimento)}</strong>{' '}
+                negli stessi giorni dei mesi scorsi
+                {confronto.scostamento !== null && (
+                  <>
+                    {' '}
+                    — {confronto.scostamento > 0 ? '+' : ''}
+                    {confronto.scostamento.toFixed(0)}%
+                  </>
+                )}
+              </>
+            )}
+            .
+          </p>
+          {confronto.precedenti.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+              {confronto.precedenti.map((p) => (
+                <li key={p.mese} className="tabular-nums">
+                  {etichettaBreve(p.mese)} {formattaEuro(p.spesa)}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-xs text-neutral-500">
+            Finestre della stessa lunghezza, non una proiezione a fine mese: «a questo ritmo
+            spenderai X» sarebbe un&rsquo;estrapolazione travestita da informazione.
+          </p>
+        </div>
+      )}
+
+      <Link className={`${BOTTONE_MINORE} w-fit`} href={perMese(mese)}>
+        vedi i {rigaMese?.movimenti ?? 0} movimenti del mese
+      </Link>
+
+      {classi.length === 0 ? (
+        <p className="text-sm text-neutral-500">Nessun movimento in questo mese.</p>
+      ) : (
+        <div className="space-y-3">
+          <BarraClassi voci={perLaBarra(classi)} />
+
+          <ul className="text-sm">
+            {classi.map((c) => (
+              <li
+                key={`${c.discrezionalita}-${c.contesto}`}
+                className="border-b border-neutral-100 dark:border-neutral-900"
+              >
+                <Link
+                  href={perMese(mese, { classe: c.discrezionalita })}
+                  className="flex min-h-11 items-center justify-between gap-3"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: COLORE_CLASSE[c.discrezionalita] ?? '#a3a3a3' }}
+                    />
+                    <span className="min-w-0 truncate">
+                      {c.discrezionalita}
+                      <span className="text-neutral-500"> · {c.contesto}</span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums whitespace-nowrap">
+                    {formattaEuro(centesimi(c.spesa))}
+                    <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {variazioni.mancanti !== null && (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
+              <strong>Le cifre qui sopra sono corrette</strong> — vengono dalle viste, non dal
+              confronto. Motivo: {variazioni.mancanti}
+            </p>
+          )}
+
+          {spiegaIlConfronto !== null && (
+            <p className="text-xs text-neutral-500">
+              {spiegaIlConfronto} Il termine di paragone &egrave; la mediana <strong>scelta</strong>{' '}
+              — un mese realmente osservato, non una media. Le frecce con un asterisco poggiano su
+              meno della met&agrave; dei mesi guardati.
+            </p>
+          )}
+        </div>
+      )}
+
+      {incassato !== null && incassato !== 0n && (
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          Entrate del mese <strong className="tabular-nums">{formattaEuro(incassato)}</strong> — la
+          spesa ne &egrave; <strong>{quotaPercentuale(speso, incassato).toFixed(0)}%</strong>.{' '}
+          <span className="text-neutral-500">
+            Escluse le entrate che sono giroconti: un rientro dal conto deposito non &egrave;
+            reddito.
+          </span>
+        </p>
+      )}
+
+      {rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0) && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          {rigaMese.senza_cambio > 0 && (
+            <>
+              <strong>{rigaMese.senza_cambio}</strong> movimenti in valuta senza tasso di cambio{' '}
+              <strong>non sono nel totale</strong>: convertirli a runtime darebbe due numeri diversi
+              in due schermate.{' '}
+            </>
+          )}
+          {rigaMese.senza_categoria > 0 && (
+            <>
+              <strong>{rigaMese.senza_categoria}</strong> movimenti per{' '}
+              {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma non in
+              nessuna categoria.{' '}
+              <Link className="underline" href="/revisione">
+                Assegnali
+              </Link>
+              .
+            </>
+          )}
+        </p>
+      )}
+    </section>
+  );
+}
+
+async function Ricorrente({ mese }: { mese: string }) {
+  const voci = ordinaPerPeso(await leggiRicorrente());
+  const abbonamenti = totalePerTipo(voci, 'abbonamento');
+  const abitudini = totalePerTipo(voci, 'abitudine');
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+          <p className="text-xs tracking-wide text-neutral-500 uppercase">Abbonamenti</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{formattaEuro(abbonamenti)}</p>
+          <p className="mt-1 text-xs text-neutral-500">Si disdicono. Il risparmio è certo.</p>
+        </div>
+        <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+          <p className="text-xs tracking-wide text-neutral-500 uppercase">Abitudini</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{formattaEuro(abitudini)}</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Niente da disdire: si ripete perché lo si rifà.
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-neutral-500">
+        Sono tassi calcolati su tutto lo storico, non su {etichettaMese(mese)}: dicono quanto costa
+        ciò che si ripete, non quanto è uscito questo mese. Non si sommano fra loro perché
+        suggeriscono due azioni diverse.
+      </p>
+    </>
+  );
+}
+
+async function InCosa({ mese }: { mese: string }) {
+  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
+  if (categorie.length === 0) return null;
+
+  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
+
+  // Solo le **radici**: con il roll-up la loro somma e' la spesa categorizzata
+  // del mese, esattamente una volta. Mettendoci anche le figlie ogni euro
+  // comparirebbe due volte e il giro non vorrebbe piu' dire niente.
+  const radici: FettaCategoria[] = categorie
+    .filter((c) => c.parent_id === null)
+    .map((c) => ({
+      chiave: c.category_id,
+      etichetta: c.categoria,
+      valore: centesimi(c.spesa),
+      href: `/categoria/${c.category_id}?mese=${mese}`,
+      variazione: perCategoria.get(c.category_id),
+    }))
+    .filter((f) => f.valore !== 0n);
+  const inCategoria = radici.reduce((s, r) => s + r.valore, 0n);
+  const totale = sommaClassi(categorie.filter((c) => c.parent_id === null));
+
+  return (
+    <>
       {radici.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-medium">In cosa</h2>
@@ -454,66 +494,68 @@ export default async function CruscottoPage({
         </section>
       )}
 
-      {categorie.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-medium">L&rsquo;albero intero</h2>
-          <p className="text-xs text-neutral-500">
-            Ogni categoria porta la somma delle sue sottocategorie, e si tocca per vedere di cosa
-            &egrave; fatta. Dove la cifra fra parentesi compare, &egrave; la parte finita
-            direttamente su quel nodo invece che in un figlio.
-          </p>
-          <Albero righe={categorie} totale={speso} mese={mese} variazioni={perCategoria} />
-        </section>
-      )}
+      <section className="mt-10 space-y-2">
+        <h2 className="font-medium">L&rsquo;albero intero</h2>
+        <p className="text-xs text-neutral-500">
+          Ogni categoria porta la somma delle sue sottocategorie, e si tocca per vedere di cosa
+          &egrave; fatta. Dove la cifra fra parentesi compare, &egrave; la parte finita direttamente
+          su quel nodo invece che in un figlio.
+        </p>
+        <Albero righe={categorie} totale={totale} mese={mese} variazioni={perCategoria} />
+      </section>
+    </>
+  );
+}
 
-      {/* ---------------------------------------------------------------- */}
-      {/* DA CHI                                                           */}
-      {/* ---------------------------------------------------------------- */}
-      {esercenti.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-medium">Da chi</h2>
-          <ul className="space-y-1 text-sm">
-            {esercenti.map((e, i) => {
-              const valore = centesimi(e.spesa);
-              const riga = (
-                <>
-                  <span className="min-w-0">
-                    <span className="block truncate">{e.esercente}</span>
-                    <span className="text-xs text-neutral-500">
-                      {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'} ·{' '}
-                      {e.discrezionalita}
-                    </span>
-                  </span>
-                  <span className="shrink-0 tabular-nums whitespace-nowrap">
-                    {formattaEuro(valore)}
-                    <Freccia
-                      riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
-                    />
-                  </span>
-                </>
-              );
-              return (
-                <li
-                  key={`${e.merchant_id ?? 'nessuno'}-${e.discrezionalita}-${i}`}
-                  className="border-b border-neutral-100 dark:border-neutral-900"
+async function DaChi({ mese }: { mese: string }) {
+  const [esercenti, variazioni] = await Promise.all([leggiEsercenti(mese), leggiVariazioni(mese)]);
+  if (esercenti.length === 0) return null;
+
+  const perEsercente = new Map(variazioni.esercenti.map((v) => [v.merchant_id, v as Variazione]));
+
+  return (
+    <section className="space-y-2">
+      <h2 className="font-medium">Da chi</h2>
+      <ul className="space-y-1 text-sm">
+        {esercenti.map((e, i) => {
+          const valore = centesimi(e.spesa);
+          const riga = (
+            <>
+              <span className="min-w-0">
+                <span className="block truncate">{e.esercente}</span>
+                <span className="text-xs text-neutral-500">
+                  {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'} ·{' '}
+                  {e.discrezionalita}
+                </span>
+              </span>
+              <span className="shrink-0 tabular-nums whitespace-nowrap">
+                {formattaEuro(valore)}
+                <Freccia
+                  riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
+                />
+              </span>
+            </>
+          );
+          return (
+            <li
+              key={`${e.merchant_id ?? 'nessuno'}-${e.discrezionalita}-${i}`}
+              className="border-b border-neutral-100 dark:border-neutral-900"
+            >
+              {e.merchant_id === null ? (
+                <span className="flex min-h-11 items-center justify-between gap-3">{riga}</span>
+              ) : (
+                <Link
+                  href={`/esercente/${e.merchant_id}`}
+                  className="flex min-h-11 items-center justify-between gap-3"
                 >
-                  {e.merchant_id === null ? (
-                    <span className="flex min-h-11 items-center justify-between gap-3">{riga}</span>
-                  ) : (
-                    <Link
-                      href={`/esercente/${e.merchant_id}`}
-                      className="flex min-h-11 items-center justify-between gap-3"
-                    >
-                      {riga}
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-    </div>
+                  {riga}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

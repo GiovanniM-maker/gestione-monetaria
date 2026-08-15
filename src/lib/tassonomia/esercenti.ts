@@ -26,15 +26,12 @@ export type RigaEsercenteElenco = {
   canonical_name: string;
   category_id: string | null;
   discretion: string | null;
-  context: string | null;
   is_subscription: boolean;
   origine: string | null;
   confermato_at: string | null;
   movimenti: number;
   totale: string;
-  ultima: string | null;
   classificazione_variabile: boolean;
-  descrizione_trovata: string | null;
 };
 
 export type Filtro = 'tutti' | 'variabili' | 'fissi' | 'da_confermare' | 'senza_categoria';
@@ -68,14 +65,14 @@ export async function leggiEsercenti(
 ): Promise<{ righe: readonly RigaEsercenteElenco[]; totale: number }> {
   const supabase = await createSupabaseServerClient();
 
-  let q = supabase
-    .from('v_merchant_totals')
-    .select(
-      'id, canonical_name, category_id, discretion, context, is_subscription, origine, ' +
-        'confermato_at, movimenti, totale::text, ultima, classificazione_variabile, ' +
-        'descrizione_trovata',
-      { count: 'exact' },
-    );
+  let q = supabase.from('v_merchant_totals').select(
+    // Solo le colonne che la riga mostra. `descrizione_trovata` sono fino a
+    // 300 caratteri per esercente che nessuno legge in un elenco: da sola
+    // valeva meta' dei 47 KB della pagina.
+    'id, canonical_name, category_id, discretion, is_subscription, origine, ' +
+      'confermato_at, movimenti, totale::text, classificazione_variabile',
+    { count: 'exact' },
+  );
 
   if (filtro === 'variabili') q = q.eq('classificazione_variabile', true);
   if (filtro === 'fissi') q = q.eq('classificazione_variabile', false);
