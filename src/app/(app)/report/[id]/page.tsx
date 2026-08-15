@@ -68,7 +68,7 @@ export default async function UnReportPage({ params }: { params: Promise<{ id: s
       */}
       <details className="scheda p-3 text-xs">
         <summary className="cursor-pointer text-testo-2">I dati esatti che ha ricevuto</summary>
-        <pre className="mt-2 overflow-x-auto text-[11px] whitespace-pre-wrap text-testo-2 text-testo-3">
+        <pre className="mt-2 overflow-x-auto text-[11px] whitespace-pre-wrap text-testo-2">
           {JSON.stringify(r.metrics, null, 2)}
         </pre>
       </details>

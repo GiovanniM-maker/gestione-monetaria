@@ -8,6 +8,8 @@ import {
   DISCREZIONALITA,
   PER_PAGINA,
   TIPI,
+  descriviFiltri,
+  filtriAttivi,
   indirizzo,
   leggiFiltri,
 } from '@/lib/movimenti/filtri';
@@ -70,145 +72,171 @@ export default async function MovimentiPage({
   const eVariabile = new Set(comeArray<{ id: string }>(variabili).map((m) => m.id));
   const primaDellaPagina = (filtri.pagina - 1) * PER_PAGINA;
 
+  // I due nomi del riassunto senza una query in piu': la categoria sta
+  // nell'albero appena letto, e l'esercente — quando e' lui il filtro — e'
+  // quello di ogni riga, quindi basta la prima. Se non ce ne sono resta «un
+  // esercente», che e' vero: non sappiamo come si chiama.
+  const attivi = filtriAttivi(filtri);
+  const descrizione = descriviFiltri(filtri, {
+    categoria: alberoCategorie.find((c) => c.id === filtri.categoria)?.percorso ?? null,
+    esercente: esito.righe[0]?.esercente ?? null,
+  });
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Movimenti</h1>
-        <p className="mt-1 text-sm text-testo-2 text-testo-3">
-          Il totale qui sotto &egrave; quello di{' '}
-          <strong>tutto ci&ograve; che &egrave; filtrato</strong>, non della pagina che stai
-          leggendo.
+      <h1 className="text-[22px] font-bold tracking-[-0.03em]">Movimenti</h1>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* IL TOTALE DI CIO' CHE E' FILTRATO                                 */}
+      {/* ---------------------------------------------------------------- */}
+      {/* In cima e non sotto i filtri: e' la risposta, e prima stava sotto
+          sette controlli, cioe' sotto il bordo dello schermo. */}
+      <div className="scheda space-y-2 p-5">
+        <p className="numerone text-[34px]">{euro(esito.totaleImporto)}</p>
+        <p className="text-[13px] text-testo-2">
+          {esito.totaleRighe} {esito.totaleRighe === 1 ? 'movimento' : 'movimenti'} — il totale di
+          tutto ci&ograve; che &egrave; filtrato, non della pagina che stai leggendo.
+        </p>
+        <p className="flex flex-wrap gap-1.5 pt-1">
+          {descrizione.map((d) => (
+            <span key={d} className="rounded-full bg-s3 px-2.5 py-1 text-[12px] text-testo-2">
+              {d}
+            </span>
+          ))}
         </p>
       </div>
 
       {/* ---------------------------------------------------------------- */}
       {/* I FILTRI                                                          */}
       {/* ---------------------------------------------------------------- */}
-      <form method="get" action="/movimenti" className="space-y-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={filtri.ricerca}
-          placeholder="cerca fra esercenti e causali"
-          className={CAMPO_PIENO}
-        />
+      <details className="scheda p-4">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px] font-medium">
+          Filtra
+          <span aria-hidden="true" className="text-testo-3">
+            ›
+          </span>
+        </summary>
+        <form method="get" action="/movimenti" className="space-y-2 pt-3">
+          <input
+            type="search"
+            name="q"
+            defaultValue={filtri.ricerca}
+            placeholder="cerca fra esercenti e causali"
+            className={CAMPO_PIENO}
+          />
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <label className="block">
-            <span className="text-xs text-testo-2">dal</span>
-            <input type="date" name="da" defaultValue={filtri.da ?? ''} className={CAMPO_PIENO} />
-          </label>
-          <label className="block">
-            <span className="text-xs text-testo-2">al</span>
-            <input type="date" name="a" defaultValue={filtri.a ?? ''} className={CAMPO_PIENO} />
-          </label>
-          <label className="block">
-            <span className="text-xs text-testo-2">tipo</span>
-            <select name="tipo" defaultValue={filtri.tipo} className={CAMPO_PIENO}>
-              {TIPI.map((t) => (
-                <option key={t} value={t}>
-                  {ETICHETTE_TIPO[t]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs text-testo-2">ordine</span>
-            <select name="ordine" defaultValue={filtri.ordine} className={CAMPO_PIENO}>
-              <option value="data">dal più recente</option>
-              <option value="importo">dal più grosso</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs text-testo-2">categoria</span>
-            <select name="categoria" defaultValue={filtri.categoria ?? ''} className={CAMPO_PIENO}>
-              <option value="">tutte</option>
-              {alberoCategorie.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.percorso}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs text-testo-2">classe</span>
-            <select
-              name="classe"
-              defaultValue={filtri.discrezionalita ?? ''}
-              className={CAMPO_PIENO}
-            >
-              <option value="">tutte</option>
-              {DISCREZIONALITA.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs text-testo-2">contesto</span>
-            <select name="contesto" defaultValue={filtri.contesto ?? ''} className={CAMPO_PIENO}>
-              <option value="">tutti</option>
-              {CONTESTI.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <button type="submit" className={`${BOTTONE} w-full`}>
-              Filtra
-            </button>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <label className="block">
+              <span className="text-xs text-testo-2">dal</span>
+              <input type="date" name="da" defaultValue={filtri.da ?? ''} className={CAMPO_PIENO} />
+            </label>
+            <label className="block">
+              <span className="text-xs text-testo-2">al</span>
+              <input type="date" name="a" defaultValue={filtri.a ?? ''} className={CAMPO_PIENO} />
+            </label>
+            <label className="block">
+              <span className="text-xs text-testo-2">tipo</span>
+              <select name="tipo" defaultValue={filtri.tipo} className={CAMPO_PIENO}>
+                {TIPI.map((t) => (
+                  <option key={t} value={t}>
+                    {ETICHETTE_TIPO[t]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-testo-2">ordine</span>
+              <select name="ordine" defaultValue={filtri.ordine} className={CAMPO_PIENO}>
+                <option value="data">dal più recente</option>
+                <option value="importo">dal più grosso</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-testo-2">categoria</span>
+              <select
+                name="categoria"
+                defaultValue={filtri.categoria ?? ''}
+                className={CAMPO_PIENO}
+              >
+                <option value="">tutte</option>
+                {alberoCategorie.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.percorso}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-testo-2">classe</span>
+              <select
+                name="classe"
+                defaultValue={filtri.discrezionalita ?? ''}
+                className={CAMPO_PIENO}
+              >
+                <option value="">tutte</option>
+                {DISCREZIONALITA.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-testo-2">contesto</span>
+              <select name="contesto" defaultValue={filtri.contesto ?? ''} className={CAMPO_PIENO}>
+                <option value="">tutti</option>
+                {CONTESTI.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end">
+              <button type="submit" className={`${BOTTONE} w-full`}>
+                Filtra
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* L'esercente non ha un selettore: la lista sarebbe di centinaia di
+          {/* L'esercente non ha un selettore: la lista sarebbe di centinaia di
             voci. Ci si arriva toccandolo dal cruscotto o da una riga, e il
             campo nascosto lo tiene mentre si cambiano gli altri filtri. */}
-        {filtri.merchant !== null && (
-          <input type="hidden" name="esercente" value={filtri.merchant} />
-        )}
-      </form>
+          {filtri.merchant !== null && (
+            <input type="hidden" name="esercente" value={filtri.merchant} />
+          )}
+        </form>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* IL TOTALE DI CIO' CHE E' FILTRATO                                 */}
-      {/* ---------------------------------------------------------------- */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-y border-filo py-3">
-        <p className="text-2xl font-semibold tabular-nums">{euro(esito.totaleImporto)}</p>
-        <p className="text-sm text-testo-2">
-          {esito.totaleRighe} {esito.totaleRighe === 1 ? 'movimento' : 'movimenti'} ·{' '}
-          {ETICHETTE_TIPO[filtri.tipo]}
-        </p>
-        {/* Fuori dalla frase e non dentro: e' un'azione, e un bersaglio alto
-            sedici pixel dentro una riga di testo si sbaglia col pollice. */}
-        {(filtri.merchant !== null || filtri.categoria !== null || filtri.ricerca !== '') && (
-          <Link className={BOTTONE_MINORE} href="/movimenti">
+        {/* Fuori dal modulo e non dentro: non e' un filtro, e' toglierli
+            tutti. Un bersaglio alto sedici pixel dentro una riga di testo si
+            sbaglia col pollice, quindi e' un bottone. */}
+        {attivi && (
+          <Link className={`${BOTTONE_MINORE} mt-2 w-full`} href="/movimenti">
             togli i filtri
           </Link>
         )}
-      </div>
+      </details>
 
       {/* ---------------------------------------------------------------- */}
       {/* LE RIGHE                                                          */}
       {/* ---------------------------------------------------------------- */}
       {esito.righe.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
+        <p className="scheda p-6 text-center text-[14px] text-testo-2">
           Nessun movimento con questi filtri.
         </p>
       ) : (
-        <ul className="divide-y divide-filo">
+        <ul className="scheda elenco px-4">
           {esito.righe.map((r) => (
-            <li key={r.id} className="space-y-1 py-1">
+            <li key={r.id} className="py-1">
               <Link
                 href={`/movimenti/${r.id}`}
                 className="flex min-h-14 items-center justify-between gap-3 py-1"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm">
+                  <span className="block truncate text-[15px]">
                     {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
                   </span>
-                  <span className="mt-0.5 block text-xs text-testo-2">
+                  <span className="mt-0.5 block text-[12px] text-testo-3">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}
                     {r.discrezionalita !== null && ` · ${r.discrezionalita}`}
@@ -223,10 +251,10 @@ export default async function MovimentiPage({
                     </span>
                   )}
                 </span>
-                <span className="shrink-0 text-right text-sm tabular-nums">
+                <span className="cifra shrink-0 text-right text-[15px]">
                   {euro(r.amount_eur ?? r.amount)}
                   {r.currency !== 'EUR' && (
-                    <span className="block text-xs text-testo-2">{r.currency}</span>
+                    <span className="block text-[12px] text-testo-3">{r.currency}</span>
                   )}
                 </span>
               </Link>

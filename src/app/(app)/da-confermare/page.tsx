@@ -28,12 +28,20 @@ export default async function DaConfermarePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Da confermare</h1>
-        <p className="mt-1 text-sm text-testo-2 text-testo-3">
-          <strong>Va bene</strong> lascia la riga agganciata al suo esercente: se domani cambi la
-          classificazione di quell&rsquo;esercente, questa la segue. <strong>Correggi</strong> dice
-          che questa spesa fa eccezione, e da l&igrave; in poi nessun automatismo la tocca.
-        </p>
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Da confermare</h1>
+        {/* La differenza fra i due gesti va detta, ma non sopra le carte a ogni
+            apertura: chi apre questa schermata la apre per premere. */}
+        <details className="mt-1 text-[13px] text-testo-2">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
+            che differenza c&rsquo;&egrave; fra i due bottoni?
+          </summary>
+          <p className="pb-2">
+            <strong className="text-testo">Va bene</strong> lascia la riga agganciata al suo
+            esercente: se domani cambi la classificazione di quell&rsquo;esercente, questa la segue.{' '}
+            <strong className="text-testo">Correggi</strong> dice che questa spesa fa eccezione, e
+            da l&igrave; in poi nessun automatismo la tocca.
+          </p>
+        </details>
       </div>
 
       <PannelloConferma righe={righe} />

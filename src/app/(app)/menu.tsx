@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { SignOutButton } from './sign-out-button';
 
 /**
  * Il menu.
@@ -112,9 +113,13 @@ export function Menu({ email }: { email: string | null }) {
             </div>
           ))}
 
-          {email !== null && (
-            <p className="border-t border-filo px-2 pt-3 text-xs text-testo-2">{email}</p>
-          )}
+          {/* Uscire e' l'azione piu' rara dell'applicazione, e stava nell'angolo
+              piu' visibile della schermata. Qui accanto all'indirizzo, che e'
+              anche il solo posto dove serve sapere con chi si e' entrati. */}
+          <div className="mt-1 flex items-center justify-between gap-3 border-t border-filo px-2 pt-3">
+            <span className="min-w-0 truncate text-[12px] text-testo-3">{email ?? ''}</span>
+            <SignOutButton />
+          </div>
         </nav>
       )}
     </>

@@ -122,7 +122,7 @@ export default async function EsercentiPage({
             className={`inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-xs sm:min-h-9 ${
               filtro === f.chiave
                 ? 'bg-testo font-medium text-s1'
-                : 'border border-filo text-testo-2 text-testo-3'
+                : 'border border-filo text-testo-2'
             }`}
           >
             {f.etichetta}

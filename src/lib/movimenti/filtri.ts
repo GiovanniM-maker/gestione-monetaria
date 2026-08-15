@@ -116,6 +116,62 @@ export function indirizzo(filtri: Filtri, modifiche: Partial<Filtri> = {}): stri
 }
 
 /** Il primo e l'ultimo giorno di un mese `YYYY-MM`, per arrivare qui dal cruscotto. */
+/**
+ * I filtri attivi, detti a parole. Serve al riassunto sopra la lista.
+ *
+ * Sette controlli aperti occupavano tutta la prima schermata, e la lista — che
+ * e' il motivo per cui si apre questa pagina — cominciava sotto il bordo. Ora
+ * i controlli stanno chiusi e al loro posto c'e' **cio' che stanno facendo**:
+ * un elenco che si legge in un secondo, e che dice se vale la pena aprirli.
+ *
+ * `tipo` c'e' sempre, anche quando e' quello predefinito: e' il filtro che piu'
+ * di ogni altro spiega perche' il totale e' quello — «spese reali» significa
+ * senza giroconti — e sottinteso sarebbe la prima cosa che si dimentica.
+ *
+ * I nomi di categoria ed esercente non li sa questa funzione: chi chiama passa
+ * quelli che ha risolto, o niente e restano «una categoria». Risolverli qui
+ * vorrebbe dire una query dentro una funzione pura.
+ */
+export function descriviFiltri(
+  filtri: Filtri,
+  nomi: { categoria?: string | null; esercente?: string | null } = {},
+): readonly string[] {
+  const voci: string[] = [];
+  const etichette: Record<Tipo, string> = {
+    spesa: 'spese reali',
+    entrate: 'entrate',
+    giroconti: 'giroconti',
+    tutti: 'tutti i movimenti',
+  };
+  voci.push(etichette[filtri.tipo]);
+
+  if (filtri.da !== null && filtri.a !== null) voci.push(`${filtri.da} → ${filtri.a}`);
+  else if (filtri.da !== null) voci.push(`dal ${filtri.da}`);
+  else if (filtri.a !== null) voci.push(`fino al ${filtri.a}`);
+
+  if (filtri.categoria !== null) voci.push(nomi.categoria ?? 'una categoria');
+  if (filtri.merchant !== null) voci.push(nomi.esercente ?? 'un esercente');
+  if (filtri.discrezionalita !== null) voci.push(filtri.discrezionalita);
+  if (filtri.contesto !== null) voci.push(filtri.contesto);
+  if (filtri.ricerca !== '') voci.push(`«${filtri.ricerca}»`);
+  if (filtri.ordine === 'importo') voci.push('dal più grosso');
+
+  return voci;
+}
+
+/** Se qualcosa restringe la lista. Il solo `tipo` non conta: c'e' sempre. */
+export function filtriAttivi(filtri: Filtri): boolean {
+  return (
+    filtri.da !== null ||
+    filtri.a !== null ||
+    filtri.categoria !== null ||
+    filtri.merchant !== null ||
+    filtri.discrezionalita !== null ||
+    filtri.contesto !== null ||
+    filtri.ricerca !== ''
+  );
+}
+
 export function estremiDelMese(mese: string): { da: string; a: string } | null {
   const trovato = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(mese.trim());
   if (trovato === null) return null;

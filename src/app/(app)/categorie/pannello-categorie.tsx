@@ -201,7 +201,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
       {daEliminare !== null && (
         <section className="space-y-3 nota nota-errore">
           <h2 className="text-sm font-medium">Elimino «{daEliminare.nome}»?</h2>
-          <p className="text-xs text-testo-2 text-testo-3">
+          <p className="text-xs text-testo-2">
             {contenuto === null ? (
               <>
                 <strong>Non so quanto contiene</strong> — i conteggi non sono disponibili. Quello

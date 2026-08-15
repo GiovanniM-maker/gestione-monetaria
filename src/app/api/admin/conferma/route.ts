@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import { confermaMovimento, ConfermaNonValida, type RichiestaConferma } from '@/lib/conferma/leggi';
+import {
+  confermaMovimenti,
+  confermaMovimento,
+  ConfermaNonValida,
+  type RichiestaConferma,
+} from '@/lib/conferma/leggi';
 import { scadeTutto } from '@/lib/supabase/cache';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +23,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    // Un elenco di identificativi e' «va bene su tutte quelle che sto
+    // guardando»; senza elenco e' la conferma o la correzione di una sola. Due
+    // forme e non un parametro opzionale, come le due funzioni SQL sotto.
+    const ids = corpo['ids'];
+    if (Array.isArray(ids)) {
+      const confermate = await confermaMovimenti(ids.map((i) => String(i)));
+      return risposta({ ok: true, confermate });
+    }
     await confermaMovimento(corpo as unknown as RichiestaConferma);
     return risposta({ ok: true });
   } catch (errore) {

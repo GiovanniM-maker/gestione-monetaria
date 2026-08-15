@@ -70,7 +70,7 @@ export default async function DebugSyncPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Ingestion</h1>
-        <p className="mt-1 text-sm text-testo-2 text-testo-3">
+        <p className="mt-1 text-sm text-testo-2">
           Fase 2. I payload arrivano integrali in <code>raw_transactions</code>, che non viene mai
           modificata ne&rsquo; cancellata. La normalizzazione e&rsquo; lavoro della Fase 3.
         </p>

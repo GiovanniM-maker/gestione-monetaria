@@ -33,7 +33,7 @@ export default function DebugEbError({
         )}
       </div>
 
-      <p className="text-sm text-testo-2 text-testo-3">
+      <p className="text-sm text-testo-2">
         Il testo completo sta nei <strong>Runtime Logs</strong> di Vercel: apri il deployment, vai
         su Logs e cerca il digest qui sopra.
       </p>

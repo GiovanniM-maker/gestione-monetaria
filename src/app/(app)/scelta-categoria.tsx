@@ -91,30 +91,41 @@ export function SceltaCategoria({
 
   return (
     <div className="w-full">
-      <select
-        value={valore}
-        onChange={(e) => void cambia(e.target.value)}
-        disabled={inCorso}
-        aria-label="categoria"
-        className={`min-h-11 w-full rounded-md bg-s3 px-2 text-[13px] sm:min-h-9 ${
-          inCorso ? 'opacity-60' : ''
-        }`}
-      >
-        <option value="">— senza categoria —</option>
-        {categorie.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.percorso}
-          </option>
-        ))}
-      </select>
+      {/* La portata sta **accanto** al controllo e non sotto: sotto era una riga
+          di testo per ogni movimento dell'elenco, cioe' cinquanta ripetizioni
+          della stessa frase in una schermata. Accanto costa due parole, e la
+          frase intera resta nel titolo per chi la sfiora. */}
+      <div className="flex items-center gap-2">
+        <select
+          value={valore}
+          onChange={(e) => void cambia(e.target.value)}
+          disabled={inCorso}
+          aria-label="categoria"
+          className={`min-h-11 min-w-0 flex-1 rounded-controllo bg-s3 px-2.5 text-[13px] sm:min-h-9 ${
+            inCorso ? 'opacity-60' : ''
+          }`}
+        >
+          <option value="">— senza categoria —</option>
+          {categorie.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.percorso}
+            </option>
+          ))}
+        </select>
 
-      {etichetta === true && (
-        <p className="mt-0.5 text-[11px] text-testo-2">
-          {ambito.tipo === 'esercente'
-            ? 'vale per tutte le spese di questo esercente'
-            : 'vale solo per questa riga'}
-        </p>
-      )}
+        {etichetta === true && (
+          <span
+            className="shrink-0 text-[11px] text-testo-3"
+            title={
+              ambito.tipo === 'esercente'
+                ? 'vale per tutte le spese di questo esercente'
+                : 'vale solo per questa riga, e la marca come corretta a mano'
+            }
+          >
+            {ambito.tipo === 'esercente' ? 'tutte le sue' : 'solo questa'}
+          </span>
+        )}
+      </div>
 
       {errore !== null && <p className="nota nota-errore mt-1 text-[11px]">{errore}</p>}
     </div>

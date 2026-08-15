@@ -103,3 +103,27 @@ export async function confermaMovimento(richiesta: RichiestaConferma): Promise<v
 
   if (error !== null) throw new Error(`Conferma fallita: ${error.message}`);
 }
+
+/**
+ * «Va bene» su tutte quelle che si stanno guardando.
+ *
+ * Esiste perche' due giorni saltati trasformano la lista della sera in quindici
+ * righe identiche, e una lista di arretrati non si smaltisce: si chiude. E' un
+ * `update` solo — quindici conferme sarebbero quindici viaggi fino al
+ * database, cioe' cinque secondi di schermata ferma.
+ *
+ * **Non incide niente**: come la sua sorella singola non tocca
+ * `manually_categorized`, quindi le righe continuano a seguire il loro
+ * esercente. Approvare in blocco non e' una scorciatoia per fare eccezioni in
+ * blocco: quelle restano una riga per volta.
+ */
+export async function confermaMovimenti(ids: readonly string[]): Promise<number> {
+  const puliti = ids.filter((i) => typeof i === 'string' && i.trim() !== '');
+  if (puliti.length === 0) throw new ConfermaNonValida('Nessun movimento indicato.');
+  if (puliti.length > 100) throw new ConfermaNonValida(`Troppi movimenti: ${puliti.length}`);
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('conferma_movimenti', { p_ids: puliti });
+  if (error !== null) throw new Error(`Conferma in blocco fallita: ${error.message}`);
+  return typeof data === 'number' ? data : 0;
+}

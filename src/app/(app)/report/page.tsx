@@ -14,7 +14,7 @@ export default async function ReportPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Report mensili</h1>
-        <p className="mt-1 text-sm text-testo-2 text-testo-3">
+        <p className="mt-1 text-sm text-testo-2">
           Le cifre le calcola il database, il modello scrive solo le frasi intorno. Gli aggregati
           esatti che ha ricevuto restano salvati: se una frase non torna, si può dire se ha
           sbagliato il modello o il calcolo.

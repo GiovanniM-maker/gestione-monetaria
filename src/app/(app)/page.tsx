@@ -415,9 +415,17 @@ async function QuantoHoSpeso({
                     className="size-2.5 shrink-0 rounded-full"
                     style={{ background: COLORE_CLASSE[c.discrezionalita] ?? 'var(--neutro)' }}
                   />
-                  <span className="min-w-0 flex-1 truncate capitalize">
-                    {c.discrezionalita}
-                    <span className="text-testo-3"> · {c.contesto}</span>
+                  {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
+                      Personale» accanto a un importo e a una freccia finiva
+                      troncato a «Voluttuario · Per…», e il nome della classe e'
+                      la cosa che si legge. */}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate capitalize">{c.discrezionalita}</span>
+                    {/* Su una riga non classificata classe e contesto sono la
+                        stessa parola, e ripeterla non aggiunge niente. */}
+                    {c.contesto !== c.discrezionalita && (
+                      <span className="block truncate text-[12px] text-testo-3">{c.contesto}</span>
+                    )}
                   </span>
                   <span className="cifra shrink-0 whitespace-nowrap">
                     {formattaEuro(centesimi(c.spesa))}

@@ -73,7 +73,7 @@ export default async function CopilotaPage({
         </div>
       </div>
 
-      <p className="text-sm text-testo-2 text-testo-3">
+      <p className="text-sm text-testo-2">
         Chiedi un numero e lo va a prendere dal database: non ne calcola nessuno. Le modifiche le{' '}
         <strong>prepara</strong>, e le applichi tu con un tocco.
       </p>

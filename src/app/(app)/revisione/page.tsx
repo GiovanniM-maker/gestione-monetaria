@@ -73,7 +73,7 @@ export default async function RevisionePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Revisione della tassonomia</h1>
-        <p className="mt-1 text-sm text-testo-2 text-testo-3">
+        <p className="mt-1 text-sm text-testo-2">
           Ogni assegnazione crea un <strong>alias</strong>, non una correzione su una riga: vale per
           le occorrenze passate e per quelle future. È il motivo per cui questo lavoro finisce.
         </p>

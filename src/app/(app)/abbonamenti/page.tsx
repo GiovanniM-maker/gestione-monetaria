@@ -25,13 +25,19 @@ export default async function AbbonamentiPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Costo ricorrente</h1>
-        <p className="mt-1 text-sm text-testo-2 text-testo-3">
-          Quanto costa al mese ci&ograve; che si ripete, diviso per classe di
-          discrezionalit&agrave;. In due numeri e non in uno: gli <strong>abbonamenti</strong> si
-          disdicono, le <strong>abitudini</strong> si cambiano, e sommarli nasconderebbe quale delle
-          due azioni &egrave; possibile.
-        </p>
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Costo ricorrente</h1>
+        <details className="mt-1 text-[13px] text-testo-2">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
+            perch&eacute; due numeri e non uno?
+          </summary>
+          <p className="pb-2">
+            Quanto costa al mese ci&ograve; che si ripete, diviso per classe di
+            discrezionalit&agrave;. In due numeri e non in uno: gli{' '}
+            <strong className="text-testo">abbonamenti</strong> si disdicono, le{' '}
+            <strong className="text-testo">abitudini</strong> si cambiano, e sommarli nasconderebbe
+            quale delle due azioni &egrave; possibile.
+          </p>
+        </details>
       </div>
 
       <PannelloAbbonamenti

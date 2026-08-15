@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth/session';
-import { SignOutButton } from './sign-out-button';
 import { Menu } from './menu';
 import { Barra } from './barra';
 
@@ -31,15 +30,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                  pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]
                  sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
     >
-      <header className="flex flex-wrap items-center gap-x-2 py-2">
+      {/* L'intestazione e' ridotta a una riga sottile: il nome
+          dell'applicazione e il bottone per uscire occupavano il posto piu'
+          visibile della schermata per due cose che non si guardano mai. Il
+          titolo di ogni pagina sta sotto, dove va letto. */}
+      <header className="flex flex-wrap items-center gap-x-2 py-1">
         <Menu email={user.email ?? null} />
         <Link
           href="/"
-          className="inline-flex min-h-11 flex-1 items-center text-[15px] font-semibold tracking-tight"
+          className="inline-flex min-h-11 flex-1 items-center text-[13px] font-medium text-testo-3"
         >
           Gestione monetaria
         </Link>
-        <SignOutButton />
       </header>
 
       {/* Lo spazio in fondo e' la barra piu' un respiro: senza, l'ultima riga

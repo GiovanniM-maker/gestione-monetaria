@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { estremiDelMese, indirizzo, leggiFiltri } from '@/lib/movimenti/filtri';
+import {
+  descriviFiltri,
+  estremiDelMese,
+  filtriAttivi,
+  indirizzo,
+  leggiFiltri,
+} from '@/lib/movimenti/filtri';
 
 const VUOTI = leggiFiltri({});
 
@@ -82,5 +88,43 @@ describe('estremiDelMese', () => {
 
   it('su un mese non valido risponde null', () => {
     expect(estremiDelMese('2026-13')).toBeNull();
+  });
+});
+
+describe('descriviFiltri — il riassunto che sostituisce sette controlli aperti', () => {
+  it('senza filtri dice comunque il tipo: e\u2019 cio\u2019 che spiega il totale', () => {
+    expect(descriviFiltri(VUOTI)).toEqual(['spese reali']);
+  });
+
+  it('un intervallo completo e\u2019 una voce sola, uno solo dei due no', () => {
+    const f = leggiFiltri({ da: '2026-07-01', a: '2026-07-31' });
+    expect(descriviFiltri(f)).toContain('2026-07-01 \u2192 2026-07-31');
+    expect(descriviFiltri(leggiFiltri({ da: '2026-07-01' }))).toContain('dal 2026-07-01');
+    expect(descriviFiltri(leggiFiltri({ a: '2026-07-31' }))).toContain('fino al 2026-07-31');
+  });
+
+  it('usa i nomi quando li riceve, e non inventa quando non li ha', () => {
+    const f = leggiFiltri({ categoria: '11111111-1111-1111-1111-111111111111' });
+    expect(descriviFiltri(f, { categoria: 'Ristorazione > Ristoranti' })).toContain(
+      'Ristorazione > Ristoranti',
+    );
+    expect(descriviFiltri(f)).toContain('una categoria');
+  });
+
+  it('la ricerca compare fra virgolette, non come parola nuda', () => {
+    expect(descriviFiltri(leggiFiltri({ q: 'deliveroo' }))).toContain('\u00abdeliveroo\u00bb');
+  });
+});
+
+describe('filtriAttivi — il solo tipo non e\u2019 un filtro', () => {
+  it('senza parametri non c\u2019e\u2019 niente da togliere', () => {
+    expect(filtriAttivi(VUOTI)).toBe(false);
+    expect(filtriAttivi(leggiFiltri({ tipo: 'giroconti' }))).toBe(false);
+  });
+
+  it('qualsiasi restrizione lo accende', () => {
+    expect(filtriAttivi(leggiFiltri({ q: 'x' }))).toBe(true);
+    expect(filtriAttivi(leggiFiltri({ da: '2026-07-01' }))).toBe(true);
+    expect(filtriAttivi(leggiFiltri({ classe: 'voluttuario' }))).toBe(true);
   });
 });

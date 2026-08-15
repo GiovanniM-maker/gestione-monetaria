@@ -63,7 +63,7 @@ export function Interruttore({
 
   const stile = (attivo: boolean) =>
     `${base} ${
-      attivo ? 'bg-testo font-medium text-s1' : 'border border-filo text-testo-2 text-testo-3'
+      attivo ? 'bg-testo font-medium text-s1' : 'border border-filo text-testo-2'
     } ${inCorso ? 'opacity-60' : ''}`;
 
   return (
