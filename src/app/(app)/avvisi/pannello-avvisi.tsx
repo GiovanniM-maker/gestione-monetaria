@@ -7,11 +7,9 @@ import type { RigaAvviso } from '@/lib/avvisi/leggi';
 import { BOTTONE_MINORE, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
 
 const COLORI: Record<string, string> = {
-  critical:
-    'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200',
-  warning:
-    'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
-  info: 'border-neutral-200 dark:border-neutral-800',
+  critical: 'nota-errore',
+  warning: 'nota-avviso',
+  info: 'border-filo',
 };
 
 /** Dove si va per fare qualcosa a proposito di questo avviso. */
@@ -60,14 +58,10 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
 
   return (
     <div className="space-y-3">
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-testo-2">
           {visibili.length} {visibili.length === 1 ? 'avviso' : 'avvisi'}
         </p>
         {chiusi > 0 && (
@@ -84,7 +78,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
       </div>
 
       {visibili.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-sm text-neutral-500 dark:border-neutral-700">
+        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
           Nessun avviso. Il costo ricorrente non è cambiato e i dati arrivano.
         </p>
       ) : (

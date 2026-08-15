@@ -12,7 +12,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+      className="w-full rounded-md bg-testo px-4 py-2 text-sm font-medium text-s1 disabled:opacity-50"
     >
       {pending ? 'Accesso in corso…' : 'Accedi'}
     </button>
@@ -34,7 +34,7 @@ export function LoginForm() {
           type="email"
           autoComplete="username"
           required
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          className="w-full rounded-controllo bg-s3 px-3.5 py-2.5 text-[15px]"
         />
       </div>
 
@@ -48,15 +48,13 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          className="w-full rounded-controllo bg-s3 px-3.5 py-2.5 text-[15px]"
         />
       </div>
 
       <SubmitButton />
 
-      {state.status === 'error' && (
-        <p className="text-sm text-red-600 dark:text-red-400">{state.message}</p>
-      )}
+      {state.status === 'error' && <p className="text-sm text-voluttuario">{state.message}</p>}
     </form>
   );
 }

@@ -25,7 +25,7 @@ export default async function UnReportPage({ params }: { params: Promise<{ id: s
         <h1 className="text-xl font-semibold tracking-tight">
           {etichettaMese(meseDaData(r.period_start) ?? r.period_start)}
         </h1>
-        <p className="mt-1 text-xs text-neutral-500">
+        <p className="mt-1 text-xs text-testo-2">
           scritto il {r.created_at.slice(0, 10)}
           {r.model !== null && ` da ${r.model}`}
           {r.tokens_used !== null && ` · ${r.tokens_used} token`}
@@ -66,9 +66,9 @@ export default async function UnReportPage({ params }: { params: Promise<{ id: s
         senza di loro non si potrebbe dire se ha sbagliato il modello o il
         calcolo, e le due cose si correggono in posti diversi.
       */}
-      <details className="rounded-lg border border-neutral-200 p-3 text-xs dark:border-neutral-800">
-        <summary className="cursor-pointer text-neutral-500">I dati esatti che ha ricevuto</summary>
-        <pre className="mt-2 overflow-x-auto text-[11px] whitespace-pre-wrap text-neutral-600 dark:text-neutral-400">
+      <details className="scheda p-3 text-xs">
+        <summary className="cursor-pointer text-testo-2">I dati esatti che ha ricevuto</summary>
+        <pre className="mt-2 overflow-x-auto text-[11px] whitespace-pre-wrap text-testo-2 text-testo-3">
           {JSON.stringify(r.metrics, null, 2)}
         </pre>
       </details>

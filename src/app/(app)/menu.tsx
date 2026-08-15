@@ -13,47 +13,32 @@ import { usePathname } from 'next/navigation';
  * scoprire non e' una navigazione.
  *
  * ---------------------------------------------------------------------------
- * Una sola forma, anche sullo schermo grande
+ * Qui c'e' solo cio' che NON sta nella barra in basso
  * ---------------------------------------------------------------------------
- * Nessuna barra alternativa da `sm` in su. Due navigazioni sono due cose da
- * tenere allineate, e quella che si aggiorna per ultima e' sempre quella che si
- * usa meno — cioe' quella che nessuno prova. Questa applicazione si guarda dal
- * telefono: il desktop e' il posto dove la si costruisce, non dove la si usa.
- *
- * ---------------------------------------------------------------------------
- * I gruppi sono verbi, non argomenti
- * ---------------------------------------------------------------------------
- * «Guardare», «Sistemare», «Chiedere». Un elenco di undici nomi si rilegge ogni
- * volta da capo; tre gruppi si imparano una volta. E la divisione dice anche
- * qualcosa di vero sull'applicazione: le pagine che mostrano numeri e quelle
- * che li correggono sono due mestieri diversi.
+ * Le quattro destinazioni che si usano ogni giorno stanno in basso, dove arriva
+ * il pollice. Qui resta la **manutenzione**: sistemare la tassonomia, leggere un
+ * report, guardare la sincronizzazione. Nessuna voce compare in tutte e due, ed
+ * e' esattamente il motivo per cui le due navigazioni non possono divergere.
  */
 
 type Voce = { href: string; nome: string; nota?: string };
 
 const GRUPPI: { titolo: string; voci: Voce[] }[] = [
   {
-    titolo: 'Guardare',
-    voci: [
-      { href: '/', nome: 'Cruscotto', nota: 'il mese, per classe e categoria' },
-      { href: '/movimenti', nome: 'Movimenti', nota: 'ogni singola spesa, filtrabile' },
-      { href: '/abbonamenti', nome: 'Ricorrente', nota: 'abbonamenti e abitudini' },
-      { href: '/report', nome: 'Report' },
-      { href: '/avvisi', nome: 'Avvisi' },
-    ],
-  },
-  {
     titolo: 'Sistemare',
     voci: [
-      { href: '/da-confermare', nome: 'Da confermare', nota: 'le spese nuove' },
       { href: '/esercenti', nome: 'Esercenti', nota: 'fissi e variabili' },
-      { href: '/categorie', nome: 'Categorie', nota: 'l’albero: aggiungi ed elimina' },
+      { href: '/categorie', nome: 'Categorie', nota: 'l\u2019albero: aggiungi ed elimina' },
       { href: '/revisione', nome: 'Revisione', nota: 'le etichette senza esercente' },
     ],
   },
   {
-    titolo: 'Chiedere',
-    voci: [{ href: '/copilota', nome: 'Copilota' }],
+    titolo: 'Leggere',
+    voci: [
+      { href: '/abbonamenti', nome: 'Ricorrente', nota: 'abbonamenti e abitudini' },
+      { href: '/avvisi', nome: 'Avvisi' },
+      { href: '/report', nome: 'Report' },
+    ],
   },
   {
     titolo: 'Manutenzione',
@@ -88,7 +73,7 @@ export function Menu({ email }: { email: string | null }) {
         aria-expanded={aperto}
         aria-controls="menu-principale"
         className="inline-flex size-11 items-center justify-center rounded-md
-                   text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                   text-testo-2 hover:bg-s3"
       >
         <span className="sr-only">{aperto ? 'Chiudi il menu' : 'Apri il menu'}</span>
         <span aria-hidden="true" className="text-xl leading-none">
@@ -97,13 +82,10 @@ export function Menu({ email }: { email: string | null }) {
       </button>
 
       {aperto && (
-        <nav
-          id="menu-principale"
-          className="order-last w-full border-t border-neutral-200 py-2 dark:border-neutral-800"
-        >
+        <nav id="menu-principale" className="order-last w-full border-t border-filo py-2">
           {GRUPPI.map((g) => (
             <div key={g.titolo} className="py-1">
-              <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-neutral-500 uppercase">
+              <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-testo-2 uppercase">
                 {g.titolo}
               </p>
               <ul>
@@ -115,14 +97,12 @@ export function Menu({ email }: { email: string | null }) {
                         href={v.href}
                         aria-current={qui ? 'page' : undefined}
                         className={`flex min-h-11 flex-col justify-center rounded-md px-2 py-1 ${
-                          qui
-                            ? 'bg-neutral-100 font-medium dark:bg-neutral-900'
-                            : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                          qui ? 'bg-s3 font-medium' : 'hover:bg-s3'
                         }`}
                       >
                         <span className="text-sm">{v.nome}</span>
                         {v.nota !== undefined && (
-                          <span className="text-xs text-neutral-500">{v.nota}</span>
+                          <span className="text-xs text-testo-2">{v.nota}</span>
                         )}
                       </Link>
                     </li>
@@ -133,9 +113,7 @@ export function Menu({ email }: { email: string | null }) {
           ))}
 
           {email !== null && (
-            <p className="border-t border-neutral-200 px-2 pt-3 text-xs text-neutral-500 dark:border-neutral-800">
-              {email}
-            </p>
+            <p className="border-t border-filo px-2 pt-3 text-xs text-testo-2">{email}</p>
           )}
         </nav>
       )}

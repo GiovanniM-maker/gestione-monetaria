@@ -172,16 +172,16 @@ export default async function CategoriaPage({
 
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{cat.name}</h1>
-        {mese !== null && <p className="mt-1 text-sm text-neutral-500">{etichettaMese(mese)}</p>}
+        {mese !== null && <p className="mt-1 text-sm text-testo-2">{etichettaMese(mese)}</p>}
         <p className="mt-2 text-3xl font-semibold tabular-nums">
           {formattaEuro(centesimi(delMese?.spesa ?? null))}
           <Freccia riga={perCategoria.get(id)} />
         </p>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-testo-2">
           {delMese?.movimenti ?? 0} movimenti, sottocategorie comprese
         </p>
         {spiegaIlConfronto !== null && (
-          <p className="mt-1 text-xs text-neutral-500">{spiegaIlConfronto}</p>
+          <p className="mt-1 text-xs text-testo-2">{spiegaIlConfronto}</p>
         )}
       </div>
 
@@ -202,7 +202,7 @@ export default async function CategoriaPage({
       {comeArray<RigaCat>(figli).length > 0 && (
         <section className="space-y-2">
           <h2 className="font-medium">Sottocategorie</h2>
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
+          <ul className="divide-y divide-filo">
             {comeArray<RigaCat>(figli).map((f) => (
               <li key={f.category_id}>
                 <Link
@@ -224,11 +224,11 @@ export default async function CategoriaPage({
       {comeArray<RigaMerc>(esercenti).length > 0 && (
         <section className="space-y-2">
           <h2 className="font-medium">Esercenti di questo nodo</h2>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-testo-2">
             Solo quelli assegnati direttamente a <strong>{cat.name}</strong>: quelli delle
             sottocategorie stanno nelle rispettive schede, e il totale in cima li comprende tutti.
           </p>
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
+          <ul className="divide-y divide-filo">
             {comeArray<RigaMerc>(esercenti).map((e, i) => (
               <li key={`${e.merchant_id ?? 'x'}-${i}`}>
                 {e.merchant_id === null ? (
@@ -275,18 +275,14 @@ export default async function CategoriaPage({
                   >
                     <span
                       className={`w-12 shrink-0 text-xs sm:w-16 ${
-                        r.mese === mese ? 'font-semibold' : 'text-neutral-500'
+                        r.mese === mese ? 'font-semibold' : 'text-testo-2'
                       }`}
                     >
                       {etichettaBreve(r.mese)}
                     </span>
-                    <span className="h-3 flex-1 overflow-hidden rounded-sm bg-neutral-100 dark:bg-neutral-900">
+                    <span className="h-3 flex-1 overflow-hidden rounded-sm bg-s3">
                       <span
-                        className={`block h-full ${
-                          r.mese === mese
-                            ? 'bg-neutral-900 dark:bg-white'
-                            : 'bg-neutral-400 dark:bg-neutral-600'
-                        }`}
+                        className={`block h-full ${r.mese === mese ? 'bg-testo' : 'bg-testo-3'}`}
                         style={{ width: `${quotaPercentuale(valore, massimo)}%` }}
                       />
                     </span>

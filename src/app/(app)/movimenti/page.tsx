@@ -74,7 +74,7 @@ export default async function MovimentiPage({
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Movimenti</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="mt-1 text-sm text-testo-2 text-testo-3">
           Il totale qui sotto &egrave; quello di{' '}
           <strong>tutto ci&ograve; che &egrave; filtrato</strong>, non della pagina che stai
           leggendo.
@@ -95,15 +95,15 @@ export default async function MovimentiPage({
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <label className="block">
-            <span className="text-xs text-neutral-500">dal</span>
+            <span className="text-xs text-testo-2">dal</span>
             <input type="date" name="da" defaultValue={filtri.da ?? ''} className={CAMPO_PIENO} />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">al</span>
+            <span className="text-xs text-testo-2">al</span>
             <input type="date" name="a" defaultValue={filtri.a ?? ''} className={CAMPO_PIENO} />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">tipo</span>
+            <span className="text-xs text-testo-2">tipo</span>
             <select name="tipo" defaultValue={filtri.tipo} className={CAMPO_PIENO}>
               {TIPI.map((t) => (
                 <option key={t} value={t}>
@@ -113,14 +113,14 @@ export default async function MovimentiPage({
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">ordine</span>
+            <span className="text-xs text-testo-2">ordine</span>
             <select name="ordine" defaultValue={filtri.ordine} className={CAMPO_PIENO}>
               <option value="data">dal più recente</option>
               <option value="importo">dal più grosso</option>
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">categoria</span>
+            <span className="text-xs text-testo-2">categoria</span>
             <select name="categoria" defaultValue={filtri.categoria ?? ''} className={CAMPO_PIENO}>
               <option value="">tutte</option>
               {alberoCategorie.map((c) => (
@@ -131,7 +131,7 @@ export default async function MovimentiPage({
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">classe</span>
+            <span className="text-xs text-testo-2">classe</span>
             <select
               name="classe"
               defaultValue={filtri.discrezionalita ?? ''}
@@ -146,7 +146,7 @@ export default async function MovimentiPage({
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">contesto</span>
+            <span className="text-xs text-testo-2">contesto</span>
             <select name="contesto" defaultValue={filtri.contesto ?? ''} className={CAMPO_PIENO}>
               <option value="">tutti</option>
               {CONTESTI.map((c) => (
@@ -174,9 +174,9 @@ export default async function MovimentiPage({
       {/* ---------------------------------------------------------------- */}
       {/* IL TOTALE DI CIO' CHE E' FILTRATO                                 */}
       {/* ---------------------------------------------------------------- */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-y border-neutral-200 py-3 dark:border-neutral-800">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-y border-filo py-3">
         <p className="text-2xl font-semibold tabular-nums">{euro(esito.totaleImporto)}</p>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-testo-2">
           {esito.totaleRighe} {esito.totaleRighe === 1 ? 'movimento' : 'movimenti'} ·{' '}
           {ETICHETTE_TIPO[filtri.tipo]}
         </p>
@@ -193,11 +193,11 @@ export default async function MovimentiPage({
       {/* LE RIGHE                                                          */}
       {/* ---------------------------------------------------------------- */}
       {esito.righe.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-sm text-neutral-500 dark:border-neutral-700">
+        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
           Nessun movimento con questi filtri.
         </p>
       ) : (
-        <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
+        <ul className="divide-y divide-filo">
           {esito.righe.map((r) => (
             <li key={r.id} className="space-y-1 py-1">
               <Link
@@ -208,7 +208,7 @@ export default async function MovimentiPage({
                   <span className="block truncate text-sm">
                     {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
                   </span>
-                  <span className="mt-0.5 block text-xs text-neutral-500">
+                  <span className="mt-0.5 block text-xs text-testo-2">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}
                     {r.discrezionalita !== null && ` · ${r.discrezionalita}`}
@@ -226,7 +226,7 @@ export default async function MovimentiPage({
                 <span className="shrink-0 text-right text-sm tabular-nums">
                   {euro(r.amount_eur ?? r.amount)}
                   {r.currency !== 'EUR' && (
-                    <span className="block text-xs text-neutral-500">{r.currency}</span>
+                    <span className="block text-xs text-testo-2">{r.currency}</span>
                   )}
                 </span>
               </Link>
@@ -267,7 +267,7 @@ export default async function MovimentiPage({
           ) : (
             <span />
           )}
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-testo-2">
             {primaDellaPagina + 1}–{Math.min(primaDellaPagina + PER_PAGINA, esito.totaleRighe)} di{' '}
             {esito.totaleRighe}
           </span>
@@ -289,7 +289,7 @@ export default async function MovimentiPage({
 
 function Segno({ testo }: { testo: string }) {
   return (
-    <span className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px] text-neutral-500 dark:border-neutral-700">
+    <span className="rounded border border-filo px-1.5 py-0.5 text-[10px] text-testo-2">
       {testo}
     </span>
   );

@@ -23,7 +23,7 @@ export default function DebugEbError({
     <div className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">Debug Enable Banking</h1>
 
-      <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+      <div className="nota nota-errore text-[14px]">
         <p className="font-medium">La pagina ha sollevato un errore non gestito.</p>
         <p className="mt-2 break-words">{error.message}</p>
         {error.digest !== undefined && (
@@ -33,16 +33,12 @@ export default function DebugEbError({
         )}
       </div>
 
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-sm text-testo-2 text-testo-3">
         Il testo completo sta nei <strong>Runtime Logs</strong> di Vercel: apri il deployment, vai
         su Logs e cerca il digest qui sopra.
       </p>
 
-      <button
-        type="button"
-        onClick={reset}
-        className="rounded-md border border-neutral-300 px-3 py-1 text-sm dark:border-neutral-700"
-      >
+      <button type="button" onClick={reset} className="rounded-controllo bg-s3 px-3 py-1 text-sm">
         Riprova
       </button>
     </div>

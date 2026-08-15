@@ -13,13 +13,11 @@ export default function TermsPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">Termini di servizio</h1>
-      <p className="mb-8 text-sm text-neutral-500">Ultimo aggiornamento: agosto 2026</p>
+      <p className="mb-8 text-sm text-testo-2">Ultimo aggiornamento: agosto 2026</p>
 
-      <div className="space-y-6 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+      <div className="space-y-6 text-sm leading-relaxed text-testo-2">
         <section>
-          <h2 className="mb-2 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            1. Oggetto
-          </h2>
+          <h2 className="mb-2 text-base font-semibold text-testo">1. Oggetto</h2>
           <p>
             &laquo;Gestione monetaria&raquo; e&rsquo; un&rsquo;applicazione privata che aggrega e
             analizza i movimenti dei conti di pagamento del proprio unico utente. Non e&rsquo; un
@@ -29,9 +27,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            2. Accesso ai dati bancari
-          </h2>
+          <h2 className="mb-2 text-base font-semibold text-testo">2. Accesso ai dati bancari</h2>
           <p>
             L&rsquo;accesso avviene tramite Enable Banking, prestatore di servizi di informazione
             sui conti autorizzato, previo consenso esplicito prestato dall&rsquo;utente presso il
@@ -43,9 +39,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            3. Natura delle elaborazioni
-          </h2>
+          <h2 className="mb-2 text-base font-semibold text-testo">3. Natura delle elaborazioni</h2>
           <p>
             Categorie, ricorrenze, riepiloghi e avvisi prodotti dall&rsquo;applicazione hanno
             finalita&rsquo; puramente informativa. Non costituiscono consulenza finanziaria, fiscale
@@ -55,9 +49,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            4. Assenza di garanzie
-          </h2>
+          <h2 className="mb-2 text-base font-semibold text-testo">4. Assenza di garanzie</h2>
           <p>
             Il servizio e&rsquo; fornito &laquo;cosi&rsquo; com&rsquo;e&rsquo;&raquo;, senza
             garanzia di continuita&rsquo;, completezza o accuratezza dei dati. La
@@ -67,7 +59,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="mb-2 text-base font-semibold text-testo">
             5. Trattamento dei dati personali
           </h2>
           <p>
@@ -80,9 +72,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            6. Contatto
-          </h2>
+          <h2 className="mb-2 text-base font-semibold text-testo">6. Contatto</h2>
           <p>
             <a
               href="mailto:giovanni.mavilla.grz@gmail.com"

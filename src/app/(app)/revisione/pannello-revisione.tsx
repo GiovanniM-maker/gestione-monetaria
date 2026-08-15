@@ -109,32 +109,24 @@ export function PannelloRevisione({
 
   return (
     <div className="space-y-8">
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
-      {esito !== null && errore === null && (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          {esito}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      {esito !== null && errore === null && <p className="nota nota-esito text-[14px]">{esito}</p>}
 
       <section>
         <h2 className="mb-1 text-sm font-semibold">
           Da classificare · {quanteInTutto} etichette
           {quanteInTutto > daClassificare.length && (
-            <span className="font-normal text-neutral-500">
+            <span className="font-normal text-testo-2">
               {' '}
               (ne vedi le {daClassificare.length} piu&rsquo; costose)
             </span>
           )}
         </h2>
-        <p className="mb-2 text-xs text-neutral-500">
+        <p className="mb-2 text-xs text-testo-2">
           In ordine di quanto costa lasciarle così. Assegna a un esercente esistente, oppure creane
           uno nuovo scrivendone il nome.
         </p>
-        <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-xs text-neutral-500">
+        <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-xs text-testo-2">
           <input
             type="checkbox"
             className={CASELLA}
@@ -164,7 +156,7 @@ export function PannelloRevisione({
             />
           ))}
           {visibili.length === 0 && (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-testo-2">
               {daClassificare.length === 0
                 ? 'Nessuna etichetta scoperta. Ogni spesa reale ha il suo esercente.'
                 : 'Nessuna etichetta ricorrente da classificare: quel che resta compare una volta sola.'}
@@ -175,7 +167,7 @@ export function PannelloRevisione({
 
       <section>
         <h2 className="mb-1 text-sm font-semibold">Esercenti · {esercenti.length}</h2>
-        <p className="mb-3 text-xs text-neutral-500">
+        <p className="mb-3 text-xs text-testo-2">
           Cambiare qui la discrezionalità la riscrive su tutte le transazioni dell&rsquo;esercente.
           Il totale accanto serve a sapere quanto pesa la modifica prima di farla.
         </p>
@@ -223,12 +215,12 @@ function RigaDaClassificare({
   const pronto = creaNuovo ? nome.trim() !== '' : true;
 
   return (
-    <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+    <div className="scheda p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-mono text-sm break-all">{voce.etichetta}</span>
-        <span className="text-sm text-neutral-500">
-          <strong className="text-neutral-900 dark:text-neutral-100">{euro(voce.totale)}</strong> ·{' '}
-          {voce.movimenti}× · {voce.prima} → {voce.ultima}
+        <span className="text-sm text-testo-2">
+          <strong className="text-testo">{euro(voce.totale)}</strong> · {voce.movimenti}× ·{' '}
+          {voce.prima} → {voce.ultima}
         </span>
       </div>
 
@@ -368,12 +360,12 @@ function RigaMerchant({
   const [abbonamento, setAbbonamento] = useState(merchant.is_subscription);
 
   return (
-    <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+    <div className="scheda p-3">
       {/* Nome e importo su una riga propria: accanto ai controlli, su 360
           pixel, finirebbero schiacciati a una parola per riga. */}
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3">
         <span className="text-sm font-medium">{merchant.canonical_name}</span>
-        <span className="text-xs text-neutral-500 tabular-nums">
+        <span className="text-xs text-testo-2 tabular-nums">
           {euro(merchant.totale)} · {merchant.movimenti}×
         </span>
       </div>

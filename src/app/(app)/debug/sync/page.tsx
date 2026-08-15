@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'Ingestion' };
 
 function Riquadro({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+    <section className="scheda p-4">
       <h2 className="mb-3 text-sm font-semibold tracking-tight">{titolo}</h2>
       {children}
     </section>
@@ -70,7 +70,7 @@ export default async function DebugSyncPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Ingestion</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="mt-1 text-sm text-testo-2 text-testo-3">
           Fase 2. I payload arrivano integrali in <code>raw_transactions</code>, che non viene mai
           modificata ne&rsquo; cancellata. La normalizzazione e&rsquo; lavoro della Fase 3.
         </p>
@@ -78,7 +78,7 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo="Connessioni">
         {elencoConnessioni.length === 0 ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-testo-2">
             Nessuna connessione. Registra i conti dal pannello qui sotto.
           </p>
         ) : (
@@ -88,7 +88,7 @@ export default async function DebugSyncPage() {
                 <span className="font-medium">
                   {c.aspsp_name} ({c.aspsp_country})
                 </span>
-                <span className="text-neutral-500">
+                <span className="text-testo-2">
                   {' '}
                   · {c.status} · consenso fino al {quando(c.valid_until)} · ultimo sync{' '}
                   {quando(c.last_sync_at)}
@@ -101,13 +101,13 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo={`Conti (${elencoConti.length})`}>
         {elencoConti.length === 0 ? (
-          <p className="text-sm text-neutral-500">Nessun conto registrato.</p>
+          <p className="text-sm text-testo-2">Nessun conto registrato.</p>
         ) : (
           <ul className="space-y-1 text-sm">
             {elencoConti.map((c) => (
               <li key={c.id}>
                 <span className="font-medium">{c.name ?? 'Conto'}</span>
-                <span className="text-neutral-500">
+                <span className="text-testo-2">
                   {' '}
                   · {c.iban_masked ?? '—'} · {c.currency} · {c.account_type ?? 'tipo ignoto'} ·{' '}
                   {c.include_in_totals ? 'nei totali' : 'escluso dai totali'}
@@ -124,13 +124,13 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo={`Uscite per mese · ${movimenti ?? 0} movimenti normalizzati`}>
         {mesi.length === 0 ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-testo-2">
             Nessun movimento normalizzato. Premi <strong>3 · Normalizza</strong>.
           </p>
         ) : (
           <>
             <table className="w-full max-w-md text-left text-sm">
-              <thead className="text-xs text-neutral-500">
+              <thead className="text-xs text-testo-2">
                 <tr>
                   <th className="py-1 pr-4">mese</th>
                   <th className="py-1 pr-4 text-right">uscite</th>
@@ -139,20 +139,20 @@ export default async function DebugSyncPage() {
               </thead>
               <tbody className="font-mono">
                 {mesi.map((m) => (
-                  <tr key={m.mese} className="border-t border-neutral-100 dark:border-neutral-900">
+                  <tr key={m.mese} className="border-t border-filo">
                     <td className="py-1 pr-4">{m.mese}</td>
                     <td className="py-1 pr-4 text-right">{m.movimenti}</td>
                     <td className="py-1 text-right">
                       {m.totale_eur ?? '—'}
                       {m.senza_cambio > 0 && (
-                        <span className="text-amber-600"> · {m.senza_cambio} senza cambio</span>
+                        <span className="text-utile"> · {m.senza_cambio} senza cambio</span>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-xs text-neutral-500">
+            <p className="mt-2 text-xs text-testo-2">
               Solo uscite reali: esclusi giroconti, rimborsi, conti fuori dai totali e movimenti a
               importo zero. E&rsquo; il numero da confrontare con l&rsquo;app della banca.
             </p>
@@ -162,11 +162,11 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo={`Righe grezze: ${righeGrezze ?? 0}`}>
         {elencoCorse.length === 0 ? (
-          <p className="text-sm text-neutral-500">Nessuna sincronizzazione eseguita.</p>
+          <p className="text-sm text-testo-2">Nessuna sincronizzazione eseguita.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="text-neutral-500">
+              <thead className="text-testo-2">
                 <tr>
                   <th className="py-1 pr-3">avvio</th>
                   <th className="py-1 pr-3">tipo</th>
@@ -180,7 +180,7 @@ export default async function DebugSyncPage() {
               </thead>
               <tbody className="font-mono">
                 {elencoCorse.map((r) => (
-                  <tr key={r.id} className="border-t border-neutral-100 dark:border-neutral-900">
+                  <tr key={r.id} className="border-t border-filo">
                     <td className="py-1 pr-3">{quando(r.started_at)}</td>
                     <td className="py-1 pr-3">{r.trigger}</td>
                     <td className="py-1 pr-3">{r.status}</td>
@@ -188,9 +188,7 @@ export default async function DebugSyncPage() {
                     <td className="py-1 pr-3">{r.rows_fetched}</td>
                     <td className="py-1 pr-3">{r.rows_new}</td>
                     <td className="py-1 pr-3">{r.rows_duplicate}</td>
-                    <td className="py-1 break-words text-red-600 dark:text-red-400">
-                      {r.error_message ?? ''}
-                    </td>
+                    <td className="py-1 break-words text-voluttuario">{r.error_message ?? ''}</td>
                   </tr>
                 ))}
               </tbody>

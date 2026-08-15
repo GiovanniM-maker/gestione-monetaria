@@ -1,9 +1,192 @@
 @import 'tailwindcss';
 
+/* ==========================================================================
+   Il sistema visivo.
+   ==========================================================================
+   Quattro superfici, tre raggi, cinque misure di carattere. Sta qui e non
+   sparso nelle schermate per la stessa ragione per cui le altezze dei controlli
+   stanno in `lib/ui/controlli.ts`: quattro copie dello stesso grigio divergono
+   alla prima modifica, e la schermata che resta indietro e' sempre quella che
+   si usa meno.
+
+   --------------------------------------------------------------------------
+   Superfici, non bordi
+   --------------------------------------------------------------------------
+   Prima ogni riquadro aveva un `border-neutral-200`. Dieci bordi su una
+   schermata la fanno sembrare un modulo da compilare, e su un telefono al buio
+   sono dieci linee grigie che competono col contenuto. La profondita' viene dal
+   **valore della superficie**: una scheda e' piu' chiara di cio' su cui poggia,
+   e tanto basta.
+
+   --------------------------------------------------------------------------
+   Il nero e' il caso normale
+   --------------------------------------------------------------------------
+   Questa applicazione si apre dopo cena, a letto. Il tema scuro e' disegnato
+   per primo — nero vero come fondo, cosi' su uno schermo OLED le schede
+   galleggiano davvero — e il chiaro e' costruito con lo stesso ritmo, non
+   ricavato invertendo.
+*/
+
 :root {
   color-scheme: light dark;
+
+  /* le quattro superfici, dalla piu' profonda alla piu' vicina */
+  --s0: #f2f2f7;
+  --s1: #ffffff;
+  --s2: #ffffff;
+  --s3: #f4f4f7;
+
+  --testo: #05070a;
+  --testo-2: rgb(5 7 10 / 0.56);
+  --testo-3: rgb(5 7 10 / 0.34);
+  --filo: rgb(5 7 10 / 0.09);
+  --velo: rgb(255 255 255 / 0.72);
+  --ombra: 0 1px 2px rgb(5 7 10 / 0.04), 0 8px 26px rgb(5 7 10 / 0.06);
+
+  /* le quattro classi, ai valori di sistema: piu' saturi e leggibili sul nero */
+  --essenziale: #0a84ff;
+  --utile: #ff9f0a;
+  --voluttuario: #ff375f;
+  --investimento: #30d158;
+  --neutro: #8e8e93;
+
+  --r-scheda: 22px;
+  --r-controllo: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --s0: #000000;
+    --s1: #0d0d10;
+    --s2: #17171c;
+    --s3: #1f1f26;
+
+    --testo: #f5f5f7;
+    --testo-2: rgb(245 245 247 / 0.6);
+    --testo-3: rgb(245 245 247 / 0.36);
+    --filo: rgb(245 245 247 / 0.11);
+    --velo: rgb(20 20 24 / 0.68);
+    --ombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 30px rgb(0 0 0 / 0.4);
+
+    --essenziale: #409cff;
+    --utile: #ffb340;
+    --voluttuario: #ff6482;
+    --investimento: #3ddc6a;
+    --neutro: #98989f;
+  }
+}
+
+@theme inline {
+  --color-s0: var(--s0);
+  --color-s1: var(--s1);
+  --color-s2: var(--s2);
+  --color-s3: var(--s3);
+  --color-testo: var(--testo);
+  --color-testo-2: var(--testo-2);
+  --color-testo-3: var(--testo-3);
+  --color-filo: var(--filo);
+  --color-essenziale: var(--essenziale);
+  --color-utile: var(--utile);
+  --color-voluttuario: var(--voluttuario);
+  --color-investimento: var(--investimento);
+  --radius-scheda: var(--r-scheda);
+  --radius-controllo: var(--r-controllo);
 }
 
 body {
-  @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+  background: var(--s0);
+  color: var(--testo);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI Variable',
+    'Segoe UI', system-ui, Roboto, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   Le cifre
+   --------------------------------------------------------------------------
+   A larghezza fissa e crenatura stretta, sempre. Le colonne si allineano e
+   l'occhio confronta due importi senza leggerli — che e' meta' del lavoro di
+   un'applicazione di soldi.
+*/
+.cifra {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.02em;
+}
+
+.numerone {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+/* La scheda: superficie, raggio, nessun bordo. */
+.scheda {
+  background: var(--s2);
+  border-radius: var(--r-scheda);
+}
+
+/**
+ * Il separatore **rientrato**: comincia dopo il pallino, non dal bordo.
+ * E' il dettaglio che piu' di ogni altro dice «fatto da qualcuno che
+ * guardava», e costa una regola.
+ */
+.elenco > * + * {
+  border-top: 0.5px solid var(--filo);
+}
+
+/**
+ * Le note: errore, avvertimento, esito.
+ * --------------------------------------------------------------------------
+ * Il fondo e' una **velatura** del colore sulla superficie, non il colore: al
+ * buio un riquadro rosso pieno e' l'unica cosa che si vede della schermata, e
+ * una nota che grida piu' del numerone insegna a chiudere l'app invece che a
+ * leggerla. Il testo resta il testo normale — leggibile in entrambi i temi
+ * senza una seconda tavolozza da mantenere.
+ *
+ * I tre toni escono dalle quattro tinte gia' in uso. Una quinta e una sesta
+ * renderebbero il colore un'informazione in meno.
+ */
+.nota {
+  border-radius: var(--r-controllo);
+  padding: 0.625rem 0.875rem;
+}
+.nota-errore {
+  background: color-mix(in oklab, var(--voluttuario) 14%, var(--s2));
+}
+.nota-avviso {
+  background: color-mix(in oklab, var(--utile) 14%, var(--s2));
+}
+.nota-esito {
+  background: color-mix(in oklab, var(--investimento) 14%, var(--s2));
+}
+
+/**
+ * Materiale traslucido per la barra e i fogli: il contenuto che scorre sotto
+ * si intravede, e la barra sembra appoggiata invece che incollata.
+ */
+.velato {
+  background: var(--velo);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+}
+
+/* Chi non ha il supporto vede una superficie piena: meglio opaca che illeggibile. */
+@supports not (backdrop-filter: blur(1px)) {
+  .velato {
+    background: var(--s1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

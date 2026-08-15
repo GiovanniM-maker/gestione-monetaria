@@ -86,7 +86,7 @@ export default async function EsercentiPage({
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Esercenti</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-testo-2">
           {totale} {totale === 1 ? 'esercente' : 'esercenti'}, dal più caro. Un esercente{' '}
           <strong>fisso</strong> classifica tutte le sue spese allo stesso modo; uno{' '}
           <strong>variabile</strong> le fa decidere una per una.
@@ -121,8 +121,8 @@ export default async function EsercentiPage({
             href={indirizzo({ filtro: f.chiave === 'tutti' ? '' : f.chiave, pagina: '' })}
             className={`inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-xs sm:min-h-9 ${
               filtro === f.chiave
-                ? 'bg-neutral-900 font-medium text-white dark:bg-white dark:text-neutral-900'
-                : 'border border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-400'
+                ? 'bg-testo font-medium text-s1'
+                : 'border border-filo text-testo-2 text-testo-3'
             }`}
           >
             {f.etichetta}
@@ -131,15 +131,15 @@ export default async function EsercentiPage({
       </div>
 
       {righe.length === 0 ? (
-        <p className="text-sm text-neutral-500">Nessun esercente con questi filtri.</p>
+        <p className="text-sm text-testo-2">Nessun esercente con questi filtri.</p>
       ) : (
-        <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
+        <ul className="divide-y divide-filo">
           {righe.map((e) => (
             <li key={e.id} className="space-y-1 py-2">
               <div className="flex items-start justify-between gap-3">
                 <Link href={`/esercente/${e.id}`} className="min-w-0 flex-1 py-1">
                   <span className="block truncate text-sm font-medium">{e.canonical_name}</span>
-                  <span className="mt-0.5 block text-xs text-neutral-500">
+                  <span className="mt-0.5 block text-xs text-testo-2">
                     {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'}
                     {e.discretion !== null && ` · ${e.discretion}`}
                     {e.is_subscription && ' · abbonamento'}
@@ -173,7 +173,7 @@ export default async function EsercentiPage({
           ) : (
             <span />
           )}
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-testo-2">
             pagina {pagina + 1} di {ultimaPagina + 1}
           </span>
           {pagina < ultimaPagina ? (

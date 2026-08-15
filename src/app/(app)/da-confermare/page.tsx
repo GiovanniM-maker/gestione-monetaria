@@ -29,7 +29,7 @@ export default async function DaConfermarePage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Da confermare</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="mt-1 text-sm text-testo-2 text-testo-3">
           <strong>Va bene</strong> lascia la riga agganciata al suo esercente: se domani cambi la
           classificazione di quell&rsquo;esercente, questa la segue. <strong>Correggi</strong> dice
           che questa spesa fa eccezione, e da l&igrave; in poi nessun automatismo la tocca.

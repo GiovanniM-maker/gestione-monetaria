@@ -47,7 +47,7 @@ export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[]
 
   if (righe.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-sm text-neutral-500 dark:border-neutral-700">
+      <div className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
         <p>Niente da confermare. Tutti i movimenti contabilizzati sono stati visti.</p>
         <p className="mt-2 text-xs">
           I movimenti ancora <strong>provvisori</strong> non compaiono qui: la banca non li ha
@@ -60,33 +60,26 @@ export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[]
 
   return (
     <div className="space-y-3">
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
 
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-testo-2">
         {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
       </p>
 
       <ul className="space-y-2">
         {righe.map((r) => (
-          <li
-            key={r.id}
-            className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
-          >
+          <li key={r.id} className="scheda p-3">
             <div className="flex items-baseline justify-between gap-3">
               <span className="min-w-0">
                 <span className="block truncate font-medium">
                   {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
                 </span>
-                <span className="text-xs text-neutral-500">{r.booking_date}</span>
+                <span className="text-xs text-testo-2">{r.booking_date}</span>
               </span>
               <span className="shrink-0 tabular-nums">{euro(r.amount_eur ?? r.amount)}</span>
             </div>
 
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-testo-2">
               {r.categoria ?? 'senza categoria'} · {r.discrezionalita ?? 'non classificato'}
               {r.contesto !== null && ` · ${r.contesto}`}
             </p>
@@ -95,7 +88,7 @@ export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[]
                 nessuno l'ha ancora guardata, ed e' la prima da mettere in
                 dubbio. */}
             {r.origine_classificazione === 'ai' && r.esercente_confermato_at === null && (
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+              <p className="mt-1 text-xs text-utile">
                 Proposta dal modello{r.motivazione !== null && `: ${r.motivazione}`}
               </p>
             )}
@@ -155,8 +148,8 @@ function Correzione({
   const [note, setNote] = useState(riga.note ?? '');
 
   return (
-    <div className="mt-3 space-y-2 border-t border-neutral-100 pt-3 dark:border-neutral-900">
-      <p className="text-xs text-neutral-500">
+    <div className="mt-3 space-y-2 border-t border-filo pt-3">
+      <p className="text-xs text-testo-2">
         Vale solo per questa spesa. La categoria resta quella dell&rsquo;esercente: si cambia da{' '}
         <Link className="underline" href="/revisione">
           revisione
@@ -165,7 +158,7 @@ function Correzione({
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs text-neutral-500">discrezionalità</span>
+          <span className="text-xs text-testo-2">discrezionalità</span>
           <select
             value={discrezionalita}
             onChange={(e) => setDiscrezionalita(e.target.value)}
@@ -181,7 +174,7 @@ function Correzione({
           </select>
         </label>
         <label className="block">
-          <span className="text-xs text-neutral-500">contesto</span>
+          <span className="text-xs text-testo-2">contesto</span>
           <select
             value={contesto}
             onChange={(e) => setContesto(e.target.value)}

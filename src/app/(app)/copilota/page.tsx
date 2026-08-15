@@ -45,7 +45,7 @@ export default async function CopilotaPage({
         <div className="flex gap-3 text-sm">
           {messaggi.length > 0 && (
             <Link
-              className="inline-flex min-h-11 items-center text-neutral-500 underline sm:min-h-0"
+              className="inline-flex min-h-11 items-center text-testo-2 underline sm:min-h-0"
               href={`/copilota?c=${nuovaConversazione()}`}
             >
               nuova conversazione
@@ -53,15 +53,15 @@ export default async function CopilotaPage({
           )}
           {conversazioni.length > 1 && (
             <details className="relative">
-              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-neutral-500 underline sm:min-h-0">
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-testo-2 underline sm:min-h-0">
                 precedenti
               </summary>
-              <ul className="absolute right-0 z-10 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-950">
+              <ul className="absolute right-0 z-10 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg bg-s2 p-1 shadow-lg">
                 {conversazioni.map((c) => (
                   <li key={c.conversazione_id}>
                     <Link
                       href={`/copilota?c=${c.conversazione_id}`}
-                      className="flex min-h-11 items-center rounded-md px-2 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                      className="flex min-h-11 items-center rounded-md px-2 text-xs hover:bg-s3"
                     >
                       <span className="truncate">{c.titolo ?? '(vuota)'}</span>
                     </Link>
@@ -73,13 +73,13 @@ export default async function CopilotaPage({
         </div>
       </div>
 
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-sm text-testo-2 text-testo-3">
         Chiedi un numero e lo va a prendere dal database: non ne calcola nessuno. Le modifiche le{' '}
         <strong>prepara</strong>, e le applichi tu con un tocco.
       </p>
 
       {!aiConfigurata() && (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+        <p className="nota nota-avviso text-[14px]">
           <code>OPENROUTER_API_KEY</code> non è impostata su questo ambiente: il copilota non può
           rispondere. I numeri restano tutti visibili dal cruscotto.
         </p>

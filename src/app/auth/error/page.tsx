@@ -19,7 +19,7 @@ export default async function AuthErrorPage({
   return (
     <div className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6">
       <h1 className="mb-2 text-xl font-semibold tracking-tight">Accesso non riuscito</h1>
-      <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">{message}</p>
+      <p className="mb-6 text-sm text-testo-2 text-testo-3">{message}</p>
       <Link href="/login" className="text-sm underline underline-offset-4">
         Torna al login
       </Link>

@@ -63,9 +63,7 @@ export function Interruttore({
 
   const stile = (attivo: boolean) =>
     `${base} ${
-      attivo
-        ? 'bg-neutral-900 font-medium text-white dark:bg-white dark:text-neutral-900'
-        : 'border border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-400'
+      attivo ? 'bg-testo font-medium text-s1' : 'border border-filo text-testo-2 text-testo-3'
     } ${inCorso ? 'opacity-60' : ''}`;
 
   return (
@@ -79,7 +77,7 @@ export function Interruttore({
         </button>
       </div>
       {!compatto && (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-testo-2">
           {valore ? (
             <>
               Ogni sua spesa si classifica <strong>una per una</strong>: la categoria qui sotto è
@@ -94,11 +92,7 @@ export function Interruttore({
           )}
         </p>
       )}
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[13px]">{errore}</p>}
     </div>
   );
 }

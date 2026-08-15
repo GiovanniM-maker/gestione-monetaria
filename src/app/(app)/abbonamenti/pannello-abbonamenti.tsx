@@ -112,17 +112,13 @@ export function PannelloAbbonamenti({
 
   return (
     <div className="space-y-8">
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
 
       {/* -------------------------------------------------------------- */}
       {/* I DUE NUMERI                                                    */}
       {/* -------------------------------------------------------------- */}
       {voci.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-sm text-neutral-500 dark:border-neutral-700">
+        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
           Nessuna ricorrenza rilevata. Il rilevamento si lancia dal pannello di{' '}
           <a className="underline" href="/debug/sync">
             sincronizzazione
@@ -149,11 +145,9 @@ export function PannelloAbbonamenti({
       {/* COSA RESTA FUORI                                                */}
       {/* -------------------------------------------------------------- */}
       {escluse.length > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-900 dark:bg-amber-950">
-          <p className="font-medium text-amber-900 dark:text-amber-200">
-            Cosa i numeri qui sopra non contano
-          </p>
-          <ul className="mt-1 space-y-0.5 text-amber-800 dark:text-amber-300">
+        <div className="nota nota-avviso text-[13px]">
+          <p className="font-medium text-utile">Cosa i numeri qui sopra non contano</p>
+          <ul className="mt-1 space-y-0.5 text-utile">
             {escluse.map((e) => (
               <li key={e.motivo}>
                 {e.motivo}: {e.esercenti} {e.esercenti === 1 ? 'esercente' : 'esercenti'}, spesi in
@@ -168,7 +162,7 @@ export function PannelloAbbonamenti({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-amber-800 dark:text-amber-300">
+          <p className="mt-2 text-utile">
             Serve essere presenti in almeno tre mesi civili <em>e</em> su almeno 75 giorni coperti.
             La seconda condizione non &egrave; ridondante: un intervallo di 63 giorni attraversa
             sempre tre mesi civili, e senza di lei dieci addebiti concentrati in due mesi
@@ -219,7 +213,7 @@ export function PannelloAbbonamenti({
         </ul>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-neutral-200 p-3 text-xs text-neutral-500 dark:border-neutral-800">
+      <div className="space-y-3 scheda p-3 text-xs text-testo-2">
         <p>
           <strong>Da dove viene il numero «al mese».</strong> Per un canone davvero fisso &egrave;
           il canone stesso: Netflix dice 6,99, che &egrave; la cifra che riconosci. Per tutto il
@@ -265,20 +259,16 @@ function Scheda({
   const spento = disdetto || a.status === 'lapsed';
 
   return (
-    <li
-      className={`rounded-lg border border-neutral-200 p-3 dark:border-neutral-800 ${
-        spento ? 'opacity-60' : ''
-      }`}
-    >
+    <li className={`scheda p-3 ${spento ? 'opacity-60' : ''}`}>
       <div className="flex items-baseline justify-between gap-3">
         <span className={`font-medium ${disdetto ? 'line-through' : ''}`}>{a.esercente}</span>
         <span className="shrink-0 text-right tabular-nums">
           {euro(a.costo_mensile)}
-          <span className="text-xs font-normal text-neutral-500">/mese</span>
+          <span className="text-xs font-normal text-testo-2">/mese</span>
         </span>
       </div>
 
-      <p className="mt-0.5 text-xs text-neutral-500">
+      <p className="mt-0.5 text-xs text-testo-2">
         {a.tipo} · {a.categoria ?? 'senza categoria'} · {a.discrezionalita ?? 'non classificato'}
         {a.status !== 'active' && ` · ${a.status === 'lapsed' ? 'fermo' : 'disdetto'}`}
       </p>
@@ -321,9 +311,7 @@ function Scheda({
               onScrivi({ usageVerdict: a.usage_verdict === g.valore ? null : g.valore })
             }
             className={`${BOTTONE_MINORE} ${
-              a.usage_verdict === g.valore
-                ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                : ''
+              a.usage_verdict === g.valore ? 'bg-testo text-s1' : ''
             }`}
           >
             {g.etichetta}
@@ -347,7 +335,7 @@ function Scheda({
 function Dato({ voce, valore }: { voce: string; valore: string }) {
   return (
     <div>
-      <dt className="text-neutral-500">{voce}</dt>
+      <dt className="text-testo-2">{voce}</dt>
       <dd className="tabular-nums">{valore}</dd>
     </div>
   );
@@ -369,27 +357,24 @@ function Blocco({
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h2 className="font-medium">{titolo}</h2>
-          <p className="text-xs text-neutral-500">{sottotitolo}</p>
+          <p className="text-xs text-testo-2">{sottotitolo}</p>
         </div>
         <p className="text-lg font-semibold tabular-nums whitespace-nowrap">
           {formattaEuro(totale)}
-          <span className="text-xs font-normal text-neutral-500">/mese</span>
+          <span className="text-xs font-normal text-testo-2">/mese</span>
         </p>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {voci.map((v) => (
-          <div
-            key={`${v.discrezionalita}-${v.contesto}`}
-            className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
-          >
-            <p className="text-[11px] tracking-wide text-neutral-500 uppercase">
+          <div key={`${v.discrezionalita}-${v.contesto}`} className="scheda p-3">
+            <p className="text-[11px] tracking-wide text-testo-2 uppercase">
               {v.discrezionalita}
               <span className="block normal-case">{v.contesto}</span>
             </p>
             <p className="mt-1 text-lg font-semibold tabular-nums sm:text-xl">
               {formattaEuro(v.costoMensile)}
             </p>
-            <p className="mt-0.5 text-[11px] text-neutral-500">
+            <p className="mt-0.5 text-[11px] text-testo-2">
               {v.ricorrenze} {v.ricorrenze === 1 ? 'voce' : 'voci'}
             </p>
           </div>

@@ -16,20 +16,38 @@
  * prova.
  */
 
+/**
+ * ---------------------------------------------------------------------------
+ * Superfici, non bordi
+ * ---------------------------------------------------------------------------
+ * Un campo era un rettangolo bianco con un filo grigio intorno. Dieci fili su
+ * una schermata la fanno sembrare un modulo da compilare, e al buio sono dieci
+ * linee che competono col contenuto. Ora un campo e' una **superficie piu'
+ * profonda** di cio' su cui poggia: si riconosce che ci si puo' scrivere dentro
+ * senza che nulla debba essere disegnato intorno.
+ *
+ * Le tinte non stanno qui: stanno in `globals.css`, in un posto solo.
+ */
 const BASE_CAMPO =
-  'rounded-md border border-neutral-300 bg-white px-3 text-sm ' +
-  'dark:border-neutral-700 dark:bg-neutral-900';
+  'rounded-controllo bg-s3 px-3.5 text-[15px] text-testo placeholder:text-testo-3 ' +
+  'outline-none focus:ring-2 focus:ring-(--essenziale)';
 
 /** Campo a piena larghezza sul telefono, compatto da `sm` in su. */
-export const CAMPO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-9 sm:w-auto`;
+export const CAMPO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10 sm:w-auto`;
 
 /** Campo che resta a piena larghezza anche su schermo grande (dentro una griglia). */
-export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-9`;
+export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10`;
 
+/**
+ * Il bottone principale: pieno, invertito rispetto al fondo.
+ *
+ * Nero su chiaro e chiaro su nero, non blu: il blu e' gia' la tinta della
+ * classe `essenziale` e dei collegamenti, e un terzo mestiere per lo stesso
+ * colore lo renderebbe un'informazione in meno.
+ */
 export const BOTTONE =
-  'inline-flex min-h-11 items-center justify-center rounded-md bg-neutral-900 px-4 ' +
-  'text-sm font-medium text-white disabled:opacity-40 ' +
-  'dark:bg-white dark:text-neutral-900 sm:min-h-9';
+  'inline-flex min-h-11 items-center justify-center rounded-controllo bg-testo px-4 ' +
+  'text-[15px] font-semibold text-s1 disabled:opacity-40 sm:min-h-10';
 
 /**
  * Bottone secondario. Alto 44 px come il principale finche' lo schermo e'
@@ -38,13 +56,13 @@ export const BOTTONE =
  * dell'applicazione, non un ripiego.
  */
 export const BOTTONE_MINORE =
-  'inline-flex min-h-11 items-center justify-center rounded-md border border-neutral-300 ' +
-  'px-3 text-xs disabled:opacity-40 sm:min-h-8 dark:border-neutral-700';
+  'inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 ' +
+  'px-3.5 text-[13px] font-medium text-testo disabled:opacity-40 sm:min-h-9';
 
 /**
  * Una casella di spunta piccola quanto il carattere si sbaglia sempre. Il
  * bersaglio vero e' l'etichetta che la contiene, che va resa alta almeno 44 px.
  */
-export const CASELLA = 'size-4 shrink-0';
+export const CASELLA = 'size-4 shrink-0 accent-(--essenziale)';
 export const ETICHETTA_CASELLA =
-  'inline-flex min-h-11 items-center gap-2 text-xs text-neutral-500 sm:min-h-0';
+  'inline-flex min-h-11 items-center gap-2 text-[13px] text-testo-2 sm:min-h-0';

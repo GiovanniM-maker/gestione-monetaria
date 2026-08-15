@@ -100,8 +100,8 @@ export function SpostaMovimento({
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-neutral-300 p-3 dark:border-neutral-700">
-      <p className="text-xs text-neutral-500">
+    <section className="space-y-3 scheda p-3">
+      <p className="text-xs text-testo-2">
         Vale <strong>solo per questo movimento</strong>, che da qui in poi nessun automatismo
         toccher&agrave; pi&ugrave;. Serve quando la banca scrive due cose diverse con la stessa
         causale{esercenteAttuale !== null && ` — come su ${esercenteAttuale}`}.
@@ -141,10 +141,10 @@ export function SpostaMovimento({
                   type="button"
                   disabled={inCorso}
                   onClick={() => void sposta({ merchantId: m.id })}
-                  className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                  className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-2 text-left text-sm hover:bg-s3"
                 >
                   <span className="truncate">{m.esercente}</span>
-                  <span className="shrink-0 text-xs text-neutral-500">
+                  <span className="shrink-0 text-xs text-testo-2">
                     {m.categoria ?? 'senza categoria'}
                     {m.abbonamento && ' · abbonamento'}
                   </span>
@@ -153,7 +153,7 @@ export function SpostaMovimento({
             ))}
           </ul>
           {ricerca.trim().length >= 2 && trovati.length === 0 && (
-            <p className="text-xs text-neutral-500">Nessun esercente con questo nome.</p>
+            <p className="text-xs text-testo-2">Nessun esercente con questo nome.</p>
           )}
         </div>
       ) : (
@@ -238,11 +238,7 @@ export function SpostaMovimento({
         </div>
       )}
 
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
 
       <button type="button" className={BOTTONE_MINORE} onClick={() => setAperto(false)}>
         Annulla

@@ -92,7 +92,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
 
   return (
     <div className="space-y-6">
-      <section className="space-y-3 rounded-lg border border-neutral-300 p-3 dark:border-neutral-700">
+      <section className="space-y-3 scheda p-3">
         <h2 className="text-sm font-medium">Aggiungi una categoria</h2>
         <input
           value={nome}
@@ -127,7 +127,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
             </option>
           ))}
         </select>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-testo-2">
           Il genitore elenca solo le categorie di primo livello: due livelli bastano a ritrovarsi, e
           un terzo si aggiunge spostando dalla scheda della categoria quando serve davvero.
         </p>
@@ -154,15 +154,11 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
         </button>
       </section>
 
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
 
       <section className="space-y-1">
         <h2 className="font-medium">L&rsquo;albero</h2>
-        <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
+        <ul className="divide-y divide-filo">
           {albero.map((c) => (
             <li key={c.id} className="py-1">
               <div
@@ -171,7 +167,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
               >
                 <Link href={`/categoria/${c.id}`} className="min-w-0 flex-1 py-2">
                   <span className="block truncate text-sm">{c.nome}</span>
-                  <span className="block text-xs text-neutral-500">
+                  <span className="block text-xs text-testo-2">
                     {c.esercenti === null || c.movimenti === null ? (
                       <span title="conteggi non disponibili">— · —</span>
                     ) : (
@@ -203,9 +199,9 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
       </section>
 
       {daEliminare !== null && (
-        <section className="space-y-3 rounded-lg border border-red-300 p-3 dark:border-red-900">
+        <section className="space-y-3 nota nota-errore">
           <h2 className="text-sm font-medium">Elimino «{daEliminare.nome}»?</h2>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400">
+          <p className="text-xs text-testo-2 text-testo-3">
             {contenuto === null ? (
               <>
                 <strong>Non so quanto contiene</strong> — i conteggi non sono disponibili. Quello

@@ -96,10 +96,9 @@ export function SceltaCategoria({
         onChange={(e) => void cambia(e.target.value)}
         disabled={inCorso}
         aria-label="categoria"
-        className={`min-h-11 w-full rounded-md border border-neutral-300 bg-white px-2 text-xs
-                    dark:border-neutral-700 dark:bg-neutral-900 sm:min-h-9 ${
-                      inCorso ? 'opacity-60' : ''
-                    }`}
+        className={`min-h-11 w-full rounded-md bg-s3 px-2 text-[13px] sm:min-h-9 ${
+          inCorso ? 'opacity-60' : ''
+        }`}
       >
         <option value="">— senza categoria —</option>
         {categorie.map((c) => (
@@ -110,18 +109,14 @@ export function SceltaCategoria({
       </select>
 
       {etichetta === true && (
-        <p className="mt-0.5 text-[11px] text-neutral-500">
+        <p className="mt-0.5 text-[11px] text-testo-2">
           {ambito.tipo === 'esercente'
             ? 'vale per tutte le spese di questo esercente'
             : 'vale solo per questa riga'}
         </p>
       )}
 
-      {errore !== null && (
-        <p className="mt-1 rounded-md bg-red-50 px-2 py-1 text-[11px] text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore mt-1 text-[11px]">{errore}</p>}
     </div>
   );
 }

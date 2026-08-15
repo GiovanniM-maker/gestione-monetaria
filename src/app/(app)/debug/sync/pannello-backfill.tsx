@@ -701,13 +701,13 @@ export function PannelloBackfill({
     <div className="space-y-4">
       <div className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <div>
-          <label className="text-xs text-neutral-500">
+          <label className="text-xs text-testo-2">
             da
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="mt-1 block rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 block rounded-controllo bg-s3 px-2 py-1 text-sm"
             />
           </label>
           {/* Lo storico lungo si ottiene solo chiedendolo: a date vuote la banca
@@ -718,18 +718,18 @@ export function PannelloBackfill({
             type="button"
             onClick={() => setDateFrom(mesiFa(24))}
             disabled={inCorso}
-            className="mt-1 text-[11px] text-neutral-500 underline underline-offset-2 disabled:opacity-40"
+            className="mt-1 text-[11px] text-testo-2 underline underline-offset-2 disabled:opacity-40"
           >
             24 mesi fa
           </button>
         </div>
-        <label className="text-xs text-neutral-500">
+        <label className="text-xs text-testo-2">
           a
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="mt-1 block rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            className="mt-1 block rounded-controllo bg-s3 px-2 py-1 text-sm"
           />
         </label>
 
@@ -766,15 +766,15 @@ export function PannelloBackfill({
           8 · Sequenza quotidiana
         </button>
       </div>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-testo-2">
         Il bottone 7 esegue in un colpo ciò che Vercel Cron lancia ogni notte alle 05:00 UTC:
         scarica gli ultimi 7 giorni, normalizza, categorizza e rileva le ricorrenze. Chiama la
         stessa funzione del cron — se divergessero, provarla non direbbe niente.
       </p>
 
       {corseRiprendibili.length > 0 && (
-        <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-          <p className="text-xs text-amber-800 dark:text-amber-300">
+        <div className="nota nota-avviso space-y-2">
+          <p className="text-xs text-utile">
             {corseRiprendibili.length === 1
               ? 'Una corsa non e\u2019 arrivata in fondo. Il suo cursore e\u2019 salvato: riprenderla continua da dove si era fermata, senza riscaricare nulla.'
               : `${corseRiprendibili.length} corse non sono arrivate in fondo. I loro cursori sono salvati: riprenderle continua da dove si erano fermate.`}
@@ -786,7 +786,7 @@ export function PannelloBackfill({
                 type="button"
                 onClick={() => void riprendi(corsa.id)}
                 disabled={inCorso}
-                className="rounded-md border border-amber-400 px-3 py-1 text-xs disabled:opacity-40 dark:border-amber-800"
+                className="rounded-controllo bg-s3 px-3 py-1 text-xs font-medium text-utile disabled:opacity-40"
               >
                 Riprendi{' '}
                 {new Date(corsa.started_at).toLocaleString('it-IT', {
@@ -803,7 +803,7 @@ export function PannelloBackfill({
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-xs text-neutral-500">
+      <label className="flex items-center gap-2 text-xs text-testo-2">
         <input
           type="checkbox"
           checked={fetteCorte}
@@ -814,7 +814,7 @@ export function PannelloBackfill({
         tranche anche su uno storico corto.
       </label>
 
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-testo-2">
         A date vuote la banca risponde con la sua <strong>finestra predefinita</strong>, che su
         Revolut si e&rsquo; vista di 90 giorni: per lo storico lungo la data va chiesta
         esplicitamente. Se la banca la rifiuta, il backfill ripiega sulla finestra predefinita e lo
@@ -823,7 +823,7 @@ export function PannelloBackfill({
       </p>
 
       {messaggi.length > 0 && (
-        <pre className="max-h-64 overflow-auto rounded bg-neutral-100 p-2 text-[11px] leading-snug dark:bg-neutral-900">
+        <pre className="max-h-64 overflow-auto rounded bg-s3 p-2 text-[11px] leading-snug">
           {messaggi.join('\n')}
         </pre>
       )}

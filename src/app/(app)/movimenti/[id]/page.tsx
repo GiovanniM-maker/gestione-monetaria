@@ -69,7 +69,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         <h1 className="mt-1 text-lg">
           {m.esercente ?? m.raw_description ?? '(senza descrizione)'}
         </h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-testo-2">
           {m.booking_date}
           {m.conto !== null && ` · ${m.conto}`}
         </p>
@@ -78,13 +78,13 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
       {/* Perche' questa riga non e' nella spesa reale. E' la prima cosa da
           sapere quando si e' arrivati qui perche' un totale non tornava. */}
       {m.fuori_dalla_spesa !== null && (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        <p className="nota nota-avviso text-[14px]">
           Non entra nella spesa reale: <strong>{m.fuori_dalla_spesa}</strong>.
         </p>
       )}
 
       {m.stato === 'pending' && (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        <p className="nota nota-avviso text-[14px]">
           Movimento <strong>provvisorio</strong>: la banca non l&rsquo;ha ancora contabilizzato.
           L&rsquo;importo pu&ograve; cambiare, e la data di valuta non c&rsquo;&egrave; ancora.
         </p>
@@ -133,7 +133,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
           spesa**, non guardando l'elenco degli esercenti. Farlo da qui evita di
           uscire, cambiare, e tornare a cercare la riga. */}
       {m.merchant_id !== null && (
-        <section className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+        <section className="space-y-2 scheda p-3">
           <h2 className="text-sm font-medium">{m.esercente ?? 'Questo esercente'}</h2>
           <Interruttore id={m.merchant_id} variabile={variabile} />
         </section>
@@ -152,7 +152,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />
       </div>
 
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-testo-2">
         Per cambiare la classificazione di <strong>tutte</strong> le occorrenze di questo esercente
         si passa dalla{' '}
         {m.merchant_id === null ? (
@@ -170,7 +170,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
 
 function Blocco({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+    <section className="scheda p-3">
       <h2 className="mb-2 text-sm font-medium">{titolo}</h2>
       <dl className="space-y-1">{children}</dl>
     </section>
@@ -180,7 +180,7 @@ function Blocco({ titolo, children }: { titolo: string; children: React.ReactNod
 function Voce({ nome, valore }: { nome: string; valore: string | null }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm">
-      <dt className="text-neutral-500">{nome}</dt>
+      <dt className="text-testo-2">{nome}</dt>
       <dd className="min-w-0 text-right break-words">{valore ?? '—'}</dd>
     </div>
   );

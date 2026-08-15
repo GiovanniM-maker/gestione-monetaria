@@ -132,8 +132,8 @@ export function PannelloCopilota({
     <div className="space-y-4">
       <div className="space-y-4">
         {righe.length === 0 && (
-          <div className="rounded-lg border border-dashed border-neutral-300 p-4 dark:border-neutral-700">
-            <p className="text-sm text-neutral-500">Per esempio:</p>
+          <div className="rounded-lg border border-dashed border-filo p-4">
+            <p className="text-sm text-testo-2">Per esempio:</p>
             <ul className="mt-2 space-y-1">
               {ESEMPI.map((e) => (
                 <li key={e}>
@@ -141,7 +141,7 @@ export function PannelloCopilota({
                     type="button"
                     onClick={() => void invia(e)}
                     disabled={inCorso}
-                    className="flex min-h-11 w-full items-center text-left text-sm text-neutral-700 underline decoration-neutral-300 underline-offset-4 dark:text-neutral-300"
+                    className="flex min-h-11 w-full items-center text-left text-sm text-testo-2 underline decoration-(--filo) underline-offset-4"
                   >
                     {e}
                   </button>
@@ -155,15 +155,11 @@ export function PannelloCopilota({
           <Messaggio key={r.id} riga={r} occupato={inCorso} onApplica={applica} />
         ))}
 
-        {inCorso && <p className="text-sm text-neutral-500">sto guardando i dati…</p>}
+        {inCorso && <p className="text-sm text-testo-2">sto guardando i dati…</p>}
         <div ref={fondo} />
       </div>
 
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
 
       {/* La riga di scrittura resta in fondo alla pagina e non fissata allo
           schermo: su un telefono una barra fissa finisce sotto la tastiera, e
@@ -202,7 +198,7 @@ function Messaggio({
 }) {
   if (riga.ruolo === 'utente') {
     return (
-      <p className="ml-auto max-w-[85%] break-words rounded-2xl rounded-br-sm bg-neutral-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-neutral-900">
+      <p className="ml-auto max-w-[85%] break-words rounded-2xl rounded-br-sm bg-testo px-3 py-2 text-sm text-s1">
         {riga.testo}
       </p>
     );
@@ -233,7 +229,7 @@ function Messaggio({
       </div>
 
       {riga.cifre_inventate !== null && riga.cifre_inventate.length > 0 && (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+        <p className="nota nota-avviso text-[13px]">
           <strong>
             {riga.cifre_inventate.length === 1
               ? 'Una cifra'
@@ -258,7 +254,7 @@ function Messaggio({
       ))}
 
       {riga.strumenti !== null && riga.strumenti.length > 0 && (
-        <details className="text-xs text-neutral-500">
+        <details className="text-xs text-testo-2">
           <summary className="inline-flex min-h-11 cursor-pointer items-center">
             da dove vengono i numeri ({riga.strumenti.length})
           </summary>
@@ -266,7 +262,7 @@ function Messaggio({
             {riga.strumenti.map((s, i) => (
               <li key={i}>
                 <code className="font-medium">{s.nome}</code>
-                <pre className="mt-1 max-h-56 overflow-auto rounded-md bg-neutral-50 p-2 text-[11px] leading-relaxed dark:bg-neutral-900">
+                <pre className="mt-1 max-h-56 overflow-auto rounded-md bg-s3 p-2 text-[11px] leading-relaxed">
                   {JSON.stringify(s.argomenti)}
                   {'\n→ '}
                   {JSON.stringify(s.dati, null, 1)}
@@ -292,8 +288,8 @@ function Scheda({
   const fatta = proposta.applicata_at !== null;
 
   return (
-    <div className="rounded-lg border border-neutral-300 p-3 dark:border-neutral-700">
-      <p className="text-xs uppercase tracking-wide text-neutral-500">
+    <div className="scheda p-3">
+      <p className="text-xs uppercase tracking-wide text-testo-2">
         {fatta ? 'applicata' : 'da applicare'}
       </p>
       <p className="mt-1 text-sm">{proposta.descrizione}</p>

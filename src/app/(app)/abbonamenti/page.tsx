@@ -26,7 +26,7 @@ export default async function AbbonamentiPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Costo ricorrente</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="mt-1 text-sm text-testo-2 text-testo-3">
           Quanto costa al mese ci&ograve; che si ripete, diviso per classe di
           discrezionalit&agrave;. In due numeri e non in uno: gli <strong>abbonamenti</strong> si
           disdicono, le <strong>abitudini</strong> si cambiano, e sommarli nasconderebbe quale delle

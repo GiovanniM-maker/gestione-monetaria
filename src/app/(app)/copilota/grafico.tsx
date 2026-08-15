@@ -38,7 +38,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
   // e il modello lo ha comunque nei dati.
   if (disegno === null) {
     return (
-      <p className="rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 dark:border-neutral-700">
+      <p className="rounded-lg border border-dashed border-filo p-3 text-xs text-testo-2">
         Non ci sono abbastanza mesi per disegnare {grafico.titolo.toLowerCase()}.
       </p>
     );
@@ -48,7 +48,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
   const larghezza = larghezzaBarra(disegno.serie[0]?.punti.length ?? 1);
 
   return (
-    <figure className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+    <figure className="scheda p-3">
       <figcaption className="mb-2 text-xs font-medium">{grafico.titolo}</figcaption>
 
       <svg
@@ -65,13 +65,13 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
               x2={LARGHEZZA}
               y1={t.y}
               y2={t.y}
-              className="stroke-neutral-200 dark:stroke-neutral-800"
+              className="stroke-(--filo)"
               strokeWidth={0.5}
             />
             <text
               x={2}
               y={t.y - 2}
-              className="fill-neutral-400"
+              className="fill-(--testo-3)"
               style={{ fontSize: 7 }}
               textAnchor="start"
             >
@@ -86,7 +86,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
           x2={LARGHEZZA}
           y1={disegno.zeroY}
           y2={disegno.zeroY}
-          className="stroke-neutral-400 dark:stroke-neutral-600"
+          className="stroke-(--testo-3)"
           strokeWidth={0.8}
         />
 
@@ -139,7 +139,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
             key={i}
             x={e.x}
             y={ALTEZZA - 6}
-            className="fill-neutral-400"
+            className="fill-(--testo-3)"
             style={{ fontSize: 7 }}
             textAnchor={i === 0 ? 'start' : i === disegno.etichetteX.length - 1 ? 'end' : 'middle'}
           >
@@ -149,7 +149,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
       </svg>
 
       {disegno.serie.length > 1 && (
-        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-500">
+        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-testo-2">
           {disegno.serie.map((s) => (
             <li key={s.nome} className="flex items-center gap-1">
               <span
@@ -166,7 +166,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
           cambiano la forma della figura, e una figura che tace un buco è
           peggio di una che lo dichiara. */}
       {(grafico.nota !== undefined || disegno.nonLetti > 0) && (
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="mt-2 text-xs text-testo-2">
           {grafico.nota}
           {disegno.nonLetti > 0 &&
             ` ${disegno.nonLetti} ${disegno.nonLetti === 1 ? 'importo non è' : 'importi non sono'} leggibile e non compare.`}

@@ -39,7 +39,7 @@ export function GeneraReport() {
       <button type="button" onClick={genera} disabled={inCorso} className={BOTTONE}>
         {inCorso ? 'Scrivo…' : 'Genera il report del mese scorso'}
       </button>
-      {messaggio !== null && <p className="text-sm text-neutral-500">{messaggio}</p>}
+      {messaggio !== null && <p className="text-sm text-testo-2">{messaggio}</p>}
     </div>
   );
 }

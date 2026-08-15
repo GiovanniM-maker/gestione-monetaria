@@ -28,12 +28,12 @@ import { formattaEuro } from '@/lib/abbonamenti/formato';
  * mese il rosa a destra e' «voluttuario» e basta guardarne la larghezza.
  */
 export const COLORE_CLASSE: Record<string, string> = {
-  essenziale: '#0ea5e9',
-  utile: '#f59e0b',
-  voluttuario: '#f43f5e',
-  investimento: '#10b981',
+  essenziale: 'var(--essenziale)',
+  utile: 'var(--utile)',
+  voluttuario: 'var(--voluttuario)',
+  investimento: 'var(--investimento)',
 };
-const COLORE_IGNOTO = '#a3a3a3';
+const COLORE_IGNOTO = 'var(--neutro)';
 
 /** L'ordine delle classi sulla barra, fisso. Vedi `fette()`. */
 export const ORDINE_CLASSI = ['essenziale', 'utile', 'voluttuario', 'investimento'];
@@ -47,7 +47,15 @@ export const ORDINE_CLASSI = ['essenziale', 'utile', 'voluttuario', 'investiment
  * serve a scegliere dove scendere, non a essere un inventario. L'inventario
  * completo e' l'albero, subito sotto.
  */
-const TAVOLOZZA = ['#0ea5e9', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6'];
+const TAVOLOZZA = [
+  'var(--essenziale)',
+  'var(--voluttuario)',
+  'var(--utile)',
+  'var(--investimento)',
+  '#bf5af2',
+  '#ff2d55',
+  '#64d2ff',
+];
 
 /* -------------------------------------------------------------------------- */
 /* La freccia                                                                  */
@@ -67,14 +75,10 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
   if (s === null) return null;
 
   const colore =
-    s.tono === 'su'
-      ? 'text-amber-600 dark:text-amber-500'
-      : s.tono === 'giu'
-        ? 'text-emerald-600 dark:text-emerald-500'
-        : 'text-neutral-400 dark:text-neutral-500';
+    s.tono === 'su' ? 'text-utile' : s.tono === 'giu' ? 'text-investimento' : 'text-testo-3';
 
   return (
-    <span className={`ml-2 text-xs whitespace-nowrap tabular-nums ${colore}`} title={s.descrizione}>
+    <span className={`cifra ml-2 text-xs whitespace-nowrap ${colore}`} title={s.descrizione}>
       <span aria-hidden="true">{s.simbolo}</span> {s.testo}
       {/* Il puntino dice «questo confronto poggia su pochi mesi». Non toglie il
           numero, che e' vero: toglie l'enfasi, che sarebbe eccessiva. */}
@@ -106,7 +110,7 @@ export function BarraClassi({ voci }: { voci: readonly Voce[] }) {
 
   return (
     <div
-      className="flex h-3 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-900"
+      className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full"
       role="img"
       aria-label={pezzi
         .filter((p) => p.lunghezza > 0)
@@ -118,10 +122,10 @@ export function BarraClassi({ voci }: { voci: readonly Voce[] }) {
         .map((p) => (
           <span
             key={p.chiave}
-            className="h-full"
+            className="h-full rounded-full"
             style={{
               width: larghezza(p),
-              backgroundColor: COLORE_CLASSE[p.chiave] ?? COLORE_IGNOTO,
+              background: COLORE_CLASSE[p.chiave] ?? COLORE_IGNOTO,
             }}
           />
         ))}
@@ -188,12 +192,12 @@ export function Ciambella({ voci, totale }: { voci: readonly FettaCategoria[]; t
           </g>
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-semibold tabular-nums">{formattaEuro(totale)}</span>
-          <span className="text-[10px] text-neutral-500">in categoria</span>
+          <span className="cifra text-sm font-semibold">{formattaEuro(totale)}</span>
+          <span className="text-[10px] text-testo-3">in categoria</span>
         </div>
       </div>
 
-      <ul className="w-full min-w-0 flex-1 text-sm">
+      <ul className="elenco w-full min-w-0 flex-1 text-sm">
         {pezzi.map((p, i) => {
           const voce = voci[i];
           if (voce === undefined) return null;
@@ -204,14 +208,17 @@ export function Ciambella({ voci, totale }: { voci: readonly FettaCategoria[]; t
                 style={{ backgroundColor: colore(i, p.chiave) }}
               />
               <span className="min-w-0 flex-1 truncate">{voce.etichetta}</span>
-              <span className="shrink-0 tabular-nums whitespace-nowrap">
+              <span className="cifra shrink-0 whitespace-nowrap">
                 {formattaEuro(p.valore)}
                 <Freccia riga={voce.variazione} />
+              </span>
+              <span aria-hidden="true" className="shrink-0 text-testo-3">
+                ›
               </span>
             </>
           );
           return (
-            <li key={p.chiave} className="border-b border-neutral-100 dark:border-neutral-900">
+            <li key={p.chiave}>
               {voce.href === null ? (
                 <span className="flex min-h-11 items-center gap-2">{contenuto}</span>
               ) : (

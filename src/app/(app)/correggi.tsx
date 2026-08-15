@@ -93,15 +93,11 @@ function Pannello({
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-neutral-300 p-3 dark:border-neutral-700">
+    <section className="space-y-3 scheda p-3">
       <h2 className="text-sm font-medium">{titolo}</h2>
-      <p className="text-xs text-neutral-500">{portata}</p>
+      <p className="text-xs text-testo-2">{portata}</p>
       {children}
-      {errore !== null && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {errore}
-        </p>
-      )}
+      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
       <button type="button" className={BOTTONE_MINORE} onClick={chiudi}>
         Annulla
       </button>
@@ -212,7 +208,7 @@ export function CorreggiMovimento({
           disabilitato={inCorso}
         />
       ) : (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-testo-2">
           La <strong>categoria</strong> qui non si cambia: questo esercente è dichiarato{' '}
           <em>fisso</em>, quindi la sua categoria vale per tutte le sue spese. Per farla decidere
           riga per riga, marcalo <em>variabile</em> dalla sua scheda.
@@ -258,7 +254,7 @@ export function CorreggiMovimento({
         Applica a questa riga
       </button>
       {!cambiato && (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-testo-2">
           Niente da applicare: finché non cambi qualcosa la riga non viene marcata come corretta a
           mano.
         </p>
@@ -342,7 +338,7 @@ export function CorreggiEsercente({
         />
         è un abbonamento che si può disdire
       </label>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-testo-2">
         Il segno di spunta decide da che parte finisce nella metrica: gli abbonamenti si disdicono e
         il risparmio è certo, le abitudini si cambiano. Non si sommano mai, perché suggeriscono due
         azioni diverse.
@@ -427,7 +423,7 @@ export function CorreggiCategoria({
         opzioni={comeOpzioni(DISCREZIONALITA)}
         disabilitato={inCorso}
       />
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-testo-2">
         La discrezionalità predefinita è quella che si applica a un esercente nuovo di questa
         categoria. Non riscrive quelli che ci sono già: la loro sta sull’esercente, e si cambia
         dalla sua scheda.

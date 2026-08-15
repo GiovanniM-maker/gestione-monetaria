@@ -48,7 +48,7 @@ async function prova<T>(chiamata: () => Promise<T>): Promise<Esito<T>> {
 
 function Riquadro({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+    <section className="scheda p-4">
       <h2 className="mb-3 text-sm font-semibold tracking-tight">{titolo}</h2>
       {children}
     </section>
@@ -56,18 +56,14 @@ function Riquadro({ titolo, children }: { titolo: string; children: React.ReactN
 }
 
 function Errore({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="rounded-md bg-red-50 px-3 py-2 text-sm break-words text-red-700 dark:bg-red-950 dark:text-red-300">
-      {children}
-    </p>
-  );
+  return <p className="nota nota-errore text-[14px] break-words">{children}</p>;
 }
 
 function Grezzo({ etichetta, valore }: { etichetta: string; valore: unknown }) {
   return (
     <details className="mt-1">
-      <summary className="cursor-pointer text-xs text-neutral-500">{etichetta}</summary>
-      <pre className="mt-1 max-h-72 overflow-auto rounded bg-neutral-100 p-2 text-[11px] leading-snug dark:bg-neutral-900">
+      <summary className="cursor-pointer text-xs text-testo-2">{etichetta}</summary>
+      <pre className="mt-1 max-h-72 overflow-auto rounded bg-s3 p-2 text-[11px] leading-snug">
         {jsonRedatto(valore)}
       </pre>
     </details>
@@ -102,7 +98,7 @@ function Configurazione() {
           <span aria-hidden>{riga.ok ? '✅' : '❌'}</span>
           <span>
             <span className="font-mono text-xs">{riga.nome}</span>{' '}
-            <span className="text-neutral-500">· {riga.dettaglio}</span>
+            <span className="text-testo-2">· {riga.dettaglio}</span>
           </span>
         </li>
       ))}
@@ -133,9 +129,9 @@ async function Connettori() {
           className="flex items-center justify-between gap-4 text-sm"
         >
           <span>
-            {aspsp.name} <span className="text-neutral-500">({aspsp.country})</span>
+            {aspsp.name} <span className="text-testo-2">({aspsp.country})</span>
             {typeof aspsp.maximum_consent_validity === 'number' && (
-              <span className="text-neutral-500">
+              <span className="text-testo-2">
                 {' '}
                 · consenso max {Math.round(aspsp.maximum_consent_validity / 86400)} giorni
               </span>
@@ -155,7 +151,7 @@ async function Connettori() {
             )}
             <button
               type="submit"
-              className="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-neutral-900"
+              className="rounded-md bg-testo px-3 py-1 text-xs font-medium text-s1"
             >
               Autorizza
             </button>
@@ -190,7 +186,7 @@ async function Saldi({ accountUid }: { accountUid: string }) {
   return (
     <>
       {saldi.length === 0 ? (
-        <p className="text-xs text-neutral-500">Nessun saldo nella risposta.</p>
+        <p className="text-xs text-testo-2">Nessun saldo nella risposta.</p>
       ) : (
         <ul className="text-sm">
           {saldi.map((saldo, indice) => (
@@ -198,10 +194,7 @@ async function Saldi({ accountUid }: { accountUid: string }) {
               <span className="font-medium">
                 {saldo.balance_amount?.amount ?? '—'} {saldo.balance_amount?.currency ?? ''}
               </span>
-              <span className="text-neutral-500">
-                {' '}
-                · {saldo.name ?? saldo.balance_type ?? 'saldo'}
-              </span>
+              <span className="text-testo-2"> · {saldo.name ?? saldo.balance_type ?? 'saldo'}</span>
             </li>
           ))}
         </ul>
@@ -220,7 +213,7 @@ async function UltimeTransazioni({ accountUid }: { accountUid: string }) {
 
   return (
     <>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-testo-2">
         {movimenti.length} transazioni nella prima pagina
         {typeof risposta?.continuation_key === 'string' ? ' · altre pagine disponibili' : ''}
       </p>
@@ -241,9 +234,9 @@ async function UltimeTransazioni({ accountUid }: { accountUid: string }) {
 
 function Conto({ accountUid }: { accountUid: string }) {
   return (
-    <li className="space-y-1 border-t border-neutral-100 pt-3 first:border-0 first:pt-0 dark:border-neutral-900">
+    <li className="space-y-1 border-t border-filo pt-3 first:border-0 first:pt-0">
       <IntestazioneConto accountUid={accountUid} />
-      <p className="font-mono text-xs break-all text-neutral-500">uid {accountUid}</p>
+      <p className="font-mono text-xs break-all text-testo-2">uid {accountUid}</p>
       <Saldi accountUid={accountUid} />
       <UltimeTransazioni accountUid={accountUid} />
     </li>
@@ -277,7 +270,7 @@ async function SessioneCorrente() {
 
   if (sessionId === undefined) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-testo-2">
         Nessuna sessione attiva. Avvia un&rsquo;autorizzazione qui sopra.
       </p>
     );
@@ -301,15 +294,15 @@ async function SessioneCorrente() {
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-neutral-500">Banca</dt>
+        <dt className="text-testo-2">Banca</dt>
         <dd>
           {testo(sessione.aspsp?.name)} ({testo(sessione.aspsp?.country)})
         </dd>
-        <dt className="text-neutral-500">Stato</dt>
+        <dt className="text-testo-2">Stato</dt>
         <dd>{testo(sessione.status)}</dd>
-        <dt className="text-neutral-500">Valida fino a</dt>
+        <dt className="text-testo-2">Valida fino a</dt>
         <dd>{testo(sessione.access?.valid_until)}</dd>
-        <dt className="text-neutral-500">Conti</dt>
+        <dt className="text-testo-2">Conti</dt>
         <dd>{uids.length}</dd>
       </dl>
 
@@ -342,7 +335,7 @@ export default async function DebugEbPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Debug Enable Banking</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="mt-1 text-sm text-testo-2 text-testo-3">
           Verifica della Fase 1. Nessun dato viene salvato: quello che vedi arriva direttamente
           dall&rsquo;API a ogni caricamento della pagina. Gli IBAN sono mascherati anche nei dump
           grezzi.
@@ -351,9 +344,7 @@ export default async function DebugEbPage({
 
       {errore !== undefined && <Errore>{errore}</Errore>}
       {ok !== undefined && (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Autorizzazione completata.
-        </p>
+        <p className="nota nota-esito text-[14px]">Autorizzazione completata.</p>
       )}
 
       <Riquadro titolo="Configurazione">

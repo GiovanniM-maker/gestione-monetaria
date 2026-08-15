@@ -123,14 +123,14 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
 
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{m.canonical_name}</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-testo-2">
           {m.movimenti} {m.movimenti === 1 ? 'movimento' : 'movimenti'}
           {m.ultima !== null && ` · ultimo il ${m.ultima}`}
         </p>
         <p className="mt-2 text-3xl font-semibold tabular-nums">
           {formattaEuro(centesimi(m.totale))}
         </p>
-        <p className="text-xs text-neutral-500">speso in tutto lo storico</p>
+        <p className="text-xs text-testo-2">speso in tutto lo storico</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -142,12 +142,12 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         </Link>
       </div>
 
-      <section className="space-y-3 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+      <section className="space-y-3 scheda p-3">
         <h2 className="text-sm font-medium">Come si classificano le sue spese</h2>
         <Interruttore id={m.id} variabile={m.classificazione_variabile} />
       </section>
 
-      <section className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+      <section className="scheda p-3">
         <h2 className="mb-2 text-sm font-medium">Classificazione</h2>
         <dl className="space-y-1 text-sm">
           <Voce nome="categoria" valore={categoria?.percorso ?? null} />
@@ -157,12 +157,10 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           <Voce nome="origine" valore={ORIGINI[m.origine ?? ''] ?? m.origine} />
         </dl>
         {m.motivazione !== null && (
-          <p className="mt-2 border-t border-neutral-100 pt-2 text-xs text-neutral-500 dark:border-neutral-900">
-            {m.motivazione}
-          </p>
+          <p className="mt-2 border-t border-filo pt-2 text-xs text-testo-2">{m.motivazione}</p>
         )}
         {m.origine === 'ai' && m.confermato_at === null && (
-          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+          <p className="mt-2 text-xs text-utile">
             Questa classificazione l&rsquo;ha proposta il modello e nessuno l&rsquo;ha ancora
             confermata. Vale per i conteggi — una classificazione probabile e visibile è più utile
             di nessuna — ma è la prima da guardare se un totale sorprende.
@@ -180,7 +178,7 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
       />
 
       {ricorrenza !== null && (
-        <section className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
+        <section className="scheda p-3 text-sm">
           <h2 className="mb-2 text-sm font-medium">Ricorrenza</h2>
           <p>
             Rilevata come <strong>{(ricorrenza as { tipo: string }).tipo}</strong>, cadenza{' '}
@@ -211,12 +209,12 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
                     href={`/?mese=${r.mese}`}
                     className="flex min-h-11 items-center gap-3 text-sm sm:min-h-0 sm:py-0.5"
                   >
-                    <span className="w-12 shrink-0 text-xs text-neutral-500 sm:w-16">
+                    <span className="w-12 shrink-0 text-xs text-testo-2 sm:w-16">
                       {etichettaBreve(r.mese)}
                     </span>
-                    <span className="h-3 flex-1 overflow-hidden rounded-sm bg-neutral-100 dark:bg-neutral-900">
+                    <span className="h-3 flex-1 overflow-hidden rounded-sm bg-s3">
                       <span
-                        className="block h-full bg-neutral-400 dark:bg-neutral-600"
+                        className="block h-full bg-testo-3"
                         style={{ width: `${quotaPercentuale(valore, massimo)}%` }}
                       />
                     </span>
@@ -237,7 +235,7 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
 function Voce({ nome, valore }: { nome: string; valore: string | null }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-      <dt className="text-neutral-500">{nome}</dt>
+      <dt className="text-testo-2">{nome}</dt>
       <dd className="text-right">{valore ?? '—'}</dd>
     </div>
   );
