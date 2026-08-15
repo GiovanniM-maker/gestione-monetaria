@@ -765,6 +765,80 @@ bersaglio toccabile, su 360, 375 e 414 px. Con Chromium già presente in ambient
 Stato misurato a fine Fase 6: **nessun elemento sborda** a nessuna delle tre larghezze, e l'unico
 bersaglio sotto i 44 px è la casella di spunta, la cui etichetta è alta 44 e toccandola la commuta.
 
+### Il rifacimento della UX, agosto 2026
+
+Fatto dopo la Fase 10, su richiesta, misurando prima di opinare: `/revisione` era alta **97.677 px**
+— centosedici schermate — con 313 bersagli sotto i 44 px; `/abbonamenti` 12.372; `/esercenti` 8.444.
+Nessuna sbordava di lato: il difetto non era la larghezza, era che **ogni schermata chiedeva di
+scorrere prima di rispondere**.
+
+#### La navigazione sta in basso, e sono quattro domande
+
+Il menu a tre lineette stava in alto a sinistra — su un telefono da sei pollici il punto **più
+lontano** dal pollice destro — e costava un tocco solo per vedere dove si può andare. Le quattro
+schede in basso non sono nomi di tabelle (`movimenti`, `esercenti`, `categorie` lo erano) ma le
+domande che si fanno all'app: **Oggi**, **Conferma**, **Dove**, **Chiedi**.
+
+Il resto — revisione, categorie, esercenti, report, diagnostica — è **manutenzione e non uso**, e
+resta nel menu in alto. Le due navigazioni **non hanno nessuna voce in comune**, di proposito: è
+l'unica ragione per cui non possono divergere.
+
+#### Superfici, non bordi
+
+Ogni riquadro aveva un `border-neutral-200`. Dieci bordi su una schermata la fanno sembrare un
+modulo da compilare, e su un telefono al buio sono dieci linee grigie che competono col contenuto.
+La profondità viene dal **valore della superficie** — quattro, da `--s0` a `--s3` — e i separatori
+sono rientrati. Le tinte, i raggi e le note stanno in `globals.css`, in un posto solo, per la stessa
+ragione per cui le altezze dei controlli stanno in `lib/ui/controlli.ts`.
+
+Rosso, ambra e verde non sono più riquadri pieni ma **velature** delle quattro tinte già in uso
+(`.nota-errore`, `.nota-avviso`, `.nota-esito`): al buio un riquadro rosso pieno è l'unica cosa che
+si vede della schermata, e una nota che grida più del numerone insegna a chiudere l'app. Una quinta
+e una sesta tinta renderebbero il colore un'informazione in meno.
+
+Le cifre sono tabulari ovunque (`.cifra`): due importi incolonnati si confrontano senza leggerli.
+
+#### La prosa metodologica sta sotto un «perché?»
+
+Il perché si confrontano finestre uguali, perché la mediana è scelta e non calcolata, perché
+abbonamenti e abitudini non si sommano: è vero, va detto, ed è ciò che rende credibili i numeri.
+Ma **alla decima apertura occupa lo spazio dei numeri**. Sta dentro un `<details>` chiuso, in ogni
+schermata dove c'era. Stessa sorte per l'albero intero delle categorie, che è un inventario e non
+una risposta.
+
+Stato e avvisi sono scesi **in fondo** al cruscotto. Un avviso che compare prima del numero si legge
+come «c'è un problema» ogni volta che apri l'app, e dopo una settimana non lo leggi più: è il modo
+in cui muoiono i canali di notifica, già scritto nelle decisioni della Fase 8, e rientrava dalla
+disposizione.
+
+#### Il riassunto al posto dei controlli
+
+`/movimenti` apriva su sette filtri, e la lista — il motivo per cui si apre quella pagina —
+cominciava sotto il bordo dello schermo. Ora il totale è in cima, i filtri stanno chiusi, e al loro
+posto c'è **cosa stanno facendo**: `descriviFiltri()`. Il tipo compare sempre, anche quando è quello
+predefinito, perché «spese reali» significa _senza giroconti_ ed è il filtro che più di ogni altro
+spiega perché il totale è quello.
+
+Stessa idea sul selettore di categoria dentro le righe: la frase che ne dichiarava la portata era
+cinquanta ripetizioni in una schermata, ed è diventata due parole accanto al controllo — «tutte le
+sue» / «solo questa». La distinzione resta visibile: un controllo che a volte tocca una riga e a
+volte trecento senza dirlo sarebbe la cosa più pericolosa dell'applicazione.
+
+#### «Sei in pari» non è una schermata vuota
+
+È quella che si vede più spesso quando l'abitudine ha preso. Un riquadro tratteggiato con «nessun
+risultato» dice che qualcosa manca; qui non manca niente.
+
+Insieme è arrivato **«va bene tutte»** (`conferma_movimenti`, migration 0040): due giorni saltati
+trasformano la lista della sera in quindici righe identiche, e una lista di arretrati non si
+smaltisce — si chiude. Non tocca `manually_categorized`, come la conferma singola: approvare in
+blocco non è una scorciatoia per incidere in blocco.
+
+#### Misurato dopo, a 390 px, in tutti e due i temi
+
+Nessuna schermata sborda di lato; tre bersagli sotto i 44 px in tutta l'applicazione (erano 313 solo
+su `/revisione`); il cruscotto scende da 4.924 a 4.063 px e `/movimenti` da 7.163 a 6.057.
+
 ### Le decisioni della Fase 6-bis
 
 #### Righe e totale devono uscire dalla stessa query
