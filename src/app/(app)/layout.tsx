@@ -34,14 +34,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           dell'applicazione e il bottone per uscire occupavano il posto piu'
           visibile della schermata per due cose che non si guardano mai. Il
           titolo di ogni pagina sta sotto, dove va letto. */}
-      <header className="flex flex-wrap items-center gap-x-2 py-1">
-        <Menu email={user.email ?? null} />
+      <header className="flex items-center gap-x-2 py-1">
         <Link
           href="/"
           className="inline-flex min-h-11 flex-1 items-center text-[13px] font-medium text-testo-3"
         >
           Gestione monetaria
         </Link>
+        <Menu email={user.email ?? null} />
       </header>
 
       {/* Lo spazio in fondo e' la barra piu' un respiro: senza, l'ultima riga

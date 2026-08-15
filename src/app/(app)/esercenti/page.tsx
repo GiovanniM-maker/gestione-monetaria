@@ -85,8 +85,8 @@ export default async function EsercentiPage({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Esercenti</h1>
-        <p className="mt-1 text-sm text-testo-2">
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Esercenti</h1>
+        <p className="mt-1 text-[13px] text-testo-2">
           {totale} {totale === 1 ? 'esercente' : 'esercenti'}, dal più caro. Un esercente{' '}
           <strong>fisso</strong> classifica tutte le sue spese allo stesso modo; uno{' '}
           <strong>variabile</strong> le fa decidere una per una.
@@ -95,34 +95,41 @@ export default async function EsercentiPage({
 
       {/* La ricerca e' un form GET: nessun JavaScript, e l'indirizzo resta
           condivisibile. */}
-      <form action="/esercenti" method="get" className="flex flex-wrap gap-2">
+      {/* La ricerca e' un form GET: nessun JavaScript, e l'indirizzo resta
+          condivisibile. Il bottone sta **dentro** la riga del campo — a capo da
+          solo era un blocco alto quarantaquattro pixel per una parola, e su un
+          telefono Invio manda comunque il modulo. */}
+      <form action="/esercenti" method="get" className="flex gap-2">
         {filtro !== 'tutti' && <input type="hidden" name="filtro" value={filtro} />}
         <input
           type="search"
           name="cerca"
           defaultValue={cerca ?? ''}
           placeholder="cerca per nome"
-          className={`${CAMPO_PIENO} sm:max-w-xs`}
+          className={`${CAMPO_PIENO} min-w-0 flex-1`}
         />
-        <button type="submit" className={BOTTONE}>
+        <button type="submit" className={`${BOTTONE} shrink-0`}>
           Cerca
         </button>
         {cerca !== null && (
-          <Link className={BOTTONE_MINORE} href={indirizzo({ cerca: '', pagina: '' })}>
+          <Link
+            className={`${BOTTONE_MINORE} shrink-0`}
+            href={indirizzo({ cerca: '', pagina: '' })}
+          >
             azzera
           </Link>
         )}
       </form>
 
-      <div className="-mx-1 flex gap-1 overflow-x-auto">
+      {/* Le pastiglie **vanno a capo** invece di scorrere di lato: l'ultima
+          diceva «sen…» e nessuno scorre una riga che sembra finita. */}
+      <div className="flex flex-wrap gap-1.5">
         {FILTRI.map((f) => (
           <Link
             key={f.chiave}
             href={indirizzo({ filtro: f.chiave === 'tutti' ? '' : f.chiave, pagina: '' })}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-md px-3 text-xs sm:min-h-9 ${
-              filtro === f.chiave
-                ? 'bg-testo font-medium text-s1'
-                : 'border border-filo text-testo-2'
+            className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-[13px] sm:min-h-9 ${
+              filtro === f.chiave ? 'bg-testo font-medium text-s1' : 'bg-s2 text-testo-2'
             }`}
           >
             {f.etichetta}
@@ -131,34 +138,38 @@ export default async function EsercentiPage({
       </div>
 
       {righe.length === 0 ? (
-        <p className="text-sm text-testo-2">Nessun esercente con questi filtri.</p>
+        <p className="scheda p-6 text-center text-[14px] text-testo-2">
+          Nessun esercente con questi filtri.
+        </p>
       ) : (
-        <ul className="divide-y divide-filo">
+        <ul className="scheda elenco px-4">
           {righe.map((e) => (
-            <li key={e.id} className="space-y-1 py-2">
-              <div className="flex items-start justify-between gap-3">
+            <li key={e.id} className="space-y-1.5 py-2">
+              <div className="flex items-start gap-3">
                 <Link href={`/esercente/${e.id}`} className="min-w-0 flex-1 py-1">
-                  <span className="block truncate text-sm font-medium">{e.canonical_name}</span>
-                  <span className="mt-0.5 block text-xs text-testo-2">
+                  <span className="block truncate text-[15px]">{e.canonical_name}</span>
+                  <span className="mt-0.5 block truncate text-[12px] text-testo-3">
                     {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'}
                     {e.discretion !== null && ` · ${e.discretion}`}
                     {e.is_subscription && ' · abbonamento'}
                     {e.origine === 'ai' && e.confermato_at === null && ' · proposto dal modello'}
                   </span>
                 </Link>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-sm tabular-nums">{formattaEuro(centesimi(e.totale))}</span>
-                  <Interruttore id={e.id} variabile={e.classificazione_variabile} compatto />
-                </div>
+                <span className="cifra shrink-0 pt-1 text-[15px]">
+                  {formattaEuro(centesimi(e.totale))}
+                </span>
               </div>
-              {/* La categoria si cambia da qui: entrare nella scheda per
+              <div className="flex items-center gap-2">
+                <Interruttore id={e.id} variabile={e.classificazione_variabile} compatto />
+                {/* La categoria si cambia da qui: entrare nella scheda per
                   cambiarne una costa due navigazioni e un ritorno indietro, ed
                   e' la differenza fra sistemarne venti e sistemarne tre. */}
-              <SceltaCategoria
-                ambito={{ tipo: 'esercente', merchantId: e.id }}
-                categoriaId={e.category_id}
-                categorie={categorie}
-              />
+                <SceltaCategoria
+                  ambito={{ tipo: 'esercente', merchantId: e.id }}
+                  categoriaId={e.category_id}
+                  categorie={categorie}
+                />
+              </div>
             </li>
           ))}
         </ul>

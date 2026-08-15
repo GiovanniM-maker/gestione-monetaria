@@ -41,7 +41,7 @@ export default async function CopilotaPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Copilota</h1>
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Copilota</h1>
         <div className="flex gap-3 text-sm">
           {messaggi.length > 0 && (
             <Link

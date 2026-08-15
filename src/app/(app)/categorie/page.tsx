@@ -24,10 +24,10 @@ export default async function CategoriePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Categorie</h1>
-        <p className="mt-1 text-sm text-testo-2">
-          {albero.length} voci. Toccando una categoria si apre la sua scheda, dove si rinomina, si
-          sposta e si vede quanto pesa nel mese.
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Categorie</h1>
+        <p className="mt-1 text-[13px] text-testo-2">
+          {albero.length} voci. Il <strong>+</strong> di una riga crea una sottocategoria l&igrave;
+          dentro; toccando il nome si apre la sua scheda, dove si rinomina e si vede quanto pesa.
         </p>
       </div>
       {senzaConteggi && (

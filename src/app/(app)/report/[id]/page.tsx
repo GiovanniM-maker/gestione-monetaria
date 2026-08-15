@@ -22,7 +22,7 @@ export default async function UnReportPage({ params }: { params: Promise<{ id: s
       </Link>
 
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">
           {etichettaMese(meseDaData(r.period_start) ?? r.period_start)}
         </h1>
         <p className="mt-1 text-xs text-testo-2">

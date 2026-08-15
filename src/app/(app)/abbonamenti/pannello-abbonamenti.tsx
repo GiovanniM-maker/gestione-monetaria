@@ -16,6 +16,7 @@ import type {
   VoceMetrica,
 } from '@/lib/abbonamenti/formato';
 import { BOTTONE_MINORE, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
+import { COLORE_CLASSE } from '../grafici';
 
 const GIUDIZI = [
   { valore: 'usato', etichetta: 'Lo uso' },
@@ -118,7 +119,7 @@ export function PannelloAbbonamenti({
       {/* I DUE NUMERI                                                    */}
       {/* -------------------------------------------------------------- */}
       {voci.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
+        <p className="scheda p-6 text-center text-[14px] text-testo-2">
           Nessuna ricorrenza rilevata. Il rilevamento si lancia dal pannello di{' '}
           <a className="underline" href="/debug/sync">
             sincronizzazione
@@ -356,25 +357,31 @@ function Blocco({
     <div className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
-          <h2 className="font-medium">{titolo}</h2>
-          <p className="text-xs text-testo-2">{sottotitolo}</p>
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
+          <p className="text-[13px] text-testo-3">{sottotitolo}</p>
         </div>
-        <p className="text-lg font-semibold tabular-nums whitespace-nowrap">
+        <p className="numerone text-[22px] whitespace-nowrap">
           {formattaEuro(totale)}
-          <span className="text-xs font-normal text-testo-2">/mese</span>
+          <span className="text-[12px] font-normal text-testo-3">/mese</span>
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+      {/* Il pallino della classe e' lo stesso del cruscotto e della barra
+          segmentata. Quattro tessere grigie identiche si distinguono solo
+          leggendole; con il colore la piu' pesante si riconosce prima. */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {voci.map((v) => (
-          <div key={`${v.discrezionalita}-${v.contesto}`} className="scheda p-3">
-            <p className="text-[11px] tracking-wide text-testo-2 uppercase">
-              {v.discrezionalita}
-              <span className="block normal-case">{v.contesto}</span>
+          <div key={`${v.discrezionalita}-${v.contesto}`} className="scheda p-4">
+            <p className="flex items-center gap-1.5 text-[12px] text-testo-2">
+              <span
+                aria-hidden="true"
+                className="size-2 shrink-0 rounded-full"
+                style={{ background: COLORE_CLASSE[v.discrezionalita] ?? 'var(--neutro)' }}
+              />
+              <span className="min-w-0 truncate capitalize">{v.discrezionalita}</span>
             </p>
-            <p className="mt-1 text-lg font-semibold tabular-nums sm:text-xl">
-              {formattaEuro(v.costoMensile)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-testo-2">
+            <p className="text-[12px] text-testo-3">{v.contesto}</p>
+            <p className="numerone mt-1.5 text-[22px]">{formattaEuro(v.costoMensile)}</p>
+            <p className="mt-0.5 text-[12px] text-testo-3">
               {v.ricorrenze} {v.ricorrenze === 1 ? 'voce' : 'voci'}
             </p>
           </div>

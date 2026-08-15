@@ -22,8 +22,8 @@ export default async function AvvisiPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Avvisi</h1>
-        <p className="mt-1 text-sm text-testo-2">
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Avvisi</h1>
+        <p className="mt-1 text-[13px] text-testo-2">
           Solo due cose meritano un avviso: che il costo ricorrente sia cambiato, e che i numeri
           abbiano smesso di essere affidabili. Un avviso ignorato non torna.
         </p>

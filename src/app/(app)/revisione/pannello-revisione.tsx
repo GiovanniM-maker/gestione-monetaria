@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryRow } from '@/lib/db/types';
 import { BOTTONE, CAMPO_PIENO, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
+import { Foglio } from '../foglio';
 
 /**
  * Il pannello di revisione.
@@ -74,10 +75,15 @@ export function PannelloRevisione({
    * fingendo che sia intera.
    */
   const [soloRicorrenti, setSoloRicorrenti] = useState(true);
+  /** Trecento esercenti non si scorrono: si cercano. Il filtro e' in memoria. */
+  const [cerca, setCerca] = useState('');
 
   const visibili = soloRicorrenti ? daClassificare.filter((v) => v.movimenti >= 2) : daClassificare;
   const nascoste = daClassificare.filter((v) => v.movimenti < 2);
   const importoNascosto = nascoste.reduce((somma, v) => somma + Number(v.totale || '0'), 0);
+  const ago = cerca.trim().toLowerCase();
+  const cercati =
+    ago === '' ? esercenti : esercenti.filter((m) => m.canonical_name.toLowerCase().includes(ago));
 
   async function chiama(metodo: 'POST' | 'PATCH', corpo: unknown, chiave: string) {
     setInCorso(chiave);
@@ -113,7 +119,7 @@ export function PannelloRevisione({
       {esito !== null && errore === null && <p className="nota nota-esito text-[14px]">{esito}</p>}
 
       <section>
-        <h2 className="mb-1 text-sm font-semibold">
+        <h2 className="mb-1 text-[17px] font-semibold tracking-[-0.02em]">
           Da classificare · {quanteInTutto} etichette
           {quanteInTutto > daClassificare.length && (
             <span className="font-normal text-testo-2">
@@ -122,7 +128,7 @@ export function PannelloRevisione({
             </span>
           )}
         </h2>
-        <p className="mb-2 text-xs text-testo-2">
+        <p className="mb-2 text-[13px] text-testo-3">
           In ordine di quanto costa lasciarle così. Assegna a un esercente esistente, oppure creane
           uno nuovo scrivendone il nome.
         </p>
@@ -143,7 +149,7 @@ export function PannelloRevisione({
             </span>
           )}
         </label>
-        <div className="space-y-2">
+        <ul className="scheda elenco px-4">
           {visibili.map((voce) => (
             <RigaDaClassificare
               key={voce.etichetta}
@@ -155,24 +161,33 @@ export function PannelloRevisione({
               onAssegna={(corpo) => chiama('POST', corpo, voce.etichetta)}
             />
           ))}
-          {visibili.length === 0 && (
-            <p className="text-sm text-testo-2">
-              {daClassificare.length === 0
-                ? 'Nessuna etichetta scoperta. Ogni spesa reale ha il suo esercente.'
-                : 'Nessuna etichetta ricorrente da classificare: quel che resta compare una volta sola.'}
-            </p>
-          )}
-        </div>
+        </ul>
+        {visibili.length === 0 && (
+          <p className="scheda p-6 text-center text-[14px] text-testo-2">
+            {daClassificare.length === 0
+              ? 'Nessuna etichetta scoperta. Ogni spesa reale ha il suo esercente.'
+              : 'Nessuna etichetta ricorrente da classificare: quel che resta compare una volta sola.'}
+          </p>
+        )}
       </section>
 
       <section>
-        <h2 className="mb-1 text-sm font-semibold">Esercenti · {esercenti.length}</h2>
-        <p className="mb-3 text-xs text-testo-2">
+        <h2 className="mb-1 text-[17px] font-semibold tracking-[-0.02em]">
+          Esercenti · {esercenti.length}
+        </h2>
+        <p className="mb-3 text-[13px] text-testo-3">
           Cambiare qui la discrezionalità la riscrive su tutte le transazioni dell&rsquo;esercente.
           Il totale accanto serve a sapere quanto pesa la modifica prima di farla.
         </p>
-        <div className="space-y-2">
-          {esercenti.map((m) => (
+        <input
+          type="search"
+          value={cerca}
+          onChange={(e) => setCerca(e.target.value)}
+          placeholder="cerca un esercente"
+          className={`${CAMPO_PIENO} mb-3`}
+        />
+        <ul className="scheda elenco px-4">
+          {cercati.map((m) => (
             <RigaMerchant
               key={m.id}
               merchant={m}
@@ -182,7 +197,12 @@ export function PannelloRevisione({
               onSalva={(corpo) => chiama('PATCH', corpo, m.id)}
             />
           ))}
-        </div>
+        </ul>
+        {cercati.length === 0 && (
+          <p className="scheda p-6 text-center text-[14px] text-testo-2">
+            Nessun esercente con questo nome.
+          </p>
+        )}
       </section>
     </div>
   );
@@ -210,134 +230,155 @@ function RigaDaClassificare({
   const [contesto, setContesto] = useState('personale');
   const [abbonamento, setAbbonamento] = useState(false);
   const [frammento, setFrammento] = useState(false);
+  const [aperto, setAperto] = useState(false);
 
   const creaNuovo = merchantId === '';
   const pronto = creaNuovo ? nome.trim() !== '' : true;
 
   return (
-    <div className="scheda p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-mono text-sm break-all">{voce.etichetta}</span>
-        <span className="text-sm text-testo-2">
-          <strong className="text-testo">{euro(voce.totale)}</strong> · {voce.movimenti}× ·{' '}
-          {voce.prima} → {voce.ultima}
+    <li>
+      {/* La riga e' un sommario e il modulo sta nel foglio. Aperti, tredici
+          moduli da sei controlli facevano una schermata alta novantasettemila
+          pixel: centosedici schermate per assegnare tredici etichette. */}
+      <button
+        type="button"
+        onClick={() => setAperto(true)}
+        disabled={disabilitato}
+        className="flex min-h-14 w-full items-center gap-3 py-1.5 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-mono text-[14px]">{voce.etichetta}</span>
+          <span className="cifra block truncate text-[12px] text-testo-3">
+            {voce.movimenti}× · {voce.prima} → {voce.ultima}
+          </span>
         </span>
-      </div>
+        <span className="cifra shrink-0 text-[15px]">{euro(voce.totale)}</span>
+        <span aria-hidden="true" className="shrink-0 text-testo-3">
+          ›
+        </span>
+      </button>
 
-      <div className="mt-2 grid grid-cols-1 items-center gap-2 sm:flex sm:flex-wrap">
-        <select
-          value={merchantId}
-          onChange={(e) => setMerchantId(e.target.value)}
-          className={bordo}
-          disabled={disabilitato}
-        >
-          <option value="">— crea un esercente nuovo —</option>
-          {esercenti.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.canonical_name}
-            </option>
-          ))}
-        </select>
+      <Foglio
+        aperto={aperto}
+        titolo={voce.etichetta}
+        nota={`${euro(voce.totale)} · ${voce.movimenti} movimenti · ${voce.prima} → ${voce.ultima}`}
+        onChiudi={() => setAperto(false)}
+      >
+        <div className="grid grid-cols-1 items-center gap-2">
+          <select
+            value={merchantId}
+            onChange={(e) => setMerchantId(e.target.value)}
+            className={bordo}
+            disabled={disabilitato}
+          >
+            <option value="">— crea un esercente nuovo —</option>
+            {esercenti.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.canonical_name}
+              </option>
+            ))}
+          </select>
 
-        {creaNuovo && (
-          <>
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="nome dell'esercente"
-              className={bordo}
-              disabled={disabilitato}
-            />
-            <select
-              value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
-              className={bordo}
-              disabled={disabilitato}
-            >
-              <option value="">— categoria —</option>
-              {categorie.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.parent_id === null ? c.name : `· ${c.name}`}
-                </option>
-              ))}
-            </select>
-            <select
-              value={discrezionalita}
-              onChange={(e) => setDiscrezionalita(e.target.value)}
-              className={bordo}
-              disabled={disabilitato}
-            >
-              <option value="">— dalla categoria —</option>
-              {DISCREZIONALITA.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <select
-              value={contesto}
-              onChange={(e) => setContesto(e.target.value)}
-              className={bordo}
-              disabled={disabilitato}
-            >
-              {CONTESTI.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <label className={ETICHETTA_CASELLA}>
+          {creaNuovo && (
+            <>
               <input
-                type="checkbox"
-                className={CASELLA}
-                checked={abbonamento}
-                onChange={(e) => setAbbonamento(e.target.checked)}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="nome dell'esercente"
+                className={bordo}
                 disabled={disabilitato}
               />
-              abbonamento
-            </label>
-          </>
-        )}
+              <select
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value)}
+                className={bordo}
+                disabled={disabilitato}
+              >
+                <option value="">— categoria —</option>
+                {categorie.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.parent_id === null ? c.name : `· ${c.name}`}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={discrezionalita}
+                onChange={(e) => setDiscrezionalita(e.target.value)}
+                className={bordo}
+                disabled={disabilitato}
+              >
+                <option value="">— dalla categoria —</option>
+                {DISCREZIONALITA.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={contesto}
+                onChange={(e) => setContesto(e.target.value)}
+                className={bordo}
+                disabled={disabilitato}
+              >
+                {CONTESTI.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <label className={ETICHETTA_CASELLA}>
+                <input
+                  type="checkbox"
+                  className={CASELLA}
+                  checked={abbonamento}
+                  onChange={(e) => setAbbonamento(e.target.checked)}
+                  disabled={disabilitato}
+                />
+                abbonamento
+              </label>
+            </>
+          )}
 
-        <label className={ETICHETTA_CASELLA}>
-          <input
-            type="checkbox"
-            className={CASELLA}
-            checked={frammento}
-            onChange={(e) => setFrammento(e.target.checked)}
-            disabled={disabilitato}
-          />
-          {/* Predefinito spento: con `exact` il pattern e' l'etichetta intera,
+          <label className={ETICHETTA_CASELLA}>
+            <input
+              type="checkbox"
+              className={CASELLA}
+              checked={frammento}
+              onChange={(e) => setFrammento(e.target.checked)}
+              disabled={disabilitato}
+            />
+            {/* Predefinito spento: con `exact` il pattern e' l'etichetta intera,
               quindi non puo' pescare niente che non sia gia' sotto gli occhi. */}
-          usa come frammento
-        </label>
+            usa come frammento
+          </label>
 
-        <button
-          type="button"
-          className={bottone}
-          disabled={disabilitato || !pronto}
-          onClick={() =>
-            onAssegna({
-              etichetta: voce.etichetta,
-              matchType: frammento ? 'contains' : 'exact',
-              ...(creaNuovo
-                ? {
-                    nuovo: {
-                      canonical_name: nome.trim(),
-                      category_id: categoria === '' ? null : categoria,
-                      discretion: discrezionalita === '' ? null : discrezionalita,
-                      context: contesto === '' ? null : contesto,
-                      is_subscription: abbonamento,
-                    },
-                  }
-                : { merchantId }),
-            })
-          }
-        >
-          {inCorso ? 'Assegno…' : 'Assegna'}
-        </button>
-      </div>
-    </div>
+          <button
+            type="button"
+            className={bottone}
+            disabled={disabilitato || !pronto}
+            onClick={() =>
+              onAssegna({
+                etichetta: voce.etichetta,
+                matchType: frammento ? 'contains' : 'exact',
+                ...(creaNuovo
+                  ? {
+                      nuovo: {
+                        canonical_name: nome.trim(),
+                        category_id: categoria === '' ? null : categoria,
+                        discretion: discrezionalita === '' ? null : discrezionalita,
+                        context: contesto === '' ? null : contesto,
+                        is_subscription: abbonamento,
+                      },
+                    }
+                  : { merchantId }),
+              })
+            }
+          >
+            {inCorso ? 'Assegno…' : 'Assegna'}
+          </button>
+        </div>
+      </Foglio>
+    </li>
   );
 }
 
@@ -358,88 +399,107 @@ function RigaMerchant({
   const [discrezionalita, setDiscrezionalita] = useState(merchant.discretion ?? '');
   const [contesto, setContesto] = useState(merchant.context ?? '');
   const [abbonamento, setAbbonamento] = useState(merchant.is_subscription);
+  const [aperto, setAperto] = useState(false);
 
   return (
-    <div className="scheda p-3">
-      {/* Nome e importo su una riga propria: accanto ai controlli, su 360
-          pixel, finirebbero schiacciati a una parola per riga. */}
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3">
-        <span className="text-sm font-medium">{merchant.canonical_name}</span>
-        <span className="text-xs text-testo-2 tabular-nums">
-          {euro(merchant.totale)} · {merchant.movimenti}×
+    <li>
+      <button
+        type="button"
+        onClick={() => setAperto(true)}
+        disabled={disabilitato}
+        className="flex min-h-14 w-full items-center gap-3 py-1.5 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px]">{merchant.canonical_name}</span>
+          <span className="block truncate text-[12px] text-testo-3">
+            {merchant.discretion ?? 'senza classe'}
+            {merchant.is_subscription && ' · abbonamento'}
+          </span>
         </span>
-      </div>
-      <div className="grid grid-cols-1 items-center gap-2 sm:flex sm:flex-wrap">
-        <select
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-          className={bordo}
-          disabled={disabilitato}
-        >
-          <option value="">— nessuna —</option>
-          {categorie.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.parent_id === null ? c.name : `· ${c.name}`}
-            </option>
-          ))}
-        </select>
+        <span className="cifra shrink-0 text-[15px]">{euro(merchant.totale)}</span>
+        <span aria-hidden="true" className="shrink-0 text-testo-3">
+          ›
+        </span>
+      </button>
 
-        <select
-          value={discrezionalita}
-          onChange={(e) => setDiscrezionalita(e.target.value)}
-          className={bordo}
-          disabled={disabilitato}
-        >
-          <option value="">— dalla categoria —</option>
-          {DISCREZIONALITA.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={contesto}
-          onChange={(e) => setContesto(e.target.value)}
-          className={bordo}
-          disabled={disabilitato}
-        >
-          <option value="">— nessuno —</option>
-          {CONTESTI.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <label className={ETICHETTA_CASELLA}>
-          <input
-            type="checkbox"
-            className={CASELLA}
-            checked={abbonamento}
-            onChange={(e) => setAbbonamento(e.target.checked)}
+      <Foglio
+        aperto={aperto}
+        titolo={merchant.canonical_name}
+        nota={`${euro(merchant.totale)} · ${merchant.movimenti} movimenti — quel che cambi qui vale per tutti`}
+        onChiudi={() => setAperto(false)}
+      >
+        <div className="grid grid-cols-1 items-center gap-2">
+          <select
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            className={bordo}
             disabled={disabilitato}
-          />
-          abbonamento
-        </label>
+          >
+            <option value="">— nessuna —</option>
+            {categorie.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.parent_id === null ? c.name : `· ${c.name}`}
+              </option>
+            ))}
+          </select>
 
-        <button
-          type="button"
-          className={bottone}
-          disabled={disabilitato}
-          onClick={() =>
-            onSalva({
-              id: merchant.id,
-              category_id: categoria === '' ? null : categoria,
-              discretion: discrezionalita === '' ? null : discrezionalita,
-              context: contesto === '' ? null : contesto,
-              is_subscription: abbonamento,
-            })
-          }
-        >
-          {inCorso ? 'Salvo…' : 'Salva'}
-        </button>
-      </div>
-    </div>
+          <select
+            value={discrezionalita}
+            onChange={(e) => setDiscrezionalita(e.target.value)}
+            className={bordo}
+            disabled={disabilitato}
+          >
+            <option value="">— dalla categoria —</option>
+            {DISCREZIONALITA.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={contesto}
+            onChange={(e) => setContesto(e.target.value)}
+            className={bordo}
+            disabled={disabilitato}
+          >
+            <option value="">— nessuno —</option>
+            {CONTESTI.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <label className={ETICHETTA_CASELLA}>
+            <input
+              type="checkbox"
+              className={CASELLA}
+              checked={abbonamento}
+              onChange={(e) => setAbbonamento(e.target.checked)}
+              disabled={disabilitato}
+            />
+            abbonamento
+          </label>
+
+          <button
+            type="button"
+            className={bottone}
+            disabled={disabilitato}
+            onClick={() =>
+              onSalva({
+                id: merchant.id,
+                category_id: categoria === '' ? null : categoria,
+                discretion: discrezionalita === '' ? null : discrezionalita,
+                context: contesto === '' ? null : contesto,
+                is_subscription: abbonamento,
+              })
+            }
+          >
+            {inCorso ? 'Salvo…' : 'Salva'}
+          </button>
+        </div>
+      </Foglio>
+    </li>
   );
 }

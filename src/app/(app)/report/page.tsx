@@ -13,8 +13,8 @@ export default async function ReportPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Report mensili</h1>
-        <p className="mt-1 text-sm text-testo-2">
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Report mensili</h1>
+        <p className="mt-1 text-[13px] text-testo-2">
           Le cifre le calcola il database, il modello scrive solo le frasi intorno. Gli aggregati
           esatti che ha ricevuto restano salvati: se una frase non torna, si può dire se ha
           sbagliato il modello o il calcolo.

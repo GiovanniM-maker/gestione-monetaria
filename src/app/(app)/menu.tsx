@@ -4,14 +4,31 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SignOutButton } from './sign-out-button';
+import { Dialogo } from './foglio';
 
 /**
- * Il menu.
+ * Il menu, come cassetto che entra da destra.
  *
- * Prima le pagine stavano tutte su una barra che scorreva di lato. Con otto
- * voci su 360 pixel se ne vedevano tre: le altre esistevano solo per chi
- * sapeva che c'erano e si ricordava di trascinare. Una navigazione che si deve
- * scoprire non e' una navigazione.
+ * ---------------------------------------------------------------------------
+ * A destra, perche' la mano e' li'
+ * ---------------------------------------------------------------------------
+ * Stava in alto a sinistra, che su un telefono da sei pollici tenuto con la
+ * destra e' l'angolo piu' lontano dal pollice — si raggiunge cambiando presa,
+ * e cambiare presa e' il gesto che fa cadere i telefoni. A destra e' un
+ * movimento solo.
+ *
+ * ---------------------------------------------------------------------------
+ * Un cassetto, non un pannello che spinge
+ * ---------------------------------------------------------------------------
+ * Prima il menu si apriva **dentro l'intestazione**, allargandola: la pagina
+ * scendeva di trecento pixel e il contenuto che si stava guardando spariva. Un
+ * cassetto passa **sopra**, largo l'80% dello schermo e non tutto: la striscia
+ * di pagina che resta visibile a sinistra dice da sola «questo si chiude», e
+ * si chiude toccandola.
+ *
+ * E' un `<dialog>` come il foglio dal basso — stessa ragione: fuoco dentro,
+ * Esc che chiude, resto della pagina inerte, nessuna gara di `z-index` con la
+ * barra. Quello che cambia e' da dove entra.
  *
  * ---------------------------------------------------------------------------
  * Qui c'e' solo cio' che NON sta nella barra in basso
@@ -28,8 +45,8 @@ const GRUPPI: { titolo: string; voci: Voce[] }[] = [
   {
     titolo: 'Sistemare',
     voci: [
+      { href: '/categorie', nome: 'Categorie', nota: 'crea, rinomina, elimina' },
       { href: '/esercenti', nome: 'Esercenti', nota: 'fissi e variabili' },
-      { href: '/categorie', nome: 'Categorie', nota: 'l\u2019albero: aggiungi ed elimina' },
       { href: '/revisione', nome: 'Revisione', nota: 'le etichette senza esercente' },
     ],
   },
@@ -56,40 +73,38 @@ export function Menu({ email }: { email: string | null }) {
   /**
    * Lo stato non e' «aperto», e' **da quale pagina** e' stato aperto.
    *
-   * Cosi' il menu si chiude da solo quando si naviga — se il percorso non e'
-   * piu' quello, non e' piu' aperto — senza un effetto che chiami `setState`
-   * dopo il disegno. Un effetto del genere fa comparire il pannello sulla
-   * pagina nuova per un istante prima di sparire, ed e' anche cio' che la
+   * Cosi' il cassetto si chiude da solo quando si naviga — se il percorso non
+   * e' piu' quello, non e' piu' aperto — senza un effetto che chiami
+   * `setState` dopo il disegno. Un effetto del genere fa comparire il pannello
+   * sulla pagina nuova per un istante prima di sparire, ed e' anche cio' che la
    * regola `react-hooks/set-state-in-effect` esiste per impedire.
    */
   const [apertoDa, setApertoDa] = useState<string | null>(null);
   const aperto = apertoDa === percorso;
-  const setAperto = (v: boolean) => setApertoDa(v ? percorso : null);
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setAperto(!aperto)}
+        onClick={() => setApertoDa(percorso)}
         aria-expanded={aperto}
         aria-controls="menu-principale"
-        className="inline-flex size-11 items-center justify-center rounded-md
-                   text-testo-2 hover:bg-s3"
+        className="-mr-2 inline-flex size-11 items-center justify-center rounded-full text-testo-2"
       >
-        <span className="sr-only">{aperto ? 'Chiudi il menu' : 'Apri il menu'}</span>
+        <span className="sr-only">Apri il menu</span>
         <span aria-hidden="true" className="text-xl leading-none">
-          {aperto ? '✕' : '☰'}
+          ☰
         </span>
       </button>
 
-      {aperto && (
-        <nav id="menu-principale" className="order-last w-full border-t border-filo py-2">
+      <Cassetto aperto={aperto} onChiudi={() => setApertoDa(null)}>
+        <nav id="menu-principale" className="space-y-5">
           {GRUPPI.map((g) => (
-            <div key={g.titolo} className="py-1">
-              <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-testo-2 uppercase">
+            <div key={g.titolo}>
+              <p className="px-1 pb-1 text-[11px] font-medium tracking-wide text-testo-3 uppercase">
                 {g.titolo}
               </p>
-              <ul>
+              <ul className="scheda elenco px-3">
                 {g.voci.map((v) => {
                   const qui = v.href === '/' ? percorso === '/' : percorso.startsWith(v.href);
                   return (
@@ -97,13 +112,13 @@ export function Menu({ email }: { email: string | null }) {
                       <Link
                         href={v.href}
                         aria-current={qui ? 'page' : undefined}
-                        className={`flex min-h-11 flex-col justify-center rounded-md px-2 py-1 ${
-                          qui ? 'bg-s3 font-medium' : 'hover:bg-s3'
-                        }`}
+                        className="flex min-h-12 flex-col justify-center py-1.5"
                       >
-                        <span className="text-sm">{v.nome}</span>
+                        <span className={`text-[15px] ${qui ? 'font-semibold' : ''}`}>
+                          {v.nome}
+                        </span>
                         {v.nota !== undefined && (
-                          <span className="text-xs text-testo-2">{v.nota}</span>
+                          <span className="text-[12px] text-testo-3">{v.nota}</span>
                         )}
                       </Link>
                     </li>
@@ -116,12 +131,59 @@ export function Menu({ email }: { email: string | null }) {
           {/* Uscire e' l'azione piu' rara dell'applicazione, e stava nell'angolo
               piu' visibile della schermata. Qui accanto all'indirizzo, che e'
               anche il solo posto dove serve sapere con chi si e' entrati. */}
-          <div className="mt-1 flex items-center justify-between gap-3 border-t border-filo px-2 pt-3">
+          <div className="flex items-center justify-between gap-3 border-t border-filo pt-4">
             <span className="min-w-0 truncate text-[12px] text-testo-3">{email ?? ''}</span>
             <SignOutButton />
           </div>
         </nav>
-      )}
+      </Cassetto>
     </>
+  );
+}
+
+/**
+ * Il cassetto.
+ *
+ * Non usa `<Foglio>` perche' quello sale dal basso e questo entra di lato: la
+ * differenza non e' un parametro, e' tutta la geometria. Quello che i due
+ * condividono — il `<dialog>`, il fondo che chiude, la safe area — sono sei
+ * righe, e tenerle in due posti costa meno che un componente con un
+ * interruttore «da dove entro».
+ */
+function Cassetto({
+  aperto,
+  onChiudi,
+  children,
+}: {
+  aperto: boolean;
+  onChiudi: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Dialogo aperto={aperto} etichetta="Menu" onChiudi={onChiudi}>
+      <div className="flex h-full justify-end">
+        <div
+          className="w-[80%] max-w-xs overflow-y-auto bg-s1 px-4
+                     pt-[max(1rem,env(safe-area-inset-top))]
+                     pb-[max(1.5rem,env(safe-area-inset-bottom))]
+                     shadow-[-8px_0_40px_rgb(0_0_0/0.3)]"
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <span className="text-[13px] font-medium text-testo-3">Gestione monetaria</span>
+            <button
+              type="button"
+              onClick={onChiudi}
+              className="-mr-2 inline-flex size-11 items-center justify-center rounded-full text-testo-2"
+            >
+              <span className="sr-only">Chiudi il menu</span>
+              <span aria-hidden="true" className="text-[17px] leading-none">
+                ✕
+              </span>
+            </button>
+          </div>
+          {children}
+        </div>
+      </div>
+    </Dialogo>
   );
 }

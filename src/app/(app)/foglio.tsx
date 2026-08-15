@@ -34,6 +34,47 @@ import { useEffect, useRef } from 'react';
  *   foglio: un elenco di trentacinque categorie non deve poter spingere il
  *   titolo fuori dalla vista.
  */
+export function Dialogo({
+  aperto,
+  etichetta,
+  onChiudi,
+  children,
+}: {
+  aperto: boolean;
+  etichetta: string;
+  onChiudi: () => void;
+  children: React.ReactNode;
+}) {
+  const riferimento = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const d = riferimento.current;
+    if (d === null) return;
+    // `open` da solo non basta: senza `showModal()` non c'e' ne' la trappola
+    // del fuoco ne' Esc, e sarebbe un riquadro qualsiasi.
+    if (aperto && !d.open) d.showModal();
+    if (!aperto && d.open) d.close();
+  }, [aperto]);
+
+  return (
+    <dialog
+      ref={riferimento}
+      onClose={onChiudi}
+      onClick={(e) => {
+        // Solo il fondo, non cio' che ci sta sopra: confrontare l'elemento e'
+        // l'unico modo che non chiuda anche trascinando il dito da dentro a
+        // fuori mentre si scorre un elenco.
+        if (e.target === riferimento.current) onChiudi();
+      }}
+      aria-label={etichetta}
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0
+                 backdrop:bg-black/40 backdrop:backdrop-blur-[2px]"
+    >
+      {children}
+    </dialog>
+  );
+}
+
 export function Foglio({
   aperto,
   titolo,
@@ -47,29 +88,8 @@ export function Foglio({
   onChiudi: () => void;
   children: React.ReactNode;
 }) {
-  const riferimento = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const d = riferimento.current;
-    if (d === null) return;
-    // `open` da solo non basta: senza `showModal()` non c'e' ne' la trappola
-    // del fuoco ne' Esc, e il foglio sarebbe un riquadro qualsiasi.
-    if (aperto && !d.open) d.showModal();
-    if (!aperto && d.open) d.close();
-  }, [aperto]);
-
   return (
-    <dialog
-      ref={riferimento}
-      onClose={onChiudi}
-      onClick={(e) => {
-        if (e.target === riferimento.current) onChiudi();
-      }}
-      aria-label={titolo}
-      className="m-0 max-h-none w-full max-w-none bg-transparent p-0
-                 backdrop:bg-black/40 backdrop:backdrop-blur-[2px]
-                 fixed inset-0 h-full"
-    >
+    <Dialogo aperto={aperto} etichetta={titolo} onChiudi={onChiudi}>
       <div className="flex h-full items-end justify-center">
         <div
           className="w-full max-w-md rounded-t-[26px] bg-s1 pb-[max(1rem,env(safe-area-inset-bottom))]
@@ -102,6 +122,6 @@ export function Foglio({
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-2">{children}</div>
         </div>
       </div>
-    </dialog>
+    </Dialogo>
   );
 }

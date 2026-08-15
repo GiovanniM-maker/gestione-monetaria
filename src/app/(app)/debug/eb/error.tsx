@@ -21,7 +21,7 @@ export default function DebugEbError({
 }) {
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">Debug Enable Banking</h1>
+      <h1 className="text-[22px] font-bold tracking-[-0.03em]">Debug Enable Banking</h1>
 
       <div className="nota nota-errore text-[14px]">
         <p className="font-medium">La pagina ha sollevato un errore non gestito.</p>
