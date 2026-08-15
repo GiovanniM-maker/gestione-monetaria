@@ -156,38 +156,53 @@ export async function leggiCruscotto(meseChiesto: string | null): Promise<Crusco
   const indice = mesiDisponibili.indexOf(mese);
   const mesePrecedente = indice > 0 ? (mesiDisponibili[indice - 1] ?? null) : null;
 
-  // Fino a che giorno arrivano i dati di questo mese. Si legge **prima** di
-  // tutto il resto, perche' e' cio' che decide la finestra: ogni confronto
-  // della schermata deve parlare degli stessi giorni, o le frecce e il totale
-  // in cima raccontano due mesi diversi.
-  const { giorniCoperti, finestra } = await finestraDiConfronto(mese);
-
+  // Fino a che giorno arrivano i dati di questo mese. Decide la finestra di
+  // confronto: ogni cifra della schermata deve parlare degli stessi giorni, o
+  // le frecce e il totale in cima raccontano due mesi diversi.
+  //
+  // ---------------------------------------------------------------------
+  // Perche' le letture sono in due sole ondate e non in cinque
+  // ---------------------------------------------------------------------
+  // Il database risponde in 2-17 ms, misurati. Quello che si paga e' il
+  // **numero di andate e ritorno**, non il lavoro che fanno: fra un'ondata e
+  // la successiva ci sta un giro di rete intero, e prima erano cinque in fila.
+  //
+  // Solo due letture dipendono davvero da qualcosa: `giorniCoperti` serve alla
+  // finestra, e la finestra serve alle variazioni e al confronto. Tutto il
+  // resto non aspetta niente e non deve aspettare nessuno.
   const [
+    giorno,
     classi,
-    variazioniClassi,
     categorie,
-    variazioniCategorie,
     esercenti,
-    variazioniEsercenti,
     ricorrente,
     entrate,
     stato,
+    daConfermare,
+    avvisiNuovi,
   ] = await Promise.all([
+    finestraDiConfronto(mese),
     leggiClassi(mese),
-    leggiVariazioniClassi(mese, finestra),
     leggiCategorie(mese),
-    leggiVariazioniCategorie(mese, finestra),
     leggiEsercenti(mese),
-    leggiVariazioniEsercenti(mese, finestra, ESERCENTI_MOSTRATI),
     leggiRicorrente(),
     leggiEntrate(mese),
     leggiStatoSistema(),
+    quanteDaConfermare(),
+    leggiAvvisi(true),
   ]);
 
-  const [daConfermare, avvisiNuovi] = await Promise.all([quanteDaConfermare(), leggiAvvisi(true)]);
+  const { giorniCoperti, finestra } = giorno;
   const avvisi = avvisiNuovi.filter((a) => !GIA_SUL_CRUSCOTTO.includes(a.type));
 
-  const confronto = finestra === null ? null : await leggiConfronto(mese, finestra);
+  const [variazioniClassi, variazioniCategorie, variazioniEsercenti, confronto] = await Promise.all(
+    [
+      leggiVariazioniClassi(mese, finestra),
+      leggiVariazioniCategorie(mese, finestra),
+      leggiVariazioniEsercenti(mese, finestra, ESERCENTI_MOSTRATI),
+      finestra === null ? Promise.resolve(null) : leggiConfronto(mese, finestra),
+    ],
+  );
 
   return {
     mese,

@@ -13,7 +13,7 @@ import {
 } from '@/lib/movimenti/filtri';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
-import type { CategoryRow } from '@/lib/db/types';
+import { SceltaCategoria } from '../scelta-categoria';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimenti' };
@@ -56,12 +56,18 @@ export default async function MovimentiPage({
   const filtri = leggiFiltri(await searchParams);
 
   const supabase = await createSupabaseServerClient();
-  const [esito, { data: categorie }] = await Promise.all([
+  // Gli esercenti variabili si leggono qui e non riga per riga: sono pochi, e
+  // servono a sapere **fin dove arriva** il selettore di categoria di ogni riga.
+  const [esito, { data: categorie }, { data: variabili }] = await Promise.all([
     cercaMovimenti(filtri),
-    supabase.from('categories').select('*').order('sort_order', { ascending: true }),
+    supabase.from('v_categorie_albero').select('id, percorso, archiviata').order('percorso'),
+    supabase.from('merchants').select('id').eq('classificazione_variabile', true),
   ]);
 
-  const alberoCategorie = comeArray<CategoryRow>(categorie);
+  const alberoCategorie = comeArray<{ id: string; percorso: string; archiviata: boolean }>(
+    categorie,
+  ).filter((c) => !c.archiviata);
+  const eVariabile = new Set(comeArray<{ id: string }>(variabili).map((m) => m.id));
   const primaDellaPagina = (filtri.pagina - 1) * PER_PAGINA;
 
   return (
@@ -119,7 +125,7 @@ export default async function MovimentiPage({
               <option value="">tutte</option>
               {alberoCategorie.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.parent_id === null ? c.name : `· ${c.name}`}
+                  {c.percorso}
                 </option>
               ))}
             </select>
@@ -193,10 +199,10 @@ export default async function MovimentiPage({
       ) : (
         <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
           {esito.righe.map((r) => (
-            <li key={r.id}>
+            <li key={r.id} className="space-y-1 py-1">
               <Link
                 href={`/movimenti/${r.id}`}
-                className="flex min-h-14 items-center justify-between gap-3 py-2"
+                className="flex min-h-14 items-center justify-between gap-3 py-1"
               >
                 <span className="min-w-0">
                   <span className="block truncate text-sm">
@@ -224,6 +230,23 @@ export default async function MovimentiPage({
                   )}
                 </span>
               </Link>
+              {/* Il selettore cambia **l'esercente** quando e' fisso e **la riga**
+                  quando e' variabile, ed e' scritto sotto: e' la stessa scelta
+                  che si farebbe entrando, senza entrare. Le righe senza
+                  esercente non lo hanno — non c'e' niente a cui appenderla che
+                  valga oltre la riga, e per quelle si passa dalla scheda. */}
+              {r.merchant_id !== null && (
+                <SceltaCategoria
+                  ambito={
+                    eVariabile.has(r.merchant_id)
+                      ? { tipo: 'movimento', movimentoId: r.id }
+                      : { tipo: 'esercente', merchantId: r.merchant_id }
+                  }
+                  categoriaId={r.category_id}
+                  categorie={alberoCategorie}
+                  etichetta
+                />
+              )}
             </li>
           ))}
         </ul>
