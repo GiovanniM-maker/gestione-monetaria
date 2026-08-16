@@ -52,6 +52,21 @@
      fondo quasi bianco ha bisogno di un bordo definito, non di piu' ombra. */
   --rilievo: 0 0 0 0.5px rgb(5 7 10 / 0.05);
 
+  /**
+   * L'accento: la voce dell'applicazione.
+   * ------------------------------------------------------------------------
+   * Un indaco, non l'azzurro di sistema. La ragione non e' il gusto: l'azzurro
+   * e' gia' il colore della **classe `essenziale`**, e un colore che significa
+   * insieme «tocca qui» e «questa spesa e' essenziale» non significa piu'
+   * niente. Separandoli, il colore torna a portare un'informazione sola.
+   *
+   * Da qui passano i collegamenti, il bottone principale, l'anello del fuoco,
+   * la scheda accesa in basso e il segno di spunta. Le quattro tinte delle
+   * classi restano **dati**: pallini, barre, velature delle note.
+   */
+  --accento: #5a50e0;
+  --accento-testo: #ffffff;
+
   /* le quattro classi, ai valori di sistema: piu' saturi e leggibili sul nero */
   --essenziale: #0a84ff;
   --utile: #ff9f0a;
@@ -86,6 +101,12 @@
     --ombra: 0 1px 2px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.45);
     --rilievo: inset 0 0.5px 0 0 rgb(255 255 255 / 0.07), 0 0 0 0.5px rgb(255 255 255 / 0.04);
 
+    /* Sul nero l'indaco va alzato di luminosita' o sparisce nel fondo: a
+       #7b72ff un collegamento su fondo nero stava sotto i 5:1 e si leggeva
+       come grigio-viola. */
+    --accento: #8f8aff;
+    --accento-testo: #0b0b12;
+
     --essenziale: #409cff;
     --utile: #ffb340;
     --voluttuario: #ff6482;
@@ -103,6 +124,8 @@
   --color-testo-2: var(--testo-2);
   --color-testo-3: var(--testo-3);
   --color-filo: var(--filo);
+  --color-accento: var(--accento);
+  --color-accento-testo: var(--accento-testo);
   --color-essenziale: var(--essenziale);
   --color-utile: var(--utile);
   --color-voluttuario: var(--voluttuario);

@@ -12,7 +12,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-testo px-4 py-2 text-sm font-medium text-s1 disabled:opacity-50"
+      className="w-full rounded-md bg-accento px-4 py-2 text-sm font-medium text-accento-testo disabled:opacity-50"
     >
       {pending ? 'Accesso in corso…' : 'Accedi'}
     </button>

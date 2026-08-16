@@ -834,6 +834,36 @@ trasformano la lista della sera in quindici righe identiche, e una lista di arre
 smaltisce — si chiude. Non tocca `manually_categorized`, come la conferma singola: approvare in
 blocco non è una scorciatoia per incidere in blocco.
 
+#### L'accento è un indaco, e non è nessuna delle quattro classi
+
+Il blu di sistema faceva **due mestieri**: era il colore della classe `essenziale` e anche quello dei
+collegamenti e del bottone principale. Un colore che significa insieme «tocca qui» e «questa spesa è
+essenziale» non significa più niente.
+
+`--accento` (indaco `#5a50e0` chiaro, `#8f8aff` scuro) è la voce dell'applicazione: collegamenti,
+bottone principale, anello del fuoco, scheda accesa in basso, pastiglie attive, segno di spunta. Le
+quattro tinte delle classi restano **dati** — pallini, barre, velature delle note — e non toccano
+mai un controllo. Il bottone principale era nero su chiaro e chiaro su scuro: corretto ma muto,
+perché un'applicazione con dieci bottoni neri non ha una voce.
+
+Sul nero l'indaco va alzato di luminosità: a `#7b72ff` un collegamento stava sotto i 5:1 e si
+leggeva come grigio-viola.
+
+#### La pagina dietro una modale non deve scorrere
+
+`showModal()` rende il resto **inerte** — niente fuoco, niente clic — ma **non blocca lo
+scorrimento**: misurato, con il foglio aperto un trascinamento sul fondo faceva scorrere di
+ottocento pixel l'elenco sotto. Si chiudeva il foglio e ci si ritrovava altrove senza aver toccato
+niente.
+
+Il corpo si **fissa** (`position: fixed` più un `top` negativo) invece di ricevere
+`overflow: hidden`: su iOS il solo `overflow` lascia scorrere lo stesso, e al ripristino la pagina
+risale in cima. Sta in `Dialogo`, quindi vale per il foglio e per il cassetto insieme.
+
+Misurato su **320, 375, 390, 430, 768 e 1280 px**: nessuna delle undici schermate sborda a nessuna
+larghezza. Il foglio si ferma a 448 px centrati sul desktop e all'85% dell'altezza ovunque, il
+cassetto a 320: nessuno dei due esce dalla finestra, e lo scorrimento è sempre interno al pannello.
+
 #### La profondità: il token c'era e non lo usava nessuno
 
 «Non c'è profondità nella carta, non mi salta subito l'occhio.» `--ombra` era definito in

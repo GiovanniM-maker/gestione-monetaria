@@ -68,7 +68,7 @@ export function TestataLivello({
     <div className="space-y-3">
       <Link
         href={ritorno.href}
-        className="inline-flex min-h-11 items-center text-[13px] text-essenziale"
+        className="inline-flex min-h-11 items-center text-[13px] text-accento"
       >
         ‹ {ritorno.testo}
       </Link>
@@ -228,7 +228,7 @@ export function MesePerMese({
                       className="block h-full rounded-full"
                       style={{
                         width: `${quotaPercentuale(r.valore, massimo)}%`,
-                        background: qui ? 'var(--testo)' : 'var(--testo-3)',
+                        background: qui ? 'var(--accento)' : 'var(--testo-3)',
                       }}
                     />
                   </span>

@@ -312,7 +312,7 @@ function Scheda({
               onScrivi({ usageVerdict: a.usage_verdict === g.valore ? null : g.valore })
             }
             className={`${BOTTONE_MINORE} ${
-              a.usage_verdict === g.valore ? 'bg-testo text-s1' : ''
+              a.usage_verdict === g.valore ? 'bg-accento text-accento-testo' : ''
             }`}
           >
             {g.etichetta}

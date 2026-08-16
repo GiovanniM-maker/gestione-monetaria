@@ -270,7 +270,7 @@ function Correzione({
     >
       <p className="mb-3 text-[12px] text-testo-3">
         La categoria resta quella dell&rsquo;esercente: si cambia da{' '}
-        <Link className="text-essenziale" href="/revisione">
+        <Link className="text-accento" href="/revisione">
           revisione
         </Link>
         , dove vale per tutte le sue occorrenze.

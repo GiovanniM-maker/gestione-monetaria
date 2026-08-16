@@ -56,6 +56,39 @@ export function Dialogo({
     if (!aperto && d.open) d.close();
   }, [aperto]);
 
+  /**
+   * La pagina dietro non deve scorrere.
+   *
+   * `showModal()` rende il resto **inerte** — niente fuoco, niente clic — ma
+   * non blocca lo scorrimento: misurato, con il foglio aperto un trascinamento
+   * sul fondo faceva scorrere di ottocento pixel l'elenco sotto. Si chiudeva
+   * il foglio e ci si ritrovava altrove, senza aver toccato niente.
+   *
+   * Il corpo si **fissa** invece di ricevere `overflow: hidden`, e la
+   * posizione si conserva in un `top` negativo: su iOS il solo `overflow`
+   * lascia scorrere lo stesso, e al ripristino la pagina risale in cima. Con
+   * questo la posizione torna esattamente dov'era.
+   */
+  useEffect(() => {
+    if (!aperto) return;
+    const y = window.scrollY;
+    const corpo = document.body;
+    const prima = {
+      position: corpo.style.position,
+      top: corpo.style.top,
+      width: corpo.style.width,
+    };
+    corpo.style.position = 'fixed';
+    corpo.style.top = `-${y}px`;
+    corpo.style.width = '100%';
+    return () => {
+      corpo.style.position = prima.position;
+      corpo.style.top = prima.top;
+      corpo.style.width = prima.width;
+      window.scrollTo(0, y);
+    };
+  }, [aperto]);
+
   return (
     <dialog
       ref={riferimento}

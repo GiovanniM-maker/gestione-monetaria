@@ -254,7 +254,7 @@ export function SceltaCategoria({
                 type="button"
                 onClick={() => void creaEAssegna()}
                 disabled={inCorso || nuova.trim() === ''}
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-testo text-[15px] font-semibold text-s1 disabled:opacity-40"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
               >
                 {inCorso ? '…' : 'Crea e assegna'}
               </button>
@@ -288,7 +288,7 @@ export function SceltaCategoria({
                 setCreando(true);
                 setNuova(cerca.trim());
               }}
-              className="mb-1 flex min-h-12 w-full items-center gap-2 text-left text-[15px] text-essenziale"
+              className="mb-1 flex min-h-12 w-full items-center gap-2 text-left text-[15px] text-accento"
             >
               <span aria-hidden="true" className="text-[19px] leading-none">
                 +
@@ -352,7 +352,7 @@ function Riga({
         {/* Il segno di spunta e non un pallino: dice «questa» senza dover essere
             un controllo a sua volta. */}
         {scelta && (
-          <span aria-hidden="true" className="shrink-0 text-essenziale">
+          <span aria-hidden="true" className="shrink-0 text-accento">
             ✓
           </span>
         )}

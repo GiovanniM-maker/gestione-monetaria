@@ -152,7 +152,7 @@ export default async function CruscottoPage({
               il collegamento accanto. Quattro parole dicono la stessa cosa. */}
           <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Quanto torna ogni mese</h2>
           <Link
-            className="inline-flex min-h-11 shrink-0 items-center text-[13px] text-essenziale sm:min-h-0"
+            className="inline-flex min-h-11 shrink-0 items-center text-[13px] text-accento sm:min-h-0"
             href="/abbonamenti"
           >
             dettaglio ›
@@ -230,7 +230,7 @@ async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
               <strong className="text-testo">{rigaMese.senza_categoria}</strong> movimenti per{' '}
               {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma senza
               categoria.{' '}
-              <Link className="text-essenziale" href="/revisione">
+              <Link className="text-accento" href="/revisione">
                 Assegnali
               </Link>
               .
@@ -265,7 +265,7 @@ async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
           ))}
           {avvisi.length > 3 && (
             <Link
-              className="inline-flex min-h-11 items-center text-[13px] text-essenziale"
+              className="inline-flex min-h-11 items-center text-[13px] text-accento"
               href="/avvisi"
             >
               altri {avvisi.length - 3} avvisi ›
@@ -582,7 +582,7 @@ function StatoSistema({ riga }: { riga: RigaStato }) {
         {scaduto
           ? 'I movimenti nuovi non arrivano più, e i numeri smettono di aggiornarsi senza che nulla lo segnali. Va rinnovato dal '
           : 'Va rinnovato prima della scadenza, altrimenti i dati smettono di arrivare in silenzio. Si rinnova dal '}
-        <Link className="text-essenziale" href="/debug/eb">
+        <Link className="text-accento" href="/debug/eb">
           pannello Enable Banking
         </Link>
         .

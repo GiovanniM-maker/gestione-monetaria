@@ -76,7 +76,7 @@ export function Barra() {
                 href={s.href}
                 aria-current={qui ? 'page' : undefined}
                 className={`flex min-h-11 flex-col items-center justify-center gap-0.5 pt-2 text-[10px] font-medium
-                            ${qui ? 'text-testo' : 'text-testo-3'}`}
+                            ${qui ? 'text-accento' : 'text-testo-3'}`}
               >
                 <span aria-hidden="true" className="text-[17px] leading-none">
                   {s.icona}

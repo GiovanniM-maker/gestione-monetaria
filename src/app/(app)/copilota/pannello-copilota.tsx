@@ -198,7 +198,7 @@ function Messaggio({
 }) {
   if (riga.ruolo === 'utente') {
     return (
-      <p className="ml-auto max-w-[85%] break-words rounded-2xl rounded-br-sm bg-testo px-3 py-2 text-sm text-s1">
+      <p className="ml-auto max-w-[85%] break-words rounded-2xl rounded-br-sm bg-accento px-3 py-2 text-sm text-accento-testo">
         {riga.testo}
       </p>
     );

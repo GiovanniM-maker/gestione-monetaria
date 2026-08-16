@@ -30,7 +30,7 @@
  */
 const BASE_CAMPO =
   'rounded-controllo bg-s3 px-3.5 text-[15px] text-testo placeholder:text-testo-3 ' +
-  'outline-none focus:ring-2 focus:ring-(--essenziale)';
+  'outline-none focus:ring-2 focus:ring-(--accento)';
 
 /** Campo a piena larghezza sul telefono, compatto da `sm` in su. */
 export const CAMPO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10 sm:w-auto`;
@@ -39,15 +39,16 @@ export const CAMPO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10 sm:w-auto`;
 export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10`;
 
 /**
- * Il bottone principale: pieno, invertito rispetto al fondo.
+ * Il bottone principale: pieno, nel colore dell'accento.
  *
- * Nero su chiaro e chiaro su nero, non blu: il blu e' gia' la tinta della
- * classe `essenziale` e dei collegamenti, e un terzo mestiere per lo stesso
- * colore lo renderebbe un'informazione in meno.
+ * Era nero su chiaro e chiaro su nero — corretto ma muto: un'applicazione con
+ * dieci bottoni neri non ha una voce. L'accento e' un indaco che non e'
+ * nessuna delle quattro classi, quindi puo' voler dire «tocca qui» senza
+ * togliere significato al colore dei dati.
  */
 export const BOTTONE =
-  'inline-flex min-h-11 items-center justify-center rounded-controllo bg-testo px-4 ' +
-  'text-[15px] font-semibold text-s1 disabled:opacity-40 sm:min-h-10';
+  'inline-flex min-h-11 items-center justify-center rounded-controllo bg-accento px-4 ' +
+  'text-[15px] font-semibold text-accento-testo disabled:opacity-40 sm:min-h-10';
 
 /**
  * Bottone secondario. Alto 44 px come il principale finche' lo schermo e'
@@ -63,6 +64,6 @@ export const BOTTONE_MINORE =
  * Una casella di spunta piccola quanto il carattere si sbaglia sempre. Il
  * bersaglio vero e' l'etichetta che la contiene, che va resa alta almeno 44 px.
  */
-export const CASELLA = 'size-4 shrink-0 accent-(--essenziale)';
+export const CASELLA = 'size-4 shrink-0 accent-(--accento)';
 export const ETICHETTA_CASELLA =
   'inline-flex min-h-11 items-center gap-2 text-[13px] text-testo-2 sm:min-h-0';

@@ -151,7 +151,7 @@ async function Connettori() {
             )}
             <button
               type="submit"
-              className="rounded-md bg-testo px-3 py-1 text-xs font-medium text-s1"
+              className="rounded-md bg-accento px-3 py-1 text-xs font-medium text-accento-testo"
             >
               Autorizza
             </button>
