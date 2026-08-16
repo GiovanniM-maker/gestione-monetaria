@@ -765,6 +765,97 @@ bersaglio toccabile, su 360, 375 e 414 px. Con Chromium già presente in ambient
 Stato misurato a fine Fase 6: **nessun elemento sborda** a nessuna delle tre larghezze, e l'unico
 bersaglio sotto i 44 px è la casella di spunta, la cui etichetta è alta 44 e toccandola la commuta.
 
+### Le classi di discrezionalita' si modificano, agosto 2026
+
+Erano quattro parole in un `check` su tre colonne, piu' cinque copie della stessa lista dentro
+altrettante funzioni SQL e nove componenti che se la riscrivevano dentro. Dalla `0043` sono righe
+di `discretion_classes`: si creano, si rinominano, si archiviano e si eliminano da `/classi`.
+
+#### Lo slug resta testo, e il `check` diventa una foreign key
+
+Con un `uuid` andrebbe ricreata `v_expenses` e con lei, in ordine e senza `cascade`, le **tredici**
+viste che ci stanno sopra — la manovra che le regole di processo descrivono per esteso e che e' gia'
+costata due migration fallite. Una chiave testuale la evita per intero: stessa colonna, stesso tipo,
+stessi valori, e `v_expenses` non si tocca affatto. In piu' il copilota continua a leggere
+`voluttuario` invece di un identificativo, e un uuid dentro un prompt e' solo un'occasione per
+inventarlo.
+
+Il nome mostrato sta in `nome`, lo slug e' l'identita': **rinominare non riscrive nessuna riga di
+`transactions`**.
+
+#### `nel_ricorrente`: cosa entra nel totale, non chi entra nella metrica
+
+La metrica e' una **ripartizione**, non un numero: una riga per classe. Da quattro a sette classi
+non la rompe, la allunga — e togliere righe la farebbe mentire per omissione.
+
+Il problema e' il **totale**, e c'era gia' con quattro classi: −2.045,75 €/mese somma cose che si
+potrebbero smettere di pagare e cose che non si smetteranno mai (l'affitto, 358,22 €/mese, sta
+dentro quella cifra). Con sette — e la settima sara' «risparmio», «tasse» o «rate» — smette di
+rispondere a qualunque domanda.
+
+Quindi il totale somma solo le classi col flag, e le altre restano **sotto la linea** col loro
+subtotale, sul cruscotto e su `/abbonamenti`. Il flag arriva nei **dati** mandati al modello, non
+nel prompt: la difesa non sono le istruzioni, e' che non abbia di che sbagliare.
+
+Default `true`, e le quattro di oggi nascono tutte `true`, quindi i numeri del 13 agosto non si
+spostano di un centesimo. Una classe a cui nessuno ha pensato dev'essere **contata**, non sparita:
+per un totale il verso giusto in cui fallire e' l'eccesso visibile, mai il difetto silenzioso.
+
+**Cosa il flag non fa**: non compare sulle viste della spesa. Non e' una convenzione da rispettare,
+e' una colonna che non c'e' — chi volesse filtrare la spesa mensile per `nel_ricorrente` non
+troverebbe da dove. Luglio 2026 dice −3.640,32 € e nessuna dichiarazione sulle classi puo' spostare
+quel numero.
+
+#### I token del colore smettono di chiamarsi come le classi
+
+`--voluttuario` faceva **due mestieri**: era la classe e anche il rosso di `.nota-errore` e del
+messaggio di login. Era gia' una bugia, e al primo rinomina lo sarebbe diventata sul serio. Ora
+sette tinte di tavolozza (`--classe-blu`, `--classe-rosa`, …) piu' `--allarme`, `--attenzione` e
+`--conferma` per i tre mestieri semantici. Il colore di una classe e' una **chiave**, non un hex: un
+hex scelto a mano non ha una variante per il tema scuro.
+
+#### Al copilota le classi arrivano nelle istruzioni, non in un `enum`
+
+Le dichiarazioni degli strumenti sono costanti costruite all'avvio: un `enum` congelato
+rifiuterebbe una classe creata dieci minuti prima, e lo farebbe con l'errore piu' confondente
+possibile — «non e' un valore ammesso» per una cosa che l'utente ha appena creato. L'elenco vero sta
+nel prompt, riscritto a ogni conversazione, e la validazione avviene al momento di eseguire.
+
+#### Il contesto (`personale` / `business`) NON e' stato toccato
+
+Ha la forma identica e gli stessi `check` scritti a mano negli stessi posti. Una cosa per volta: la
+tabella nasce in un modo che lo rende un lavoro corto il giorno che serva.
+
+### «Dove» e' una fisarmonica, agosto 2026
+
+Scendere dal totale a un movimento erano quattro pagine. Non sono quattro domande — sono la stessa
+guardata da piu' vicino — e a ogni pagina nuova si perdeva il **contesto**: quanto pesa questo ramo,
+e cosa c'e' accanto. Ora ogni riga si apre dove sta.
+
+- **Il primo livello arriva col server**, gli altri al tocco. Caricare tutto vorrebbe dire, su un
+  mese pieno, spedire mille movimenti al browser perche' magari se ne guardano cinque.
+- **Chiudere non scarica.** Chiudere e riaprire e' il gesto piu' comune mentre si cerca qualcosa, e
+  sarebbe il peggior momento per rifare una query.
+- **Due modi nell'indirizzo**, non in uno stato del browser: per classe risponde a «quanto di questo
+  mese era voluttuario», per categoria a «in cosa». Non sono lo stesso elenco riordinato — aperta
+  una classe, sotto ci sono le categorie **dentro quella classe**, coi loro totali parziali, che
+  nell'altro modo non esistono da nessuna parte.
+- **Un nodo con figlie e spesa propria** mostra anche una riga «direttamente qui», che scende ai
+  movimenti del **solo** nodo (`cerca_movimenti(p_solo_questa)`). Senza, la somma delle figlie
+  sarebbe minore del padre e la differenza non avrebbe un posto dove vedersi; col ramo intero, ogni
+  euro comparirebbe due volte.
+- **«Senza categoria» e' una riga**, non un'assenza: lasciarla fuori renderebbe la somma dei rami
+  minore del totale del mese senza che nessuno sappia perche'.
+
+La ciambella e l'albero se ne vanno: la prima rispondeva a «in cosa si divide il mese», che e'
+letteralmente il primo livello della fisarmonica disegnato peggio — su un telefono una fetta e'
+larga venti pixel e si sbaglia col pollice. **«Da chi» resta**: e' l'unica domanda che la discesa
+non sa rispondere, perche' un esercente attraversa le categorie.
+
+La regola che decide cosa c'e' sotto un nodo sta in `lib/dove/nodi.ts`, puro e provato. Sbagliata
+non da' errore: produce un elenco plausibile in cui ogni euro compare due volte, e un totale
+gonfiato del doppio si nota molto dopo di quanto si creda.
+
 ### Il rifacimento della UX, agosto 2026
 
 Fatto dopo la Fase 10, su richiesta, misurando prima di opinare: `/revisione` era alta **97.677 px**
@@ -1656,7 +1747,7 @@ transactions
   status text                     -- pending | booked
   merchant_id → merchants (null)
   category_id → categories (null)
-  discretion text                 -- essenziale | investimento | utile | voluttuario
+  discretion text → discretion_classes.slug   -- FK, on update cascade / on delete restrict
   context text                    -- personale | business
   is_transfer boolean             -- giroconto tra conti miei: escluso dalle analisi
   is_refund boolean
@@ -1675,15 +1766,25 @@ categories                        -- gerarchia ad albero, profondità libera
   parent_id → categories (null)
   name text, slug text unique
   icon text, color text
-  default_discretion text
+  default_discretion text → discretion_classes.slug
   is_archived boolean
   sort_order int
+
+discretion_classes                -- le classi, modificabili come le categorie (0043)
+  slug text pk                    -- l'identita' stabile: rinominare non la tocca
+  nome text                       -- cio' che si mostra
+  descrizione text                -- cosa ci va dentro. La legge anche il modello
+  colore text                     -- chiave di tavolozza: blu ambra rosa verde viola ciano bruno
+  sort_order int                  -- l'ordine della barra segmentata, non l'alfabetico
+  nel_ricorrente boolean          -- se entra nel TOTALE del costo ricorrente
+  is_archived boolean
+  created_at
 
 merchants
   id uuid pk
   canonical_name text
   category_id → categories
-  discretion text                 -- impostato UNA VOLTA, si propaga a tutte le transazioni
+  discretion text → discretion_classes.slug   -- impostato UNA VOLTA, si propaga a tutte le transazioni
   context text
   is_subscription boolean
   website text, cancel_url text, notes text
@@ -1764,4 +1865,9 @@ reports
 - `v_expenses` — solo uscite reali: `amount < 0 AND NOT is_transfer AND NOT is_refund AND NOT
 excluded_from_analysis` e conto con `include_in_totals`
 - `v_monthly_by_category` — aggregato mensile con roll-up sull'albero categorie
-- `v_recurring_monthly_cost_by_discretion` — **la metrica principale dell'app**
+- `v_recurring_monthly_cost_by_discretion` — **la metrica principale dell'app**. Contiene
+  **tutte** le classi: `nel_ricorrente` dice quali entrano nel totale, le altre si mostrano sotto
+  la linea. Una vista che filtrasse da sola nasconderebbe delle righe, e una ripartizione a cui
+  mancano delle righe mente per omissione.
+- `ripartizione_dove(mese, classe, contesto, categoria)` — di cosa e' fatto un ramo. La fisarmonica
+  di `/dove` fa questa domanda a ogni apertura, a tutti i livelli.
