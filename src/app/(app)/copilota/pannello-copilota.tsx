@@ -28,7 +28,9 @@ const ESEMPI = [
   'Come potrei spendere meno per mettere via più soldi?',
   'Fammi il grafico della mia spesa negli ultimi mesi',
   'Quanto ho speso in ristoranti il mese scorso?',
-  'Qual è il mio costo ricorrente voluttuario?',
+  // Le classi si rinominano, quindi un esempio che ne nomina una puo'
+  // invecchiare. Questo non ne nomina nessuna e chiede la stessa cosa.
+  'Qual è il mio costo ricorrente, classe per classe?',
 ];
 
 type Riga = MessaggioSalvato & { locale?: boolean };

@@ -19,10 +19,30 @@ describe('leggiFiltri — un filtro inventato non deve arrivare al database', ()
   });
 
   it('scarta i valori non ammessi invece di passarli', () => {
-    const f = leggiFiltri({ tipo: 'tutto', ordine: 'a caso', classe: 'inventata' });
+    const f = leggiFiltri({ tipo: 'tutto', ordine: 'a caso', contesto: 'altrove' });
     expect(f.tipo).toBe('spesa');
     expect(f.ordine).toBe('data');
-    expect(f.discrezionalita).toBeNull();
+    expect(f.contesto).toBeNull();
+  });
+
+  /**
+   * La classe si controlla nella **forma**, non nell'elenco.
+   *
+   * Le classi si creano mentre l'app e' accesa, e questo modulo e' puro — non
+   * puo' sapere quali esistano, ed e' proprio quella purezza a permettere di
+   * provarlo qui invece che con un database. Uno slug che non esiste non trova
+   * righe, e va benissimo: finisce in un argomento della RPC, non in una
+   * stringa di query.
+   *
+   * Il controllo di forma serve lo stesso: senza, qualunque testo arrivato
+   * dall'indirizzo finirebbe stampato nella riga che descrive i filtri.
+   */
+  it('accetta una classe che il codice non conosce, e rifiuta cio’ che non e’ uno slug', () => {
+    expect(leggiFiltri({ classe: 'risparmio' }).discrezionalita).toBe('risparmio');
+    expect(leggiFiltri({ classe: 'sfizi-del-sabato' }).discrezionalita).toBe('sfizi-del-sabato');
+    expect(leggiFiltri({ classe: 'Voluttuario' }).discrezionalita).toBeNull();
+    expect(leggiFiltri({ classe: "x'; drop table" }).discrezionalita).toBeNull();
+    expect(leggiFiltri({ classe: '-inizia-male' }).discrezionalita).toBeNull();
   });
 
   it('accetta solo date vere e solo identificativi veri', () => {

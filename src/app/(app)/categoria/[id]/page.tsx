@@ -13,7 +13,8 @@ import {
   leggiVariazioniEsercenti,
 } from '@/lib/cruscotto/variazioni';
 import { comeSiConfronta, type Variazione } from '@/lib/cruscotto/andamento';
-import { COLORE_CLASSE } from '../../grafici';
+import { leggiClassi } from '@/lib/tassonomia/classi';
+import { tinteDelleClassi } from '../../grafici';
 import { MesePerMese, Ripartizione, TestataLivello } from '../../livello';
 import { CorreggiCategoria } from '../../correggi';
 import { genitoriPossibili } from '@/lib/tassonomia/categorie';
@@ -71,7 +72,7 @@ export default async function CategoriaPage({
 
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: categoria }, { data: serie }] = await Promise.all([
+  const [{ data: categoria }, { data: serie }, classi] = await Promise.all([
     supabase
       .from('categories')
       .select('id, name, parent_id, default_discretion')
@@ -85,6 +86,7 @@ export default async function CategoriaPage({
       .eq('category_id', id)
       .order('mese', { ascending: false })
       .limit(18),
+    leggiClassi(),
   ]);
 
   const cat = categoria as {
@@ -95,6 +97,7 @@ export default async function CategoriaPage({
   } | null;
   if (cat === null) notFound();
 
+  const tinte = tinteDelleClassi(classi);
   const mesi = comeArray<RigaCat>(serie).map((r) => ({ ...r, mese: meseDaData(r.mese) ?? r.mese }));
   const mese = meseChiesto ?? mesi[0]?.mese ?? null;
   const delMese = mesi.find((r) => r.mese === mese) ?? null;
@@ -154,9 +157,7 @@ export default async function CategoriaPage({
         sottotitolo={mese === null ? null : etichettaMese(mese)}
         importo={centesimiDi(delMese?.spesa)}
         variazione={perCategoria.get(id)}
-        tinta={
-          cat.default_discretion === null ? null : (COLORE_CLASSE[cat.default_discretion] ?? null)
-        }
+        tinta={cat.default_discretion === null ? null : (tinte[cat.default_discretion] ?? null)}
         nota={`${delMese?.movimenti ?? 0} movimenti, sottocategorie comprese${
           spiegaIlConfronto === null ? '' : ` · ${spiegaIlConfronto}`
         }`}

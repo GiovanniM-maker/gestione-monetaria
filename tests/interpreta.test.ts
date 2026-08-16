@@ -10,6 +10,9 @@ import { interpretaProposta } from '@/lib/tassonomia/interpreta';
 
 const SLUG = new Set(['ristorazione-bar', 'trasporti-treni', 'lavoro-software']);
 const LOTTO = ['Sumup  *bar Job', 'Tper Spa', 'Klingai.com'];
+// Le classi arrivano da fuori, come gli slug delle categorie: la funzione resta
+// pura e non sa da sola quali esistano.
+const CLASSI_VALIDE = new Set(['essenziale', 'utile', 'voluttuario', 'investimento']);
 
 const valida = {
   etichetta: 'Tper Spa',
@@ -23,12 +26,12 @@ const valida = {
 };
 
 function proposta(v: unknown) {
-  const esito = interpretaProposta(v, SLUG, LOTTO);
+  const esito = interpretaProposta(v, SLUG, CLASSI_VALIDE, LOTTO);
   return 'proposta' in esito ? esito.proposta : null;
 }
 
 function scarto(v: unknown) {
-  const esito = interpretaProposta(v, SLUG, LOTTO);
+  const esito = interpretaProposta(v, SLUG, CLASSI_VALIDE, LOTTO);
   return 'scarto' in esito ? esito.scarto : null;
 }
 
@@ -124,6 +127,7 @@ describe('interpretaProposta — il guasto vero del 12 agosto', () => {
     const esito = interpretaProposta(
       { ...base, etichetta: 'Canva* I04731-63857386 · 1 volte · -12.00 EUR' },
       new Set(['lavoro-software']),
+      CLASSI_VALIDE,
       LOTTO_CANVA,
     );
     expect('proposta' in esito && esito.proposta.etichetta).toBe('Canva* I04731-63857386');
@@ -133,6 +137,7 @@ describe('interpretaProposta — il guasto vero del 12 agosto', () => {
     const esito = interpretaProposta(
       { ...base, etichetta: 'Canva* I04731-63857386', frammento: 'Canva' },
       new Set(['lavoro-software']),
+      CLASSI_VALIDE,
       LOTTO_CANVA,
     );
     expect('proposta' in esito && esito.proposta.frammento).toBe('Canva');
@@ -143,6 +148,7 @@ describe('interpretaProposta — il guasto vero del 12 agosto', () => {
     const esito = interpretaProposta(
       { ...base, etichetta: 'Canva* I04731-63857386', frammento: 'Figma' },
       new Set(['lavoro-software']),
+      CLASSI_VALIDE,
       LOTTO_CANVA,
     );
     expect('proposta' in esito && esito.proposta.frammento).toBeNull();
@@ -152,11 +158,20 @@ describe('interpretaProposta — il guasto vero del 12 agosto', () => {
     const esito = interpretaProposta(
       { ...base, etichetta: 'Canva* I04731-63857386', frammento: 'ca' },
       new Set(['lavoro-software']),
+      CLASSI_VALIDE,
       LOTTO_CANVA,
     );
     expect('proposta' in esito && esito.proposta.frammento).toBeNull();
   });
 });
+
+/**
+ * Le classi non sono piu' quattro costanti: la validazione riceve l'elenco
+ * vero. Qui se ne passa uno finto, che e' il punto — la funzione non deve
+ * sapere quali classi esistano, deve rifiutare quelle che non le sono state
+ * date.
+ */
+const CLASSI = ['essenziale', 'utile', 'voluttuario', 'investimento'];
 
 describe('aggiornaMerchant — un campo assente non e’ un valore da validare', () => {
   it('il selettore di categoria manda solo la categoria, e deve passare', () => {
@@ -170,10 +185,22 @@ describe('aggiornaMerchant — un campo assente non e’ un valore da validare',
     expect(() => validaPerLaProva({ discretion: null, context: null })).not.toThrow();
   });
 
+  it('una classe creata ieri passa, perche’ l’elenco arriva dal database', () => {
+    expect(() =>
+      validaPerLaProva({
+        discretion: 'risparmio',
+        context: null,
+        classi: [...CLASSI, 'risparmio'],
+      }),
+    ).not.toThrow();
+  });
+
   it('un valore inventato viene ancora rifiutato', () => {
-    expect(() => validaPerLaProva({ discretion: 'inventata', context: null })).toThrow(
-      /Discrezionalita/,
-    );
-    expect(() => validaPerLaProva({ discretion: null, context: 'altrove' })).toThrow(/Contesto/);
+    expect(() =>
+      validaPerLaProva({ discretion: 'inventata', context: null, classi: CLASSI }),
+    ).toThrow(/Discrezionalita/);
+    expect(() =>
+      validaPerLaProva({ discretion: null, context: 'altrove', classi: CLASSI }),
+    ).toThrow(/Contesto/);
   });
 });

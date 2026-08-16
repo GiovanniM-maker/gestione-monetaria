@@ -1,6 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { applicaTassonomia } from './applica';
+import { leggiClassi } from './classi';
 import type { Context, Discretion, MatchType, MerchantRow } from '@/lib/db/types';
 
 /**
@@ -21,12 +22,6 @@ import type { Context, Discretion, MatchType, MerchantRow } from '@/lib/db/types
  * dalla classificazione ordinaria.
  */
 
-export const DISCREZIONALITA: readonly Discretion[] = [
-  'essenziale',
-  'investimento',
-  'utile',
-  'voluttuario',
-];
 export const CONTESTI: readonly Context[] = ['personale', 'business'];
 
 export type NuovoMerchant = {
@@ -70,7 +65,11 @@ export async function assegnaEtichetta(richiesta: RichiestaAssegnazione) {
     if (nuovo === undefined || nuovo.canonical_name.trim() === '') {
       throw new AssegnazioneNonValida('Serve un esercente esistente o il nome di uno nuovo.');
     }
-    validaClassificazione(nuovo.discretion, nuovo.context);
+    validaClassificazione(
+      nuovo.discretion,
+      nuovo.context,
+      (await leggiClassi()).map((c) => c.slug),
+    );
 
     // `upsert` e non `insert`: se l'esercente esiste gia' con lo stesso nome
     // canonico, va riusato. Crearne un secondo che differisce per maiuscole e'
@@ -138,7 +137,15 @@ export async function aggiornaMerchant(aggiornamento: AggiornamentoMerchant) {
   if (typeof aggiornamento.id !== 'string' || aggiornamento.id.trim() === '') {
     throw new AssegnazioneNonValida('Esercente non indicato.');
   }
-  validaClassificazione(aggiornamento.discretion, aggiornamento.context);
+  // Le classi valide si leggono: non sono piu' quattro costanti. Qui la
+  // scrittura va **diretta** sulla tabella e non passa da `valida_classe`,
+  // quindi senza questa lettura l'errore arriverebbe come un messaggio di
+  // vincolo di Postgres con dentro il nome della foreign key.
+  validaClassificazione(
+    aggiornamento.discretion,
+    aggiornamento.context,
+    (await leggiClassi()).map((c) => c.slug),
+  );
 
   // Si scrivono **solo** i campi arrivati. Mandarli tutti significherebbe
   // azzerare quelli che il chiamante non ha nominato: cambiare la categoria da
@@ -171,21 +178,29 @@ export async function aggiornaMerchant(aggiornamento: AggiornamentoMerchant) {
  * `undefined` che difende e' esattamente il difetto che si vuole non far
  * tornare.
  */
-export function validaPerLaProva(v: { discretion: unknown; context: unknown }): void {
-  validaClassificazione(v.discretion, v.context);
+export function validaPerLaProva(v: {
+  discretion: unknown;
+  context: unknown;
+  classi?: readonly string[];
+}): void {
+  validaClassificazione(v.discretion, v.context, v.classi ?? []);
 }
 
-function validaClassificazione(discretion: unknown, context: unknown): void {
+function validaClassificazione(
+  discretion: unknown,
+  context: unknown,
+  classi: readonly string[],
+): void {
   // `undefined` significa «campo non mandato», e non e' un valore da validare:
   // e' l'assenza. `null` invece e' una scelta — «togli la discrezionalita'» — e
   // resta ammesso.
   if (
     discretion !== null &&
     discretion !== undefined &&
-    !DISCREZIONALITA.includes(discretion as Discretion)
+    !classi.includes(discretion as Discretion)
   ) {
     throw new AssegnazioneNonValida(
-      `Discrezionalita' non ammessa: ${String(discretion)}. Valori validi: ${DISCREZIONALITA.join(', ')}.`,
+      `Discrezionalita' non ammessa: ${String(discretion)}. Valori validi: ${classi.join(', ')}.`,
     );
   }
   if (context !== null && context !== undefined && !CONTESTI.includes(context as Context)) {

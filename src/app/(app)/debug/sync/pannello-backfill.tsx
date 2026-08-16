@@ -774,7 +774,7 @@ export function PannelloBackfill({
 
       {corseRiprendibili.length > 0 && (
         <div className="nota nota-avviso space-y-2">
-          <p className="text-xs text-utile">
+          <p className="text-xs text-attenzione">
             {corseRiprendibili.length === 1
               ? 'Una corsa non e\u2019 arrivata in fondo. Il suo cursore e\u2019 salvato: riprenderla continua da dove si era fermata, senza riscaricare nulla.'
               : `${corseRiprendibili.length} corse non sono arrivate in fondo. I loro cursori sono salvati: riprenderle continua da dove si erano fermate.`}
@@ -786,7 +786,7 @@ export function PannelloBackfill({
                 type="button"
                 onClick={() => void riprendi(corsa.id)}
                 disabled={inCorso}
-                className="rounded-controllo bg-s3 px-3 py-1 text-xs font-medium text-utile disabled:opacity-40"
+                className="rounded-controllo bg-s3 px-3 py-1 text-xs font-medium text-attenzione disabled:opacity-40"
               >
                 Riprendi{' '}
                 {new Date(corsa.started_at).toLocaleString('it-IT', {

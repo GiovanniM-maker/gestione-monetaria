@@ -1,4 +1,5 @@
 import 'server-only';
+import { leggiClassi } from '@/lib/tassonomia/classi';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { sanificaMetriche } from '@/lib/report/sanifica';
@@ -116,8 +117,38 @@ function giorno(valore: unknown, campo: string): string | null {
   return t;
 }
 
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 const CONTESTI = ['personale', 'business'] as const;
+
+/**
+ * La classe di discrezionalita' negli argomenti del modello.
+ *
+ * Non e' un `enum` nello schema, e non e' una svista. Le dichiarazioni degli
+ * strumenti sono costanti — si costruiscono una volta e valgono per tutte le
+ * conversazioni — mentre le classi si creano e si archiviano mentre l'app e'
+ * accesa. Un `enum` congelato all'avvio rifiuterebbe una classe creata dieci
+ * minuti prima, e lo farebbe con l'errore piu' confondente possibile: «non e'
+ * un valore ammesso» per una cosa che l'utente ha appena creato.
+ *
+ * L'elenco vero il modello ce l'ha nelle istruzioni, dove viene riscritto a
+ * ogni conversazione, e la validazione avviene qui — al momento di eseguire,
+ * cioe' quando si sa cosa esiste davvero.
+ */
+const CLASSE: Record<string, unknown> = {
+  type: 'string',
+  description:
+    'Slug di una classe di discrezionalità, fra quelle elencate nelle istruzioni. ' +
+    'Non inventarne.',
+};
+
+async function classeValida(valore: unknown, campo = 'discrezionalita'): Promise<string | null> {
+  const t = testo(valore);
+  if (t === null) return null;
+  const classi = (await leggiClassi()).filter((c) => !c.is_archived).map((c) => c.slug);
+  if (!classi.includes(t)) {
+    throw new ArgomentoNonValido(`${campo} ammette solo: ${classi.join(', ')} (ricevuto: ${t}).`);
+  }
+  return t;
+}
 
 function fraQuesti<T extends string>(
   valore: unknown,
@@ -173,7 +204,7 @@ const cercaMovimenti: Strumento = {
       testo: { type: 'string', description: "Cerca nella causale e nel nome dell'esercente." },
       categoria_id: STRINGA,
       esercente_id: STRINGA,
-      discrezionalita: { type: 'string', enum: [...DISCREZIONALITA] },
+      discrezionalita: CLASSE,
       contesto: { type: 'string', enum: [...CONTESTI] },
       tipo: {
         type: 'string',
@@ -196,7 +227,7 @@ const cercaMovimenti: Strumento = {
       p_ricerca: testo(a['testo']),
       p_categoria: identificativo(a['categoria_id'], 'categoria_id'),
       p_merchant: identificativo(a['esercente_id'], 'esercente_id'),
-      p_discrezionalita: fraQuesti(a['discrezionalita'], DISCREZIONALITA, 'discrezionalita'),
+      p_discrezionalita: await classeValida(a['discrezionalita']),
       p_contesto: fraQuesti(a['contesto'], CONTESTI, 'contesto'),
       p_tipo:
         fraQuesti(a['tipo'], ['spesa', 'entrate', 'giroconti', 'tutti'] as const, 'tipo') ??
@@ -771,7 +802,7 @@ const correggiMovimento: Strumento = {
     type: 'object',
     properties: {
       id: { type: 'string', description: 'Identificativo del movimento.' },
-      discrezionalita: { type: 'string', enum: [...DISCREZIONALITA] },
+      discrezionalita: CLASSE,
       contesto: { type: 'string', enum: [...CONTESTI] },
       note: { type: 'string', description: 'Perché fa eccezione.' },
     },
@@ -781,7 +812,7 @@ const correggiMovimento: Strumento = {
     const id = identificativo(a['id'], 'id');
     if (id === null) throw new ArgomentoNonValido("Serve l'identificativo del movimento.");
 
-    const discrezionalita = fraQuesti(a['discrezionalita'], DISCREZIONALITA, 'discrezionalita');
+    const discrezionalita = await classeValida(a['discrezionalita']);
     const contesto = fraQuesti(a['contesto'], CONTESTI, 'contesto');
     const note = testo(a['note']);
 
@@ -833,7 +864,7 @@ const aggiornaEsercente: Strumento = {
     properties: {
       id: { type: 'string', description: "Identificativo dell'esercente." },
       categoria_id: STRINGA,
-      discrezionalita: { type: 'string', enum: [...DISCREZIONALITA] },
+      discrezionalita: CLASSE,
       contesto: { type: 'string', enum: [...CONTESTI] },
       abbonamento: {
         type: 'boolean',
@@ -849,7 +880,7 @@ const aggiornaEsercente: Strumento = {
     if (id === null) throw new ArgomentoNonValido("Serve l'identificativo dell'esercente.");
 
     const categoriaId = identificativo(a['categoria_id'], 'categoria_id');
-    const discrezionalita = fraQuesti(a['discrezionalita'], DISCREZIONALITA, 'discrezionalita');
+    const discrezionalita = await classeValida(a['discrezionalita']);
     const contesto = fraQuesti(a['contesto'], CONTESTI, 'contesto');
     const abbonamento = typeof a['abbonamento'] === 'boolean' ? a['abbonamento'] : null;
 
@@ -898,7 +929,7 @@ const creaCategoria: Strumento = {
     properties: {
       nome: STRINGA,
       padre_id: { type: 'string', description: 'Categoria sotto cui appenderla.' },
-      discrezionalita_predefinita: { type: 'string', enum: [...DISCREZIONALITA] },
+      discrezionalita_predefinita: CLASSE,
     },
     required: ['nome'],
   },
@@ -907,9 +938,8 @@ const creaCategoria: Strumento = {
     if (nome === null) throw new ArgomentoNonValido('Serve il nome della categoria.');
 
     const padreId = identificativo(a['padre_id'], 'padre_id');
-    const predefinita = fraQuesti(
+    const predefinita = await classeValida(
       a['discrezionalita_predefinita'],
-      DISCREZIONALITA,
       'discrezionalita_predefinita',
     );
 
@@ -953,7 +983,7 @@ const spostaMovimentoStrumento: Strumento = {
         properties: {
           nome: STRINGA,
           categoria_id: STRINGA,
-          discrezionalita: { type: 'string', enum: [...DISCREZIONALITA] },
+          discrezionalita: CLASSE,
           contesto: { type: 'string', enum: [...CONTESTI] },
           abbonamento: { type: 'boolean' },
         },
@@ -1021,11 +1051,7 @@ const spostaMovimentoStrumento: Strumento = {
         nuovo: {
           nome,
           categoriaId,
-          discrezionalita: fraQuesti(
-            nuovo?.['discrezionalita'],
-            DISCREZIONALITA,
-            'discrezionalita',
-          ),
+          discrezionalita: await classeValida(nuovo?.['discrezionalita']),
           contesto: fraQuesti(nuovo?.['contesto'], CONTESTI, 'contesto'),
           abbonamento: nuovo?.['abbonamento'] === true,
         },
@@ -1055,6 +1081,167 @@ const spostaMovimentoStrumento: Strumento = {
   },
 };
 
+/* -------------------------------------------------------------------------- */
+/* Le classi di discrezionalita'                                               */
+/* -------------------------------------------------------------------------- */
+// Dalla `0043` le classi si creano, si rinominano e si eliminano. La regola
+// della Fase 0 vale identica: se quelle operazioni vivessero solo dentro un
+// bottone, per il copilota non esisterebbero — e la domanda «crea una classe
+// per il risparmio» non avrebbe risposta.
+//
+// Come ogni scrittura, si **preparano** e l'utente le applica con un tocco.
+// Qui il motivo e' anche piu' forte del solito: eliminare una classe riscrive
+// la classificazione di ogni riga che la usava, comprese quelle corrette a
+// mano, e non e' una cosa che debba succedere sull'interpretazione di una
+// frase.
+
+const creaClasseStrumento: Strumento = {
+  nome: 'crea_classe',
+  descrizione:
+    'Prepara una classe di discrezionalità nuova. Prima controlla l’elenco nelle ' +
+    'istruzioni: due classi che vogliono dire la stessa cosa spezzano la metrica ' +
+    'principale in due righe che nessuno somma.',
+  parametri: {
+    type: 'object',
+    properties: {
+      nome: STRINGA,
+      descrizione: {
+        type: 'string',
+        description: 'Cosa ci va dentro, in una riga. La leggerai tu la prossima volta.',
+      },
+      nel_ricorrente: {
+        type: 'boolean',
+        description:
+          'Se il costo ricorrente di questa classe entra nel TOTALE. Falso per una spesa ' +
+          'che si ripete ma che non si vuole togliere — risparmio, tasse, una rata: resta ' +
+          'nella ripartizione, sotto la linea, ma non nel totale. Predefinito vero.',
+      },
+    },
+    required: ['nome'],
+  },
+  esegui: async (a) => {
+    const nome = testo(a['nome']);
+    if (nome === null) throw new ArgomentoNonValido('Serve il nome della classe.');
+    const descrizione = testo(a['descrizione']);
+    const nelRicorrente = typeof a['nel_ricorrente'] === 'boolean' ? a['nel_ricorrente'] : true;
+
+    return {
+      dati: PREPARATA,
+      proposta: {
+        operazione: 'crea_classe',
+        argomenti: { nome, descrizione, nel_ricorrente: nelRicorrente },
+        descrizione:
+          `Crea la classe «${nome}»` +
+          (nelRicorrente
+            ? ', dentro il totale del costo ricorrente.'
+            : ', fuori dal totale del costo ricorrente: resterà nella ripartizione ma non nella somma.'),
+      },
+    };
+  },
+};
+
+const aggiornaClasseStrumento: Strumento = {
+  nome: 'aggiorna_classe',
+  descrizione:
+    'Prepara la correzione di una classe: nome, descrizione, se entra nel totale del ' +
+    'costo ricorrente, o l’archiviazione. Rinominare non tocca nessuna spesa: lo slug ' +
+    'resta lo stesso, cambia solo il nome mostrato.',
+  parametri: {
+    type: 'object',
+    properties: {
+      slug: { type: 'string', description: 'Lo slug della classe da correggere.' },
+      nome: STRINGA,
+      descrizione: STRINGA,
+      nel_ricorrente: { type: 'boolean' },
+      archiviata: {
+        type: 'boolean',
+        description:
+          'Archiviare la toglie dai selettori e la lascia nello storico. Non cancella niente.',
+      },
+    },
+    required: ['slug'],
+  },
+  esegui: async (a) => {
+    const slug = await classeValida(a['slug'], 'slug');
+    if (slug === null) throw new ArgomentoNonValido('Serve lo slug della classe.');
+
+    const nome = testo(a['nome']);
+    const descrizione = testo(a['descrizione']);
+    const nelRicorrente = typeof a['nel_ricorrente'] === 'boolean' ? a['nel_ricorrente'] : null;
+    const archiviata = typeof a['archiviata'] === 'boolean' ? a['archiviata'] : null;
+
+    const cambi = [
+      nome !== null ? `nome → ${nome}` : null,
+      descrizione !== null ? 'descrizione aggiornata' : null,
+      nelRicorrente !== null
+        ? nelRicorrente
+          ? 'entra nel totale del costo ricorrente'
+          : 'esce dal totale del costo ricorrente'
+        : null,
+      archiviata !== null ? (archiviata ? 'archiviata' : 'riportata in uso') : null,
+    ].filter((c): c is string => c !== null);
+
+    if (cambi.length === 0) throw new ArgomentoNonValido('Non c’è niente da cambiare.');
+
+    return {
+      dati: PREPARATA,
+      proposta: {
+        operazione: 'aggiorna_classe',
+        argomenti: {
+          slug,
+          nome,
+          descrizione,
+          nel_ricorrente: nelRicorrente,
+          archiviata,
+        },
+        descrizione: `Classe «${slug}»: ${cambi.join(', ')}.`,
+      },
+    };
+  },
+};
+
+const eliminaClasseStrumento: Strumento = {
+  nome: 'elimina_classe',
+  descrizione:
+    'Prepara l’eliminazione di una classe, spostando le sue righe in un’altra. È anche ' +
+    'il modo di UNIRE due classi. Se la classe non è in uso, «verso» si può omettere. ' +
+    'Se vuoi solo smettere di usarla senza toccare lo storico, archiviala invece ' +
+    'con aggiorna_classe.',
+  parametri: {
+    type: 'object',
+    properties: {
+      slug: { type: 'string', description: 'La classe da eliminare.' },
+      verso: {
+        type: 'string',
+        description:
+          'La classe in cui spostare movimenti, esercenti e categorie che usavano quella ' +
+          'eliminata. Obbligatoria se è in uso.',
+      },
+    },
+    required: ['slug'],
+  },
+  esegui: async (a) => {
+    const slug = await classeValida(a['slug'], 'slug');
+    if (slug === null) throw new ArgomentoNonValido('Serve lo slug della classe.');
+    const verso = await classeValida(a['verso'], 'verso');
+    if (verso === slug)
+      throw new ArgomentoNonValido('La destinazione non può essere la stessa classe.');
+
+    return {
+      dati: PREPARATA,
+      proposta: {
+        operazione: 'elimina_classe',
+        argomenti: { slug, verso },
+        descrizione:
+          `Elimina la classe «${slug}»` +
+          (verso === null
+            ? '. Se risulta ancora in uso l’operazione si ferma senza toccare niente.'
+            : `, spostando tutte le sue righe in «${verso}». Tocca anche le righe corrette a mano: la classe che avevano non esisterà più.`),
+      },
+    };
+  },
+};
+
 export const STRUMENTI: readonly Strumento[] = [
   cercaMovimenti,
   spesaPerCategoria,
@@ -1070,6 +1257,9 @@ export const STRUMENTI: readonly Strumento[] = [
   aggiornaEsercente,
   creaCategoria,
   spostaMovimentoStrumento,
+  creaClasseStrumento,
+  aggiornaClasseStrumento,
+  eliminaClasseStrumento,
 ];
 
 export function strumento(nome: string): Strumento | undefined {

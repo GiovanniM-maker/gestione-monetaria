@@ -7,7 +7,8 @@ import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { meseDaData } from '@/lib/cruscotto/mesi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
-import { COLORE_CLASSE } from '../../grafici';
+import { leggiClassi } from '@/lib/tassonomia/classi';
+import { tinteDelleClassi } from '../../grafici';
 import { MesePerMese, TestataLivello } from '../../livello';
 import { CorreggiEsercente } from '../../correggi';
 import { Interruttore } from '../../esercenti/interruttore';
@@ -62,7 +63,7 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: riga }, { data: mensili }, { data: categorie }, { data: ricorrenza }] =
+  const [{ data: riga }, { data: mensili }, { data: categorie }, { data: ricorrenza }, classi] =
     await Promise.all([
       supabase
         .from('v_merchant_totals')
@@ -88,10 +89,13 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         .select('id, tipo, cadence, costo_mensile::text, nella_metrica, status')
         .eq('merchant_id', id)
         .maybeSingle(),
+      leggiClassi(),
     ]);
 
   const m = riga as Esercente | null;
   if (m === null) notFound();
+
+  const tinte = tinteDelleClassi(classi);
 
   const mesi = comeArray<Mensile>(mensili).map((r) => ({
     ...r,
@@ -118,7 +122,7 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           m.ultima === null ? '' : ` · ultimo il ${m.ultima}`
         }`}
         importo={centesimiDi(m.totale)}
-        tinta={m.discretion === null ? null : (COLORE_CLASSE[m.discretion] ?? null)}
+        tinta={m.discretion === null ? null : (tinte[m.discretion] ?? null)}
         nota="speso in tutto lo storico"
         azioni={
           <>
@@ -183,7 +187,7 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           <p className="mt-2 border-t border-filo pt-2 text-xs text-testo-2">{m.motivazione}</p>
         )}
         {m.origine === 'ai' && m.confermato_at === null && (
-          <p className="mt-2 text-xs text-utile">
+          <p className="mt-2 text-xs text-attenzione">
             Questa classificazione l&rsquo;ha proposta il modello e nessuno l&rsquo;ha ancora
             confermata. Vale per i conteggi — una classificazione probabile e visibile è più utile
             di nessuna — ma è la prima da guardare se un totale sorprende.

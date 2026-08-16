@@ -21,7 +21,13 @@ export type RigaTotaleMese = {
 };
 
 export type RigaClasse = {
+  /** Lo slug della classe, oppure `non classificato` per un `null` nei dati. */
   discrezionalita: string;
+  /** Il nome mostrato. Cambia con un rinomina; lo slug no. */
+  classe_nome: string;
+  /** La chiave di tavolozza, non un colore: la tinta sta in `globals.css`. */
+  colore: string;
+  ordine: number;
   contesto: string;
   spesa: string;
   movimenti: number;

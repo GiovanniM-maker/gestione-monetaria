@@ -67,12 +67,38 @@
   --accento: #5a50e0;
   --accento-testo: #ffffff;
 
-  /* le quattro classi, ai valori di sistema: piu' saturi e leggibili sul nero */
-  --essenziale: #0a84ff;
-  --utile: #ff9f0a;
-  --voluttuario: #ff375f;
-  --investimento: #30d158;
+  /**
+   * La tavolozza delle classi.
+   * ------------------------------------------------------------------------
+   * Sette tinte, ai valori di sistema: piu' saturi e leggibili sul nero.
+   *
+   * Si chiamano col nome del **colore** e non della classe, e dalla `0043` non
+   * e' piu' una preferenza: le classi si rinominano ed eliminano, quindi un
+   * token che si chiama `--voluttuario` e' una bugia il giorno dopo. Era gia'
+   * una bugia prima, del resto: `.nota-errore` e il messaggio di errore del
+   * login usavano `--voluttuario` per dire «rosso», che con la classe non
+   * c'entrava niente.
+   *
+   * Sette e non di piu', come la tavolozza della ciambella: oltre la settima
+   * due tinte adiacenti si somigliano, e un colore che non distingue e' un
+   * colore che non informa.
+   */
+  --classe-blu: #0a84ff;
+  --classe-ambra: #ff9f0a;
+  --classe-rosa: #ff375f;
+  --classe-verde: #30d158;
+  --classe-viola: #bf5af2;
+  --classe-ciano: #64d2ff;
+  --classe-bruno: #ac8e68;
   --neutro: #8e8e93;
+
+  /* Il rosso e l'ambra quando dicono «guarda qui», non «questa spesa e'
+     voluttuaria». Stesso pigmento, mestiere diverso — e chiamarli col loro
+     mestiere e' cio' che permette a una classe di cambiare colore senza
+     ridipingere gli errori. */
+  --allarme: var(--classe-rosa);
+  --attenzione: var(--classe-ambra);
+  --conferma: var(--classe-verde);
 
   --r-scheda: 22px;
   --r-controllo: 14px;
@@ -107,10 +133,13 @@
     --accento: #8f8aff;
     --accento-testo: #0b0b12;
 
-    --essenziale: #409cff;
-    --utile: #ffb340;
-    --voluttuario: #ff6482;
-    --investimento: #3ddc6a;
+    --classe-blu: #409cff;
+    --classe-ambra: #ffb340;
+    --classe-rosa: #ff6482;
+    --classe-verde: #3ddc6a;
+    --classe-viola: #da8fff;
+    --classe-ciano: #70d7ff;
+    --classe-bruno: #b59469;
     --neutro: #98989f;
   }
 }
@@ -126,10 +155,10 @@
   --color-filo: var(--filo);
   --color-accento: var(--accento);
   --color-accento-testo: var(--accento-testo);
-  --color-essenziale: var(--essenziale);
-  --color-utile: var(--utile);
-  --color-voluttuario: var(--voluttuario);
-  --color-investimento: var(--investimento);
+  --color-allarme: var(--allarme);
+  --color-attenzione: var(--attenzione);
+  --color-conferma: var(--conferma);
+  --color-neutro: var(--neutro);
   --radius-scheda: var(--r-scheda);
   --radius-controllo: var(--r-controllo);
 }
@@ -209,13 +238,13 @@ body {
   padding: 0.625rem 0.875rem;
 }
 .nota-errore {
-  background: color-mix(in oklab, var(--voluttuario) 14%, var(--s2));
+  background: color-mix(in oklab, var(--allarme) 14%, var(--s2));
 }
 .nota-avviso {
-  background: color-mix(in oklab, var(--utile) 14%, var(--s2));
+  background: color-mix(in oklab, var(--attenzione) 14%, var(--s2));
 }
 .nota-esito {
-  background: color-mix(in oklab, var(--investimento) 14%, var(--s2));
+  background: color-mix(in oklab, var(--conferma) 14%, var(--s2));
 }
 
 /**

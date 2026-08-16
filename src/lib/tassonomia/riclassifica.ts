@@ -3,7 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { chiediAlModello, estraiArrayJson, modelloInUso } from '@/lib/ai/modello';
 import { applicaTassonomia } from './applica';
-import { CONTESTI, DISCREZIONALITA } from './interpreta';
+import { CONTESTI } from './interpreta';
+import { leggiClassi } from './classi';
 import type { CategoryRow, Context, Discretion } from '@/lib/db/types';
 
 /**
@@ -69,7 +70,7 @@ REGOLE ASSOLUTE:
    allora non hai deciso: metti "sicuro": false.
 
 FORMATO di ogni voce:
-{"esercente":"...", "categoria":"slug", "discrezionalita":"essenziale|investimento|utile|voluttuario",
+{"esercente":"...", "categoria":"slug", "discrezionalita":"uno degli slug di classe elencati",
  "contesto":"personale|business", "abbonamento":true|false, "motivo":"...", "sicuro":true|false}`;
 
 export type EsitoRiclassificazione = {
@@ -113,7 +114,7 @@ export async function riclassificaConLeProve(): Promise<EsitoRiclassificazione> 
     errori: [],
   };
 
-  const [{ data: righe }, { data: categorie }] = await Promise.all([
+  const [{ data: righe }, { data: categorie }, classi] = await Promise.all([
     supabase
       .from('v_esercenti_da_riclassificare')
       .select(
@@ -122,10 +123,12 @@ export async function riclassificaConLeProve(): Promise<EsitoRiclassificazione> 
       )
       .limit(LOTTO),
     supabase.from('categories').select('*').eq('is_archived', false).order('slug'),
+    leggiClassi(),
   ]);
 
   const lotto = comeArray<RigaDaRifare>(righe);
   const albero = comeArray<CategoryRow>(categorie);
+  const classiValide = new Set(classi.filter((c) => !c.is_archived).map((c) => c.slug));
   esito.esaminati = lotto.length;
 
   if (lotto.length === 0 || albero.length === 0) return esito;
@@ -140,6 +143,13 @@ export async function riclassificaConLeProve(): Promise<EsitoRiclassificazione> 
       prompt:
         'CATEGORIE AMMESSE (slug):\n' +
         albero.map((c) => `- ${c.slug}: ${c.name}`).join('\n') +
+        '\n\nCLASSI DI DISCREZIONALITÀ AMMESSE (slug):\n' +
+        classi
+          .filter((c) => !c.is_archived)
+          .map(
+            (c) => `- ${c.slug}: ${c.nome}${c.descrizione === null ? '' : ` — ${c.descrizione}`}`,
+          )
+          .join('\n') +
         '\n\nESERCENTI DA RICLASSIFICARE:\n' +
         JSON.stringify(
           lotto.map((r) => ({
@@ -196,7 +206,7 @@ export async function riclassificaConLeProve(): Promise<EsitoRiclassificazione> 
 
     if (
       !slugValidi.has(categoria) ||
-      !DISCREZIONALITA.includes(discrezionalita) ||
+      !classiValide.has(discrezionalita) ||
       !CONTESTI.includes(contesto)
     ) {
       esito.scartati += 1;

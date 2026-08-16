@@ -1,5 +1,6 @@
 'use client';
 
+import { useClassiSceglibili } from '../classi-note';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryRow } from '@/lib/db/types';
@@ -17,7 +18,6 @@ import { Foglio } from '../foglio';
  * mai.
  */
 
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 const CONTESTI = ['personale', 'business'] as const;
 
 type DaClassificare = {
@@ -227,6 +227,7 @@ function RigaDaClassificare({
   disabilitato: boolean;
   onAssegna: (corpo: unknown) => void;
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [merchantId, setMerchantId] = useState('');
   const [nome, setNome] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -312,9 +313,9 @@ function RigaDaClassificare({
                 disabled={disabilitato}
               >
                 <option value="">— dalla categoria —</option>
-                {DISCREZIONALITA.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                {classiSceglibili.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.nome}
                   </option>
                 ))}
               </select>
@@ -399,6 +400,7 @@ function RigaMerchant({
   disabilitato: boolean;
   onSalva: (corpo: unknown) => void;
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [categoria, setCategoria] = useState(merchant.category_id ?? '');
   const [discrezionalita, setDiscrezionalita] = useState(merchant.discretion ?? '');
   const [contesto, setContesto] = useState(merchant.context ?? '');
@@ -454,9 +456,9 @@ function RigaMerchant({
             disabled={disabilitato}
           >
             <option value="">— dalla categoria —</option>
-            {DISCREZIONALITA.map((d) => (
-              <option key={d} value={d}>
-                {d}
+            {classiSceglibili.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.nome}
               </option>
             ))}
           </select>

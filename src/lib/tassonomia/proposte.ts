@@ -5,7 +5,8 @@ import { chiediAlModello, estraiArrayJson, modelloInUso } from '@/lib/ai/modello
 import { abbinaMerchant, type Alias } from './abbinamento';
 import { selezionaInviabili } from './persone';
 import { interpretaProposta, type Proposta } from './interpreta';
-import type { CategoryRow, MerchantAliasRow } from '@/lib/db/types';
+import type { CategoryRow, DiscretionClassRow, MerchantAliasRow } from '@/lib/db/types';
+import { leggiClassi } from './classi';
 
 /**
  * Lo strato che mancava: il modello propone una classificazione per gli
@@ -58,7 +59,9 @@ categoria di un albero dato.
 Regole:
 - Rispondi SOLO con un array JSON, senza testo attorno.
 - Usa esclusivamente gli slug di categoria che ti vengono elencati.
-- "discrezionalita" è una fra: essenziale, investimento, utile, voluttuario.
+- "discrezionalita" è uno degli slug di classe che ti vengono elencati, e
+  nessun altro: le classi le definisce l'utente e possono non essere quelle che
+  ti aspetti.
 - "contesto" è: personale oppure business.
 - "nome" è il nome commerciale pulito, senza numeri di negozio né sigle di
   incasso: "Lidl 1361" diventa "Lidl", "Sp Blueprint.bj-5353" diventa "Blueprint".
@@ -111,7 +114,7 @@ type Candidata = {
 export async function proponiClassificazioni(): Promise<EsitoProposte> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: candidateGrezze }, { data: categorieGrezze }, { data: aliasGrezzi }] =
+  const [{ data: candidateGrezze }, { data: categorieGrezze }, { data: aliasGrezzi }, classi] =
     await Promise.all([
       supabase
         .from('v_da_classificare')
@@ -119,11 +122,16 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
         .order('totale', { ascending: true }),
       supabase.from('categories').select('*').eq('is_archived', false),
       supabase.from('merchant_aliases').select('*'),
+      leggiClassi(),
     ]);
 
   const candidate = comeArray<Candidata>(candidateGrezze);
   const categorie = comeArray<CategoryRow>(categorieGrezze);
   const slugValidi = new Set(categorie.map((c) => c.slug));
+  // Le archiviate restano valide in scrittura ma non si propongono: il modello
+  // classifica cose nuove, e proporre una classe che l'utente ha smesso di
+  // usare e' proporgli di disfare quel che ha fatto.
+  const classiValide = new Set(classi.filter((c) => !c.is_archived).map((c) => c.slug));
   const perEtichetta = new Map(candidate.map((c) => [c.etichetta, c] as const));
 
   const { inviabili, trattenute } = selezionaInviabili(
@@ -162,11 +170,11 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
 
   if (lotto.length > 0) {
     try {
-      const grezze = await chiediLotto(lotto, categorie, perEtichetta);
+      const grezze = await chiediLotto(lotto, categorie, classi, perEtichetta);
       token = grezze.token;
       costo = grezze.costo;
       for (const p of grezze.voci) {
-        const esito = interpretaProposta(p, slugValidi, lotto);
+        const esito = interpretaProposta(p, slugValidi, classiValide, lotto);
         if ('scarto' in esito) {
           scartate += 1;
           // Solo i primi: quindici righe uguali non aggiungono niente. Ma
@@ -203,8 +211,18 @@ export async function proponiClassificazioni(): Promise<EsitoProposte> {
 async function chiediLotto(
   etichette: readonly string[],
   categorie: readonly CategoryRow[],
+  classi: readonly DiscretionClassRow[],
   perEtichetta: ReadonlyMap<string, Candidata>,
 ): Promise<{ voci: unknown[]; token: number | null; costo: number | null }> {
+  // Le classi con la loro descrizione. Costano poche decine di token e valgono
+  // un errore in meno: la Fase 4 ha misurato che quando al modello manca
+  // un'informazione se la inventa plausibile, e «utile» senza una riga che dica
+  // cosa significhi e' esattamente un'informazione che gli manca.
+  const elencoClassi = classi
+    .filter((c) => !c.is_archived)
+    .map((c) => `- ${c.slug}: ${c.nome}${c.descrizione === null ? '' : ` — ${c.descrizione}`}`)
+    .join('\n');
+
   const albero = categorie
     .map(
       (c) =>
@@ -234,6 +252,7 @@ async function chiediLotto(
     system: SYSTEM,
     prompt:
       `Categorie disponibili:\n${albero}\n\n` +
+      `Classi di discrezionalità disponibili:\n${elencoClassi}\n\n` +
       `Esercenti da classificare (array JSON):\n${righe}\n\n` +
       'Rispondi con un array JSON di oggetti con i campi: etichetta, nome, ' +
       'categoria, discrezionalita, contesto, frammento, abbonamento, motivo, sicuro. ' +

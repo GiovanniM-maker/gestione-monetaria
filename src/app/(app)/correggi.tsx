@@ -1,5 +1,6 @@
 'use client';
 
+import { useClassiSceglibili } from './classi-note';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
@@ -29,7 +30,6 @@ import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
  * settimane dopo, guardando un totale che non torna.
  */
 
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 const CONTESTI = ['personale', 'business'] as const;
 
 /* -------------------------------------------------------------------------- */
@@ -137,6 +137,15 @@ function Scelta({
 
 const comeOpzioni = (valori: readonly string[]) => valori.map((v) => ({ id: v, testo: v }));
 
+/**
+ * Le classi come opzioni: lo slug e' l'identificativo, il nome e' cio' che si
+ * legge. Erano la stessa parola finche' le classi erano quattro costanti; da
+ * quando si rinominano non lo sono piu', e mostrare lo slug vorrebbe dire
+ * mostrare la parola che l'utente ha appena smesso di usare.
+ */
+const classiComeOpzioni = (classi: readonly { slug: string; nome: string }[]) =>
+  classi.map((c) => ({ id: c.slug, testo: c.nome }));
+
 /* -------------------------------------------------------------------------- */
 /* Movimento — solo questa riga                                                */
 /* -------------------------------------------------------------------------- */
@@ -166,6 +175,7 @@ export function CorreggiMovimento({
   variabile: boolean;
   categorie: readonly { id: string; percorso: string }[];
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [aperto, setAperto] = useState(false);
   const { inCorso, errore, scrivi } = useScrittura(() => setAperto(false));
 
@@ -219,7 +229,7 @@ export function CorreggiMovimento({
           valore={d}
           cambia={setD}
           vuoto="— discrezionalità —"
-          opzioni={comeOpzioni(DISCREZIONALITA)}
+          opzioni={classiComeOpzioni(classiSceglibili)}
           disabilitato={inCorso}
         />
         <Scelta
@@ -282,6 +292,7 @@ export function CorreggiEsercente({
   abbonamento: boolean;
   categorie: readonly { id: string; percorso: string }[];
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [aperto, setAperto] = useState(false);
   const { inCorso, errore, scrivi } = useScrittura(() => setAperto(false));
 
@@ -317,7 +328,7 @@ export function CorreggiEsercente({
           valore={d}
           cambia={setD}
           vuoto="— discrezionalità —"
-          opzioni={comeOpzioni(DISCREZIONALITA)}
+          opzioni={classiComeOpzioni(classiSceglibili)}
           disabilitato={inCorso}
         />
         <Scelta
@@ -380,6 +391,7 @@ export function CorreggiCategoria({
   parentId: string | null;
   genitoriPossibili: readonly { id: string; percorso: string }[];
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [aperto, setAperto] = useState(false);
   const { inCorso, errore, scrivi } = useScrittura(() => setAperto(false));
 
@@ -420,7 +432,7 @@ export function CorreggiCategoria({
         valore={d}
         cambia={setD}
         vuoto="— senza discrezionalità predefinita —"
-        opzioni={comeOpzioni(DISCREZIONALITA)}
+        opzioni={classiComeOpzioni(classiSceglibili)}
         disabilitato={inCorso}
       />
       <p className="text-xs text-testo-2">

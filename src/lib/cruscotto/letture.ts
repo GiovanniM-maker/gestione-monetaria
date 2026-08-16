@@ -113,11 +113,19 @@ export const scegliMese = cache(async (meseChiesto: string | null) => {
 /** La finestra di confronto. Serve a tre blocchi diversi: va deduplicata. */
 export const leggiFinestra = cache(finestraDiConfronto);
 
-export const leggiClassi = cache(
-  inCache('classi', async (sb, mese: string): Promise<readonly RigaClasse[]> => {
+/**
+ * Il mese diviso per classe.
+ *
+ * Si chiamava `leggiClassi`, che dalla `0043` e' il nome di un'altra cosa: le
+ * classi ora sono righe di una tabella, e «leggere le classi» significa leggere
+ * quelle. Questa legge **la spesa** divisa per classe, che e' una domanda sul
+ * mese e non sulla tassonomia.
+ */
+export const leggiSpesaPerClasse = cache(
+  inCache('spesa-per-classe', async (sb, mese: string): Promise<readonly RigaClasse[]> => {
     const { data } = await sb
       .from('v_monthly_by_discretion')
-      .select('discrezionalita, contesto, spesa::text, movimenti')
+      .select('discrezionalita, classe_nome, colore, ordine, contesto, spesa::text, movimenti')
       .eq('mese', primoGiorno(mese))
       .order('spesa', { ascending: true });
     return comeArray<RigaClasse>(data);
@@ -154,7 +162,10 @@ export const leggiRicorrente = cache(
   inCache('ricorrente', async (sb): Promise<readonly RigaMetrica[]> => {
     const { data } = await sb
       .from('v_recurring_monthly_cost_by_discretion')
-      .select('tipo, discrezionalita, contesto, ricorrenze, costo_mensile::text');
+      .select(
+        'tipo, discrezionalita, classe_nome, nel_ricorrente, contesto, ricorrenze, ' +
+          'costo_mensile::text',
+      );
     return comeArray<RigaMetrica>(data);
   }),
 );

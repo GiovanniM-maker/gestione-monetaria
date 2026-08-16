@@ -54,7 +54,7 @@ export function LoginForm() {
 
       <SubmitButton />
 
-      {state.status === 'error' && <p className="text-sm text-voluttuario">{state.message}</p>}
+      {state.status === 'error' && <p className="text-sm text-allarme">{state.message}</p>}
     </form>
   );
 }

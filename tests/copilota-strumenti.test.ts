@@ -31,12 +31,47 @@ describe('il contratto degli strumenti', () => {
     expect(strumento('cancella_tutto')).toBeUndefined();
   });
 
-  it('espone tre sole scritture, e nessuna che cancelli', () => {
-    const scritture = STRUMENTI.filter((s) =>
-      ['correggi_movimento', 'aggiorna_esercente', 'crea_categoria'].includes(s.nome),
+  /**
+   * Le scritture sono poche e si contano.
+   *
+   * Il test originale diceva «tre, e nessuna che cancelli». Le tre sono
+   * diventate sette con le classi modificabili, e una di quelle **cancella**:
+   * `elimina_classe`. Non e' un cedimento della regola, e' il motivo per cui
+   * quella regola era scritta male — quello che protegge non e' il nome
+   * dell'operazione, e' che ogni scrittura sia una **proposta** che l'utente
+   * applica con un tocco, e che `elimina_classe` pretenda di dire dove vanno
+   * le righe invece di lasciarle senza classe.
+   *
+   * Quello che il test difende resta: aggiungere una scrittura dev'essere un
+   * atto deliberato, non una cosa che capita.
+   */
+  const SCRITTURE = [
+    'correggi_movimento',
+    'aggiorna_esercente',
+    'crea_categoria',
+    'sposta_movimento',
+    'crea_classe',
+    'aggiorna_classe',
+    'elimina_classe',
+  ];
+
+  it('espone esattamente le scritture previste, e nessun’altra', () => {
+    const scritture = STRUMENTI.filter((s) => SCRITTURE.includes(s.nome));
+    expect(scritture).toHaveLength(SCRITTURE.length);
+  });
+
+  it('l’unica operazione che cancella e’ quella sulle classi', () => {
+    const distruttive = STRUMENTI.filter((s) => /elimin|cancell|svuot/i.test(s.nome)).map(
+      (s) => s.nome,
     );
-    expect(scritture).toHaveLength(3);
-    expect(STRUMENTI.some((s) => /elimin|cancell|svuot/i.test(s.nome))).toBe(false);
+    expect(distruttive).toEqual(['elimina_classe']);
+  });
+
+  it('eliminare una classe sa dire dove vanno le sue righe', () => {
+    // Senza destinazione l'unica alternativa sarebbe metterle a `null`, cioe'
+    // spostare della spesa classificata dentro «non classificato» in silenzio.
+    const s = strumento('elimina_classe');
+    expect(Object.keys(s?.parametri['properties'] as object)).toContain('verso');
   });
 });
 

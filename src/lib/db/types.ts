@@ -77,9 +77,53 @@ export type BackfillCursor = {
   completed: readonly string[];
 };
 
-export type Discretion = 'essenziale' | 'investimento' | 'utile' | 'voluttuario';
+/**
+ * Lo slug di una classe di discrezionalita'.
+ *
+ * Era un'unione delle quattro parole. Non lo e' piu' dalla `0043`: le classi si
+ * creano e si rinominano, quindi l'insieme dei valori validi non e' noto a chi
+ * compila — e' una riga di `discretion_classes`, e la sola cosa che possa
+ * dichiararlo e' il database.
+ *
+ * Resta un tipo suo e non `string` nudo perche' dice **cosa contiene** la
+ * variabile: `Discretion` in una firma significa «lo slug di una classe», e
+ * `string` non significa niente. Il controllo, che l'unione faceva a
+ * compilazione, si e' spostato dove ora vive la verita': la foreign key sulle
+ * tre colonne, e `valida_classe` per il messaggio.
+ */
+export type Discretion = string;
 export type Context = 'personale' | 'business';
 export type MatchType = 'exact' | 'contains' | 'regex';
+
+/**
+ * Le tinte fra cui una classe puo' scegliere.
+ *
+ * Chiusa, e non un colore libero. Le tinte vere stanno in `globals.css` in un
+ * posto solo, con le due varianti chiaro e scuro: un hex scelto a mano non ha
+ * una variante per il tema scuro, e due rosa indistinguibili renderebbero il
+ * colore un'informazione in meno — che e' gia' la ragione per cui l'accento e'
+ * stato tolto alle classi.
+ *
+ * Sette e non di piu', come la tavolozza della ciambella: oltre la settima due
+ * tinte adiacenti si somigliano e la barra smette di dire a colpo d'occhio
+ * quale classe si sta guardando.
+ */
+export const COLORI_CLASSE = ['blu', 'ambra', 'rosa', 'verde', 'viola', 'ciano', 'bruno'] as const;
+export type ColoreClasse = (typeof COLORI_CLASSE)[number];
+
+export type DiscretionClassRow = {
+  slug: string;
+  nome: string;
+  descrizione: string | null;
+  colore: string;
+  sort_order: number;
+  /**
+   * Se la classe entra nel **totale** del costo ricorrente. Le altre restano
+   * nella ripartizione, sotto la linea, con il loro subtotale: mai nascoste.
+   */
+  nel_ricorrente: boolean;
+  is_archived: boolean;
+};
 
 export type CategoryRow = {
   id: string;

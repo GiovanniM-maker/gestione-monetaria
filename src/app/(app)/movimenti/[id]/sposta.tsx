@@ -1,5 +1,6 @@
 'use client';
 
+import { useClassiSceglibili } from '../../classi-note';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
@@ -24,7 +25,6 @@ import type { EsercenteMinimo } from '@/lib/movimenti/sposta';
  * giornata, applicato al campo per cui non era ancora raggiungibile.
  */
 
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 const CONTESTI = ['personale', 'business'] as const;
 
 export function SpostaMovimento({
@@ -36,6 +36,7 @@ export function SpostaMovimento({
   esercenteAttuale: string | null;
   categorie: readonly { id: string; percorso: string }[];
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
   const [modo, setModo] = useState<'cerca' | 'nuovo'>('cerca');
@@ -186,9 +187,9 @@ export function SpostaMovimento({
               disabled={inCorso}
             >
               <option value="">— discrezionalità —</option>
-              {DISCREZIONALITA.map((d) => (
-                <option key={d} value={d}>
-                  {d}
+              {classiSceglibili.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.nome}
                 </option>
               ))}
             </select>

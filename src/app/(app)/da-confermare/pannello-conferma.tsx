@@ -1,12 +1,13 @@
 'use client';
 
+import { useClassi, useClassiSceglibili } from '../classi-note';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
-import { COLORE_CLASSE } from '../grafici';
+import { tinteDelleClassi } from '../grafici';
 import { Foglio } from '../foglio';
 
 /**
@@ -33,7 +34,6 @@ import { Foglio } from '../foglio';
  * regola, non incide un valore.
  */
 
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 const CONTESTI = ['personale', 'business'] as const;
 
 function euro(valore: string | null): string {
@@ -93,8 +93,8 @@ export function PannelloConferma({
           <p
             className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
             style={{
-              background: 'color-mix(in oklab, var(--investimento) 18%, transparent)',
-              color: 'var(--investimento)',
+              background: 'color-mix(in oklab, var(--conferma) 18%, transparent)',
+              color: 'var(--conferma)',
             }}
             aria-hidden="true"
           >
@@ -292,7 +292,8 @@ function Ultime24Ore({ righe }: { righe: readonly RigaRecente[] }) {
 
 /** Il corpo della carta: chi, quanto, quando, e cosa ne pensa l'applicazione. */
 function Carta({ riga: r }: { riga: RigaDaConfermare }) {
-  const tinta = r.discrezionalita === null ? null : (COLORE_CLASSE[r.discrezionalita] ?? null);
+  const tinte = tinteDelleClassi(useClassi());
+  const tinta = r.discrezionalita === null ? null : (tinte[r.discrezionalita] ?? null);
 
   return (
     <>
@@ -341,7 +342,7 @@ function Carta({ riga: r }: { riga: RigaDaConfermare }) {
       {/* Una proposta mai confermata va detta: vale per i conteggi, ma nessuno
           l'ha ancora guardata, ed e' la prima da mettere in dubbio. */}
       {r.origine_classificazione === 'ai' && r.esercente_confermato_at === null && (
-        <p className="mt-2 text-[12px] text-utile">
+        <p className="mt-2 text-[12px] text-attenzione">
           Proposta dal modello{r.motivazione !== null && `: ${r.motivazione}`}
         </p>
       )}
@@ -362,6 +363,7 @@ function Correzione({
   onAnnulla: () => void;
   onSalva: (corpo: Record<string, unknown>) => void;
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [discrezionalita, setDiscrezionalita] = useState(riga.discrezionalita ?? '');
   const [contesto, setContesto] = useState(riga.contesto ?? '');
   const [note, setNote] = useState(riga.note ?? '');
@@ -390,9 +392,9 @@ function Correzione({
             disabled={occupato}
           >
             <option value="">— non cambiare —</option>
-            {DISCREZIONALITA.map((d) => (
-              <option key={d} value={d}>
-                {d}
+            {classiSceglibili.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.nome}
               </option>
             ))}
           </select>
