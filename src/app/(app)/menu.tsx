@@ -144,11 +144,12 @@ export function Menu({ email }: { email: string | null }) {
 /**
  * Il cassetto.
  *
- * Non usa `<Foglio>` perche' quello sale dal basso e questo entra di lato: la
- * differenza non e' un parametro, e' tutta la geometria. Quello che i due
- * condividono — il `<dialog>`, il fondo che chiude, la safe area — sono sei
- * righe, e tenerle in due posti costa meno che un componente con un
- * interruttore «da dove entro».
+ * Foglio e cassetto condividono tutto cio' che e' difficile — il `<dialog>`, il
+ * fondo che chiude solo se il gesto comincia e finisce fuori, il blocco dello
+ * scorrimento dietro, il trascinamento per mandarli via — e differiscono per
+ * una cosa sola: da che parte entrano. Quella cosa e' un parametro di
+ * `Dialogo`; il resto sarebbe stato scritto due volte, e le due copie
+ * sarebbero divergute alla prima correzione.
  */
 function Cassetto({
   aperto,
@@ -160,30 +161,31 @@ function Cassetto({
   children: React.ReactNode;
 }) {
   return (
-    <Dialogo aperto={aperto} etichetta="Menu" onChiudi={onChiudi}>
-      <div className="flex h-full justify-end">
-        <div
-          className="w-[80%] max-w-xs overflow-y-auto bg-s1 px-4
-                     pt-[max(1rem,env(safe-area-inset-top))]
-                     pb-[max(1.5rem,env(safe-area-inset-bottom))]
-                     shadow-[-8px_0_40px_rgb(0_0_0/0.3)]"
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-[13px] font-medium text-testo-3">Gestione monetaria</span>
-            <button
-              type="button"
-              onClick={onChiudi}
-              className="-mr-2 inline-flex size-11 items-center justify-center rounded-full text-testo-2"
-            >
-              <span className="sr-only">Chiudi il menu</span>
-              <span aria-hidden="true" className="text-[17px] leading-none">
-                ✕
-              </span>
-            </button>
-          </div>
-          {children}
+    <Dialogo
+      aperto={aperto}
+      etichetta="Menu"
+      verso="destra"
+      onChiudi={onChiudi}
+      /* Si spinge via a destra dalla riga in cima. Il gesto e' lo stesso del
+         foglio, ruotato: e' `Dialogo` a saperlo fare, e i due pannelli gli
+         dicono solo da che parte se ne vanno. */
+      testata={
+        <div className="mb-4 flex items-center justify-between px-4">
+          <span className="text-[13px] font-medium text-testo-3">Gestione monetaria</span>
+          <button
+            type="button"
+            onClick={onChiudi}
+            className="-mr-2 inline-flex size-11 items-center justify-center rounded-full text-testo-2"
+          >
+            <span className="sr-only">Chiudi il menu</span>
+            <span aria-hidden="true" className="text-[17px] leading-none">
+              ✕
+            </span>
+          </button>
         </div>
-      </div>
+      }
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto px-4">{children}</div>
     </Dialogo>
   );
 }

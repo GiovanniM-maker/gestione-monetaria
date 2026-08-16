@@ -1,54 +1,76 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * Il foglio dal basso.
- *
- * ---------------------------------------------------------------------------
- * Perche' dal basso e non al centro
- * ---------------------------------------------------------------------------
- * Una finestra al centro dello schermo mette i suoi controlli dove il pollice
- * non arriva, e su un telefono da sei pollici il bordo superiore e' il punto
- * piu' lontano dalla mano. Un foglio che sale dal fondo ha i bersagli dove la
- * mano gia' e', e il gesto per chiuderlo — toccare fuori, in alto — e' l'unico
- * posto della schermata che non contiene niente da premere per sbaglio.
+ * I pannelli modali: il foglio che sale dal basso e il cassetto che entra da
+ * destra.
  *
  * ---------------------------------------------------------------------------
  * E' un `<dialog>` vero
  * ---------------------------------------------------------------------------
  * `showModal()` porta gratis quattro cose che scritte a mano si sbagliano: il
  * fuoco resta dentro, Esc chiude, il resto della pagina diventa inerte per i
- * lettori di schermo, e il foglio sta sopra ogni altro contenuto senza una
+ * lettori di schermo, e il pannello sta sopra ogni altro contenuto senza una
  * gara di `z-index` con la barra in basso.
  *
- * Quello che va scritto a mano e' poco e sta qui, in un posto solo:
+ * ---------------------------------------------------------------------------
+ * Quello che il `<dialog>` NON fa, e che qui va scritto
+ * ---------------------------------------------------------------------------
+ * Tre cose, e tutte e tre erano rotte finche' non le si e' provate col dito
+ * invece che col mouse:
  *
- * - **il fondo si tocca per chiudere.** Il `<dialog>` occupa tutto lo schermo e
- *   il click su di lui — non sul foglio dentro — chiude. Confrontare
- *   `event.target` con l'elemento e' l'unico modo che non chiuda anche quando
- *   si trascina il dito da dentro a fuori scorrendo un elenco;
- * - **`env(safe-area-inset-bottom)`**, o sui telefoni con la barra dei gesti
- *   l'ultimo bottone finisce sotto il dito del sistema;
- * - **l'altezza massima e' l'85% dello schermo**, con lo scorrimento dentro il
- *   foglio: un elenco di trentacinque categorie non deve poter spingere il
- *   titolo fuori dalla vista.
+ * 1. **il fondo non chiudeva.** Il gestore confrontava `event.target` con
+ *    l'elemento `<dialog>`, ma dentro c'e' un contenitore che lo riempie tutto:
+ *    il bersaglio del tocco era sempre quello, mai il dialogo, e toccare fuori
+ *    non faceva niente. Ora si guarda se il punto toccato sta **dentro il
+ *    pannello**, e si chiude solo se il gesto e' **cominciato e finito** fuori
+ *    — se no, trascinare il dito da dentro a fuori mentre si scorre un elenco
+ *    chiuderebbe il pannello;
+ * 2. **non si poteva trascinare via.** La maniglia in cima e la forma stessa
+ *    del foglio promettono quel gesto, e un'interfaccia che promette un gesto e
+ *    non lo fa e' peggio di una che non lo promette. Ora il foglio si abbassa
+ *    col dito e il cassetto si spinge a destra; oltre un quarto della propria
+ *    misura, o con uno strappo veloce, se ne vanno. Sotto quella soglia tornano
+ *    al loro posto con una molla;
+ * 3. **la pagina dietro scorreva.** `showModal()` rende il resto inerte —
+ *    niente fuoco, niente clic — ma non blocca lo scorrimento: con il foglio
+ *    aperto un trascinamento sul fondo faceva scorrere di ottocento pixel
+ *    l'elenco sotto, e si chiudeva il foglio ritrovandosi altrove.
  */
+
+type Verso = 'basso' | 'destra';
+
+/** Quanto si deve trascinare, in frazione della misura del pannello. */
+const SOGLIA = 0.25;
+/** Uno strappo veloce chiude comunque: px al secondo. */
+const STRAPPO = 550;
+
 export function Dialogo({
   aperto,
   etichetta,
+  verso,
   onChiudi,
+  testata,
   children,
 }: {
   aperto: boolean;
   etichetta: string;
+  verso: Verso;
   onChiudi: () => void;
+  /** La parte da cui si trascina: e' `Dialogo` a legarci sopra il gesto. */
+  testata: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const riferimento = useRef<HTMLDialogElement>(null);
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const pannello = useRef<HTMLDivElement>(null);
+  const partitoFuori = useRef(false);
+  const gesto = useRef<{ da: number; quando: number } | null>(null);
+  const [scostamento, setScostamento] = useState(0);
+  const [trascinando, setTrascinando] = useState(false);
 
   useEffect(() => {
-    const d = riferimento.current;
+    const d = dialogo.current;
     if (d === null) return;
     // `open` da solo non basta: senza `showModal()` non c'e' ne' la trappola
     // del fuoco ne' Esc, e sarebbe un riquadro qualsiasi.
@@ -59,15 +81,10 @@ export function Dialogo({
   /**
    * La pagina dietro non deve scorrere.
    *
-   * `showModal()` rende il resto **inerte** — niente fuoco, niente clic — ma
-   * non blocca lo scorrimento: misurato, con il foglio aperto un trascinamento
-   * sul fondo faceva scorrere di ottocento pixel l'elenco sotto. Si chiudeva
-   * il foglio e ci si ritrovava altrove, senza aver toccato niente.
-   *
-   * Il corpo si **fissa** invece di ricevere `overflow: hidden`, e la
-   * posizione si conserva in un `top` negativo: su iOS il solo `overflow`
-   * lascia scorrere lo stesso, e al ripristino la pagina risale in cima. Con
-   * questo la posizione torna esattamente dov'era.
+   * Il corpo si **fissa** invece di ricevere `overflow: hidden`, e la posizione
+   * si conserva in un `top` negativo: su iOS il solo `overflow` lascia scorrere
+   * lo stesso, e al ripristino la pagina risale in cima. Cosi' torna esattamente
+   * dov'era.
    */
   useEffect(() => {
     if (!aperto) return;
@@ -89,25 +106,138 @@ export function Dialogo({
     };
   }, [aperto]);
 
+  const dentroIlPannello = (e: { target: EventTarget | null }): boolean =>
+    e.target instanceof Node && pannello.current !== null && pannello.current.contains(e.target);
+
+  /* ---------------------------------------------------------------------- */
+  /* Il trascinamento                                                        */
+  /* ---------------------------------------------------------------------- */
+
+  // Una coordinata sola: quale delle due dipende da dove se ne va il pannello.
+  const punto = useCallback(
+    (e: React.PointerEvent | PointerEvent): number => (verso === 'basso' ? e.clientY : e.clientX),
+    [verso],
+  );
+
+  const prendi = useCallback(
+    (e: React.PointerEvent) => {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      gesto.current = { da: punto(e), quando: e.timeStamp };
+      setTrascinando(true);
+    },
+    [punto],
+  );
+
+  useEffect(() => {
+    if (!trascinando) return;
+
+    const muovi = (e: PointerEvent) => {
+      const g = gesto.current;
+      if (g === null) return;
+      // Solo in avanti: tirare il foglio verso l'alto non lo ingrandisce, e
+      // lasciarlo scorrere in su darebbe l'idea che si possa.
+      setScostamento(Math.max(0, punto(e) - g.da));
+    };
+
+    const molla = (e: PointerEvent) => {
+      const g = gesto.current;
+      gesto.current = null;
+      setTrascinando(false);
+      if (g === null || pannello.current === null) return;
+
+      const percorso = Math.max(0, punto(e) - g.da);
+      const misura =
+        verso === 'basso'
+          ? pannello.current.getBoundingClientRect().height
+          : pannello.current.getBoundingClientRect().width;
+      const durata = Math.max(1, e.timeStamp - g.quando);
+      const velocita = (percorso / durata) * 1000;
+
+      // Lo scostamento torna a zero in ogni caso, anche quando si chiude: il
+      // pannello sparisce subito, e riaprendolo deve trovarsi al suo posto
+      // invece che gia' meta' fuori dallo schermo.
+      setScostamento(0);
+      if (percorso > misura * SOGLIA || velocita > STRAPPO) onChiudi();
+    };
+
+    window.addEventListener('pointermove', muovi);
+    window.addEventListener('pointerup', molla);
+    window.addEventListener('pointercancel', molla);
+    return () => {
+      window.removeEventListener('pointermove', muovi);
+      window.removeEventListener('pointerup', molla);
+      window.removeEventListener('pointercancel', molla);
+    };
+  }, [trascinando, verso, punto, onChiudi]);
+
+  const trasformazione =
+    scostamento === 0
+      ? undefined
+      : verso === 'basso'
+        ? `translateY(${scostamento}px)`
+        : `translateX(${scostamento}px)`;
+
   return (
     <dialog
-      ref={riferimento}
+      ref={dialogo}
       onClose={onChiudi}
+      onPointerDown={(e) => {
+        partitoFuori.current = !dentroIlPannello(e);
+      }}
       onClick={(e) => {
-        // Solo il fondo, non cio' che ci sta sopra: confrontare l'elemento e'
-        // l'unico modo che non chiuda anche trascinando il dito da dentro a
-        // fuori mentre si scorre un elenco.
-        if (e.target === riferimento.current) onChiudi();
+        if (partitoFuori.current && !dentroIlPannello(e)) onChiudi();
       }}
       aria-label={etichetta}
       className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0
                  backdrop:bg-black/40 backdrop:backdrop-blur-[2px]"
     >
-      {children}
+      <div
+        className={`flex h-full ${verso === 'basso' ? 'items-end justify-center' : 'justify-end'}`}
+      >
+        <div
+          ref={pannello}
+          style={{
+            transform: trasformazione,
+            // Durante il gesto il pannello segue il dito senza ritardo; al
+            // rilascio la molla lo riporta a posto.
+            transition: trascinando ? 'none' : 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)',
+            ...(verso === 'basso'
+              ? { maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }
+              : {}),
+          }}
+          className={
+            verso === 'basso'
+              ? `w-full max-w-md rounded-t-[26px] bg-s1
+                 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.28)]`
+              : `flex w-[80%] max-w-xs flex-col bg-s1
+                 pt-[max(1rem,env(safe-area-inset-top))]
+                 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[-8px_0_40px_rgb(0_0_0/0.3)]`
+          }
+        >
+          {/* La presa: `touch-action: none` o il browser interpreta il
+              trascinamento come uno scorrimento e il gesto non arriva mai qui. */}
+          <div
+            onPointerDown={prendi}
+            style={{ touchAction: 'none' }}
+            className="shrink-0 cursor-grab active:cursor-grabbing"
+          >
+            {testata}
+          </div>
+          {children}
+        </div>
+      </div>
     </dialog>
   );
 }
 
+/**
+ * Il foglio dal basso.
+ *
+ * Una finestra al centro dello schermo mette i suoi controlli dove il pollice
+ * non arriva; un foglio che sale dal fondo li ha dove la mano gia' e'. La
+ * maniglia in cima non e' decorazione: e' la presa, e trascinandola il foglio
+ * se ne va.
+ */
 export function Foglio({
   aperto,
   titolo,
@@ -122,15 +252,16 @@ export function Foglio({
   children: React.ReactNode;
 }) {
   return (
-    <Dialogo aperto={aperto} etichetta={titolo} onChiudi={onChiudi}>
-      <div className="flex h-full items-end justify-center">
-        <div
-          className="w-full max-w-md rounded-t-[26px] bg-s1 pb-[max(1rem,env(safe-area-inset-bottom))]
-                     shadow-[0_-8px_40px_rgb(0_0_0/0.28)]"
-          style={{ maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }}
-        >
-          {/* La maniglia non si tocca ed e' `aria-hidden`: dice «questo sale dal
-              basso» a chi guarda, e non aggiunge un bersaglio finto per chi no. */}
+    <Dialogo
+      aperto={aperto}
+      etichetta={titolo}
+      verso="basso"
+      onChiudi={onChiudi}
+      /* Si trascina dalla testata intera e non dalla sola maniglia: cinque
+         millimetri di bersaglio sono una promessa che il pollice non mantiene.
+         Il contenuto sotto resta libero di scorrere. */
+      testata={
+        <>
           <div aria-hidden="true" className="flex justify-center pt-2.5 pb-1">
             <span className="block h-1 w-9 rounded-full bg-(--testo-3)" />
           </div>
@@ -151,10 +282,10 @@ export function Foglio({
               </span>
             </button>
           </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-2">{children}</div>
-        </div>
-      </div>
+        </>
+      }
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-2">{children}</div>
     </Dialogo>
   );
 }

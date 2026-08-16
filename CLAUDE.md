@@ -849,6 +849,27 @@ perché un'applicazione con dieci bottoni neri non ha una voce.
 Sul nero l'indaco va alzato di luminosità: a `#7b72ff` un collegamento stava sotto i 5:1 e si
 leggeva come grigio-viola.
 
+#### I gesti che l'interfaccia prometteva e non manteneva
+
+Tre difetti, tutti e tre trovati col dito e invisibili col mouse.
+
+**Il fondo non chiudeva.** Il gestore confrontava `event.target` con l'elemento `<dialog>`, ma
+dentro c'è un contenitore che lo riempie tutto: il bersaglio del tocco era sempre quello, mai il
+dialogo. Ora si guarda se il punto sta **dentro il pannello**, e si chiude solo se il gesto è
+**cominciato e finito** fuori — se no, trascinare il dito da dentro a fuori mentre si scorre un
+elenco chiuderebbe il pannello.
+
+**Non si poteva trascinare via.** La maniglia in cima e la forma stessa del foglio promettono quel
+gesto, e un'interfaccia che promette un gesto e non lo fa è peggio di una che non lo promette. Ora
+il foglio si abbassa col dito e il cassetto si spinge a destra; oltre un quarto della propria misura
+o con uno strappo veloce (550 px/s) se ne vanno, sotto quella soglia tornano a posto con una molla.
+Si trascina dalla **testata intera**: cinque millimetri di maniglia sono una promessa che il pollice
+non mantiene.
+
+I due pannelli condividono tutto ciò che è difficile — il `<dialog>`, il fondo, il blocco dello
+scorrimento, il trascinamento — e differiscono per una cosa sola: da che parte entrano. Quella è un
+parametro di `Dialogo`.
+
 #### La pagina dietro una modale non deve scorrere
 
 `showModal()` rende il resto **inerte** — niente fuoco, niente clic — ma **non blocca lo
