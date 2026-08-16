@@ -24,12 +24,6 @@ import type { Context, Discretion } from '@/lib/db/types';
  * colpa fosse del modello o della validazione.
  */
 
-export const DISCREZIONALITA: readonly Discretion[] = [
-  'essenziale',
-  'investimento',
-  'utile',
-  'voluttuario',
-];
 export const CONTESTI: readonly Context[] = ['personale', 'business'];
 
 export type Proposta = {
@@ -108,6 +102,15 @@ function ritrovaEtichetta(risposta: string, lotto: readonly string[]): string | 
 export function interpretaProposta(
   grezza: unknown,
   slugValidi: ReadonlySet<string>,
+  /**
+   * Le classi ammesse, arrivate da chi chiama.
+   *
+   * Erano quattro costanti. Ora la funzione resta **pura** — si prova con un
+   * test e non con una chiamata vera, che e' tutta la ragione per cui esiste —
+   * ma non puo' piu' sapere da sola quali classi esistano: gliele si dice, come
+   * si fa gia' con gli slug delle categorie, un argomento sopra.
+   */
+  classiValide: ReadonlySet<string>,
   lotto: readonly string[],
 ): EsitoInterpretazione {
   if (grezza === null || typeof grezza !== 'object' || Array.isArray(grezza)) {
@@ -152,7 +155,7 @@ export function interpretaProposta(
   if (!slugValidi.has(categoria)) {
     return { scarto: `«${originale}»: categoria inesistente «${categoria}»` };
   }
-  if (discrezionalita === null || !DISCREZIONALITA.includes(discrezionalita as Discretion)) {
+  if (discrezionalita === null || !classiValide.has(discrezionalita)) {
     return { scarto: `«${originale}»: discrezionalità non ammessa «${discrezionalita ?? '—'}»` };
   }
   if (contesto === null || !CONTESTI.includes(contesto as Context)) {

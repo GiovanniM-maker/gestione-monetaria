@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 import { leggiAbbonamenti, leggiRiepilogo } from '@/lib/abbonamenti/rileva';
 import { PannelloAbbonamenti } from './pannello-abbonamenti';
-import { formattaEuro, ordinaPerPeso, totalePerTipo } from '@/lib/abbonamenti/formato';
+import {
+  formattaEuro,
+  fuoriDalTotale,
+  ordinaPerPeso,
+  totalePerTipo,
+} from '@/lib/abbonamenti/formato';
+import { leggiClassi } from '@/lib/tassonomia/classi';
+import { tinteDelleClassi } from '../grafici';
 import { TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +27,11 @@ export const metadata: Metadata = { title: 'Abbonamenti' };
  * genere di numero che si smette di guardare dopo la prima sorpresa.
  */
 export default async function AbbonamentiPage() {
-  const [abbonamenti, riepilogo] = await Promise.all([leggiAbbonamenti(), leggiRiepilogo()]);
+  const [abbonamenti, riepilogo, classi] = await Promise.all([
+    leggiAbbonamenti(),
+    leggiRiepilogo(),
+    leggiClassi(),
+  ]);
 
   const oggi = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
 
@@ -30,6 +41,7 @@ export default async function AbbonamentiPage() {
   const voci = ordinaPerPeso(riepilogo.metrica);
   const abbonamentiMese = totalePerTipo(voci, 'abbonamento');
   const abitudiniMese = totalePerTipo(voci, 'abitudine');
+  const fuori = fuoriDalTotale(voci);
 
   return (
     <div className="space-y-6">
@@ -40,6 +52,9 @@ export default async function AbbonamentiPage() {
         figure={[
           { valore: formattaEuro(abbonamentiMese), etichetta: 'si disdicono' },
           { valore: formattaEuro(abitudiniMese), etichetta: 'si cambiano' },
+          ...(fuori.costoMensile === 0n
+            ? []
+            : [{ valore: formattaEuro(fuori.costoMensile), etichetta: 'fuori dal totale' }]),
         ]}
         perche={
           <p>
@@ -60,6 +75,7 @@ export default async function AbbonamentiPage() {
         nellaMetrica={riepilogo.nellaMetrica}
         totali={riepilogo.totali}
         oggi={oggi}
+        tinte={tinteDelleClassi(classi)}
       />
     </div>
   );

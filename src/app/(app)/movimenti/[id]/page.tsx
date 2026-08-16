@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { leggiMovimento } from '@/lib/movimenti/cerca';
 import { centesimiDi, formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
-import { COLORE_CLASSE } from '../../grafici';
+import { leggiClassi } from '@/lib/tassonomia/classi';
+import { tinteDelleClassi } from '../../grafici';
 import { TestataLivello } from '../../livello';
 import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { SpostaMovimento } from './sposta';
@@ -51,10 +52,12 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
   const m = await leggiMovimento(id);
   if (m === null) notFound();
 
-  const [categorie, variabile] = await Promise.all([
+  const [categorie, variabile, classi] = await Promise.all([
     categorieSceglibili(),
     esercenteVariabile(m.merchant_id),
+    leggiClassi(),
   ]);
+  const tinte = tinteDelleClassi(classi);
 
   return (
     <div className="space-y-6">
@@ -63,7 +66,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         titolo={m.esercente ?? m.raw_description ?? '(senza descrizione)'}
         sottotitolo={`${m.booking_date}${m.conto === null ? '' : ` · ${m.conto}`}`}
         importo={centesimiDi(m.amount_eur ?? m.amount)}
-        tinta={m.discrezionalita === null ? null : (COLORE_CLASSE[m.discrezionalita] ?? null)}
+        tinta={m.discrezionalita === null ? null : (tinte[m.discrezionalita] ?? null)}
         nota={m.categoria}
         azioni={
           m.merchant_id === null ? undefined : (

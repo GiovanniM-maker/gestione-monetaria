@@ -166,6 +166,12 @@ export type RigaMetrica = {
   /** `abbonamento` si disdice, `abitudine` si cambia. Non si sommano. */
   tipo: string;
   discrezionalita: string;
+  classe_nome: string;
+  /**
+   * Se la classe entra nel **totale**. Falso non vuol dire nascosta: la voce
+   * resta nella ripartizione, sotto la linea, con il suo subtotale.
+   */
+  nel_ricorrente: boolean;
   contesto: string;
   ricorrenze: number;
   costo_mensile: string | null;
@@ -174,6 +180,8 @@ export type RigaMetrica = {
 export type VoceMetrica = {
   tipo: string;
   discrezionalita: string;
+  classeNome: string;
+  nelRicorrente: boolean;
   contesto: string;
   ricorrenze: number;
   costoMensile: bigint;
@@ -185,6 +193,8 @@ export function ordinaPerPeso(righe: readonly RigaMetrica[]): readonly VoceMetri
       .map((r) => ({
         tipo: r.tipo,
         discrezionalita: r.discrezionalita,
+        classeNome: r.classe_nome,
+        nelRicorrente: r.nel_ricorrente,
         contesto: r.contesto,
         ricorrenze: r.ricorrenze,
         costoMensile: parseCentesimiTollerante(r.costo_mensile) ?? 0n,
@@ -200,7 +210,38 @@ export function ordinaPerPeso(righe: readonly RigaMetrica[]): readonly VoceMetri
  * Il totale di un tipo. Somma solo dentro `abbonamento` o dentro `abitudine`,
  * mai fra i due: sono due numeri distinti proprio perche' l'azione che
  * suggeriscono e' diversa, e un totale unico la nasconderebbe.
+ *
+ * E somma solo le classi **dentro il totale**: dalla `0043` una classe puo'
+ * dichiararsi fuori — risparmio, tasse, una rata — e sommarla qui rimetterebbe
+ * dentro «quanto potrei smettere di pagare» delle cose che non si smetteranno.
+ * Quel che resta fuori non sparisce: lo restituisce `fuoriDalTotale`, e va
+ * mostrato sotto la linea.
  */
 export function totalePerTipo(voci: readonly VoceMetrica[], tipo: string): bigint {
-  return voci.reduce((somma, v) => (v.tipo === tipo ? somma + v.costoMensile : somma), 0n);
+  return voci.reduce(
+    (somma, v) => (v.tipo === tipo && v.nelRicorrente ? somma + v.costoMensile : somma),
+    0n,
+  );
+}
+
+/**
+ * Il ricorrente che sta fuori dal totale: quanto vale, e di quali classi e'
+ * fatto.
+ *
+ * Una riga sola e non due, perche' qui la distinzione fra abbonamento e
+ * abitudine non serve a niente: sono cose che non si toccano, e proporre di
+ * disdirle o di cambiarle sarebbe proporre esattamente cio' che l'utente ha
+ * dichiarato di non voler fare.
+ */
+export function fuoriDalTotale(voci: readonly VoceMetrica[]): {
+  costoMensile: bigint;
+  ricorrenze: number;
+  classi: readonly string[];
+} {
+  const fuori = voci.filter((v) => !v.nelRicorrente);
+  return {
+    costoMensile: fuori.reduce((s, v) => s + v.costoMensile, 0n),
+    ricorrenze: fuori.reduce((s, v) => s + v.ricorrenze, 0),
+    classi: [...new Set(fuori.map((v) => v.classeNome))],
+  };
 }

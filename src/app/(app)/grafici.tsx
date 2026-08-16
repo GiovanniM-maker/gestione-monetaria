@@ -22,21 +22,53 @@ import { formattaEuro } from '@/lib/abbonamenti/formato';
 /* -------------------------------------------------------------------------- */
 
 /**
- * Le quattro classi hanno sempre lo stesso colore, ovunque.
+ * Le sette tinte fra cui una classe puo' scegliere.
  *
- * E' cio' che rende la barra leggibile senza leggere la legenda: dopo qualche
- * mese il rosa a destra e' «voluttuario» e basta guardarne la larghezza.
+ * Dalla chiave salvata in `discretion_classes.colore` al token CSS. E' l'unico
+ * punto in cui le due cose si incontrano: il database conosce `rosa` e non
+ * `#ff375f`, cosi' la tinta vera resta in `globals.css` con le sue due varianti
+ * chiaro e scuro, e cambiarla e' una riga in un posto solo.
  */
-export const COLORE_CLASSE: Record<string, string> = {
-  essenziale: 'var(--essenziale)',
-  utile: 'var(--utile)',
-  voluttuario: 'var(--voluttuario)',
-  investimento: 'var(--investimento)',
+export const TAVOLOZZA_CLASSI: Record<string, string> = {
+  blu: 'var(--classe-blu)',
+  ambra: 'var(--classe-ambra)',
+  rosa: 'var(--classe-rosa)',
+  verde: 'var(--classe-verde)',
+  viola: 'var(--classe-viola)',
+  ciano: 'var(--classe-ciano)',
+  bruno: 'var(--classe-bruno)',
 };
 const COLORE_IGNOTO = 'var(--neutro)';
 
-/** L'ordine delle classi sulla barra, fisso. Vedi `fette()`. */
-export const ORDINE_CLASSI = ['essenziale', 'utile', 'voluttuario', 'investimento'];
+/**
+ * Dallo slug della classe al suo colore.
+ *
+ * Era un oggetto costante con quattro voci. Non puo' piu' esserlo: le classi
+ * si creano e cambiano colore, quindi la mappa si costruisce da cio' che c'e'
+ * nel database — e chi disegna la riceve, invece di conoscerla.
+ *
+ * Quello che **non** e' cambiato e' che il colore di una classe sia lo stesso
+ * ovunque: e' cio' che rende la barra leggibile senza leggere la legenda, dopo
+ * qualche mese si guarda la larghezza del rosa e basta.
+ */
+export type Tinte = Record<string, string>;
+
+export function tinteDelleClassi(classi: readonly { slug: string; colore: string }[]): Tinte {
+  const m: Tinte = {};
+  for (const c of classi) m[c.slug] = TAVOLOZZA_CLASSI[c.colore] ?? COLORE_IGNOTO;
+  return m;
+}
+
+/**
+ * L'ordine delle classi sulla barra.
+ *
+ * Dichiarato in `sort_order`, non alfabetico: e' cio' che rende la forma della
+ * barra riconoscibile a colpo d'occhio, e un mese anomalo visibile senza
+ * leggere un numero. Vedi `fette()`, che rispetta l'ordine ricevuto.
+ */
+export function ordineDelleClassi(classi: readonly { slug: string }[]): readonly string[] {
+  return classi.map((c) => c.slug);
+}
 
 /**
  * La tavolozza della ciambella.
@@ -46,16 +78,20 @@ export const ORDINE_CLASSI = ['essenziale', 'utile', 'voluttuario', 'investiment
  * Le categorie oltre la settima si sommano in una fetta grigia — la ciambella
  * serve a scegliere dove scendere, non a essere un inventario. L'inventario
  * completo e' l'albero, subito sotto.
+ *
+ * E' la stessa tavolozza delle classi, nell'ordine in cui sette tinte si
+ * distinguono meglio l'una dall'altra: due tavolozze diverse nella stessa
+ * schermata insegnerebbero che il colore non vuol dire niente.
  */
 const TAVOLOZZA = [
-  'var(--essenziale)',
-  'var(--voluttuario)',
-  'var(--utile)',
-  'var(--investimento)',
-  '#bf5af2',
-  '#ff2d55',
-  '#64d2ff',
-];
+  TAVOLOZZA_CLASSI['blu'],
+  TAVOLOZZA_CLASSI['rosa'],
+  TAVOLOZZA_CLASSI['ambra'],
+  TAVOLOZZA_CLASSI['verde'],
+  TAVOLOZZA_CLASSI['viola'],
+  TAVOLOZZA_CLASSI['ciano'],
+  TAVOLOZZA_CLASSI['bruno'],
+] as string[];
 
 /* -------------------------------------------------------------------------- */
 /* La freccia                                                                  */
@@ -75,7 +111,7 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
   if (s === null) return null;
 
   const colore =
-    s.tono === 'su' ? 'text-utile' : s.tono === 'giu' ? 'text-investimento' : 'text-testo-3';
+    s.tono === 'su' ? 'text-attenzione' : s.tono === 'giu' ? 'text-conferma' : 'text-testo-3';
 
   return (
     <span className={`cifra ml-2 text-xs whitespace-nowrap ${colore}`} title={s.descrizione}>
@@ -93,18 +129,18 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Come si divide il mese fra le quattro classi, in una barra sola.
+ * Come si divide il mese fra le classi, in una barra sola.
  *
  * Una barra per classe — com'era prima — risponde a «quanto vale questa
  * classe»; questa risponde a «come si divide il mese», che e' la domanda della
- * metrica dell'app. Ha sempre le stesse quattro voci nello stesso ordine,
- * quindi la sua forma si impara e un mese anomalo si riconosce senza leggere un
- * numero.
+ * metrica dell'app. Ha sempre le stesse voci nello stesso ordine — quello
+ * dichiarato in `sort_order` — quindi la sua forma si impara e un mese anomalo
+ * si riconosce senza leggere un numero.
  *
- * Le classi sono quattro anche quando i contesti sono otto: `personale` e
+ * Le voci restano quelle anche quando i contesti le raddoppiano: `personale` e
  * `business` restano distinti nell'elenco sotto, dove c'e' spazio per dirlo.
  */
-export function BarraClassi({ voci }: { voci: readonly Voce[] }) {
+export function BarraClassi({ voci, tinte }: { voci: readonly Voce[]; tinte: Tinte }) {
   const pezzi = fette(voci);
   if (pezzi.every((p) => p.lunghezza === 0)) return null;
 
@@ -125,7 +161,7 @@ export function BarraClassi({ voci }: { voci: readonly Voce[] }) {
             className="h-full rounded-full"
             style={{
               width: larghezza(p),
-              background: COLORE_CLASSE[p.chiave] ?? COLORE_IGNOTO,
+              background: tinte[p.chiave] ?? COLORE_IGNOTO,
             }}
           />
         ))}

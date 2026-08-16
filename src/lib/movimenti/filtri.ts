@@ -18,8 +18,22 @@ export type Tipo = (typeof TIPI)[number];
 export const ORDINI = ['data', 'importo'] as const;
 export type Ordine = (typeof ORDINI)[number];
 
-export const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 export const CONTESTI = ['personale', 'business'] as const;
+
+/**
+ * La forma di uno slug di classe.
+ *
+ * Qui non si puo' controllare **quali** classi esistano: questo modulo e' puro
+ * — e' cio' che permette di provarlo con dei test invece che con un database —
+ * e le classi si creano mentre l'app e' accesa. Si controlla la forma, e uno
+ * slug che non esiste semplicemente non trova righe: e' il comportamento
+ * giusto, perche' il valore finisce in un argomento della RPC e non in una
+ * stringa di query.
+ *
+ * Serve comunque un controllo: senza, qualunque testo dall'indirizzo
+ * finirebbe stampato nella riga che descrive i filtri.
+ */
+const SLUG = /^[a-z0-9][a-z0-9-]{0,60}$/;
 
 /** Quante righe per pagina. Oltre, su un telefono, non si scorre piu'. */
 export const PER_PAGINA = 50;
@@ -84,7 +98,7 @@ export function leggiFiltri(parametri: Record<string, string | string[] | undefi
     ricerca: testo(primo('q')) ?? '',
     categoria: identificativo('categoria'),
     merchant: identificativo('esercente'),
-    discrezionalita: unaDelle(primo('classe'), DISCREZIONALITA),
+    discrezionalita: dellaFormaGiusta(primo('classe'), SLUG),
     contesto: unaDelle(primo('contesto'), CONTESTI),
     tipo: unaDelle(primo('tipo'), TIPI) ?? 'spesa',
     ordine: unaDelle(primo('ordine'), ORDINI) ?? 'data',
@@ -134,7 +148,7 @@ export function indirizzo(filtri: Filtri, modifiche: Partial<Filtri> = {}): stri
  */
 export function descriviFiltri(
   filtri: Filtri,
-  nomi: { categoria?: string | null; esercente?: string | null } = {},
+  nomi: { categoria?: string | null; esercente?: string | null; classe?: string | null } = {},
 ): readonly string[] {
   const voci: string[] = [];
   const etichette: Record<Tipo, string> = {
@@ -151,12 +165,16 @@ export function descriviFiltri(
 
   if (filtri.categoria !== null) voci.push(nomi.categoria ?? 'una categoria');
   if (filtri.merchant !== null) voci.push(nomi.esercente ?? 'un esercente');
-  if (filtri.discrezionalita !== null) voci.push(filtri.discrezionalita);
+  if (filtri.discrezionalita !== null) voci.push(nomi.classe ?? filtri.discrezionalita);
   if (filtri.contesto !== null) voci.push(filtri.contesto);
   if (filtri.ricerca !== '') voci.push(`«${filtri.ricerca}»`);
   if (filtri.ordine === 'importo') voci.push('dal più grosso');
 
   return voci;
+}
+
+function dellaFormaGiusta(valore: unknown, forma: RegExp): string | null {
+  return typeof valore === 'string' && forma.test(valore) ? valore : null;
 }
 
 /** Se qualcosa restringe la lista. Il solo `tipo` non conta: c'e' sempre. */

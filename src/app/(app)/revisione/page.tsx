@@ -87,7 +87,7 @@ export default async function RevisionePage() {
         titolo="Revisione"
         cifra={conta(quanteInTutto ?? 0)}
         etichetta="etichette senza un esercente"
-        tinta={(quanteInTutto ?? 0) === 0 ? 'var(--investimento)' : 'var(--utile)'}
+        tinta={(quanteInTutto ?? 0) === 0 ? 'var(--conferma)' : 'var(--attenzione)'}
         figure={[
           { valore: formattaEuro(scoperto), etichetta: 'quanto valgono' },
           { valore: conta(quantiEsercenti), etichetta: 'esercenti in tutto' },

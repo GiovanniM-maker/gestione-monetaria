@@ -9,6 +9,7 @@ import {
 } from '@/lib/ai/modello';
 import { confermaMovimento } from '@/lib/conferma/leggi';
 import { aggiornaMerchant } from '@/lib/tassonomia/assegna';
+import { aggiornaClasse, creaClasse, eliminaClasse, leggiClassi } from '@/lib/tassonomia/classi';
 import { spostaMovimenti, type NuovoEsercente } from '@/lib/movimenti/sposta';
 import { cifreInventate } from './cifre';
 import { ArgomentoNonValido, strumento, STRUMENTI } from './strumenti';
@@ -122,7 +123,11 @@ COSA SAPERE SUI DATI:
 - La metrica principale dell'applicazione è il costo ricorrente mensile per classe di
   discrezionalità. ABBONAMENTI e ABITUDINI sono due numeri distinti e NON si sommano mai: un
   abbonamento si disdice con un gesto, un'abitudine si cambia, e sono due azioni diverse.
-- Le quattro classi di discrezionalità sono: essenziale, investimento, utile, voluttuario.
+- Le classi di discrezionalità sono elencate qui sotto e le definisce l'utente: usa solo quegli
+  slug, e non dare per scontato quali siano. Alcune sono FUORI DAL TOTALE del costo ricorrente —
+  spese che si ripetono ma che l'utente ha dichiarato di non voler togliere, come il risparmio o
+  le tasse. Restano nella ripartizione, non nella somma: non proporre di disdirle o di cambiarle,
+  e non sommarle al totale.
   I due contesti sono: personale, business.
 
 FORMA: massimo 150 parole salvo richiesta esplicita. "- " per gli elenchi, "**" per gli importi.
@@ -144,7 +149,24 @@ async function istruzioni(): Promise<string> {
   // modello userebbe quello del proprio addestramento.
   const oggi = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
 
-  return `${REGOLE}\n\nOGGI È IL ${oggi}.\n\nLE CATEGORIE, con il loro identificativo:\n${albero}`;
+  // Le classi nelle istruzioni e non in un `enum` degli strumenti: si creano
+  // mentre l'app e' accesa, e una dichiarazione di strumento e' una costante.
+  // Costano poche decine di token e valgono un identificativo inventato in
+  // meno, che e' lo stesso conto gia' fatto per l'albero delle categorie.
+  const classi = (await leggiClassi())
+    .filter((c) => !c.is_archived)
+    .map(
+      (c) =>
+        `- ${c.slug}: ${c.nome}${c.descrizione === null ? '' : ` — ${c.descrizione}`}` +
+        `${c.nel_ricorrente ? '' : ' [FUORI DAL TOTALE del costo ricorrente]'}`,
+    )
+    .join('\n');
+
+  return (
+    `${REGOLE}\n\nOGGI È IL ${oggi}.\n\n` +
+    `LE CLASSI DI DISCREZIONALITÀ:\n${classi}\n\n` +
+    `LE CATEGORIE, con il loro identificativo:\n${albero}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -448,6 +470,32 @@ async function esegui(proposta: Proposta): Promise<void> {
       if (error !== null) throw new Error(error.message);
       return;
     }
+
+    // Le tre sulle classi passano dalle funzioni nominate di
+    // `tassonomia/classi`, che sono le stesse che chiama la schermata. Se qui
+    // ci fosse una seconda strada verso le stesse RPC, un giorno una delle due
+    // imparerebbe un controllo che l'altra non ha.
+    case 'crea_classe':
+      await creaClasse({
+        nome: String(a['nome']),
+        descrizione: (a['descrizione'] as string | null) ?? null,
+        nelRicorrente: a['nel_ricorrente'] !== false,
+      });
+      return;
+
+    case 'aggiorna_classe':
+      await aggiornaClasse({
+        slug: String(a['slug']),
+        nome: (a['nome'] as string | null) ?? null,
+        descrizione: (a['descrizione'] as string | null) ?? null,
+        nelRicorrente: (a['nel_ricorrente'] as boolean | null) ?? null,
+        archiviata: (a['archiviata'] as boolean | null) ?? null,
+      });
+      return;
+
+    case 'elimina_classe':
+      await eliminaClasse(String(a['slug']), (a['verso'] as string | null) ?? null);
+      return;
   }
 }
 

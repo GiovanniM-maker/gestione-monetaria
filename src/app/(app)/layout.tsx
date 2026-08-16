@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth/session';
+import { leggiClassi } from '@/lib/tassonomia/classi';
+import { ClassiNote } from './classi-note';
 import { Menu } from './menu';
 import { Barra } from './barra';
 import { Aggiornamento } from './aggiornamento';
@@ -25,6 +27,10 @@ import { VERSIONE } from '@/lib/versione';
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  // Letta qui e non in ogni pagina: mezza applicazione mostra un selettore di
+  // classe, e cinque catene di prop identiche divergono. `inCache` la rende una
+  // query sola per richiesta — spesso nemmeno quella.
+  const classi = await leggiClassi();
 
   return (
     <div
@@ -50,7 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Lo spazio in fondo e' la barra piu' un respiro: senza, l'ultima riga
           di ogni schermata finisce sotto le quattro schede. */}
       <main className="flex-1 pt-2 pb-[calc(5.5rem+var(--barra-aggiornamento,0px)+env(safe-area-inset-bottom))]">
-        {children}
+        <ClassiNote classi={classi}>{children}</ClassiNote>
       </main>
 
       {/* Nel layout e non in una pagina: aprire l'app deve scaricare i

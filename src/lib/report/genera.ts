@@ -44,6 +44,9 @@ COSA SCRIVERE, in quest'ordine e senza titoli generici:
 - Una frase sola su com'è andato il mese, confrontata con il tipico dei mesi precedenti.
 - Il costo ricorrente: abbonamenti e abitudini restano SEPARATI e non si sommano mai, perché
   suggeriscono due azioni diverse — un abbonamento si disdice, un'abitudine si cambia.
+  Le voci con "nel_totale": false sono ricorrenti che chi legge ha dichiarato di NON voler
+  togliere — un risparmio, le tasse, una rata. Non sommarle al totale e non proporre di
+  disdirle o di cambiarle: nominarle come parte di quello che si può tagliare sarebbe falso.
 - Cosa è cambiato davvero rispetto al solito: le due o tre voci che saltano all'occhio.
 - Cosa richiede una decisione, se ci sono avvisi aperti.
 - Se ci sono movimenti senza categoria o senza cambio, dillo: sono la parte che il report non sa.

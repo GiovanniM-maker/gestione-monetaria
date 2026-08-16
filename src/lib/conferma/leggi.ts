@@ -113,7 +113,6 @@ export async function quanteDaConfermare(): Promise<number> {
 
 export class ConfermaNonValida extends Error {}
 
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'];
 const CONTESTI = ['personale', 'business'];
 
 export type RichiestaConferma = {
@@ -133,9 +132,9 @@ export async function confermaMovimento(richiesta: RichiestaConferma): Promise<v
   const c = richiesta.contesto ?? null;
   const n = richiesta.note ?? null;
 
-  if (d !== null && !DISCREZIONALITA.includes(d)) {
-    throw new ConfermaNonValida(`Discrezionalita' non ammessa: ${d}`);
-  }
+  // La classe non si valida qui: la scrittura passa da `categorizza_movimento`,
+  // che chiama `valida_classe` ed elenca nel messaggio le classi di adesso.
+  // Una copia in TypeScript elencherebbe quelle di quando e' stata scritta.
   if (c !== null && !CONTESTI.includes(c)) {
     throw new ConfermaNonValida(`Contesto non ammesso: ${c}`);
   }

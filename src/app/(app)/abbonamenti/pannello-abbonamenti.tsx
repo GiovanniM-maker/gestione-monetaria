@@ -16,7 +16,7 @@ import type {
   VoceMetrica,
 } from '@/lib/abbonamenti/formato';
 import { BOTTONE_MINORE, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
-import { COLORE_CLASSE } from '../grafici';
+import type { Tinte } from '../grafici';
 
 const GIUDIZI = [
   { valore: 'usato', etichetta: 'Lo uso' },
@@ -67,6 +67,7 @@ export function PannelloAbbonamenti({
   nellaMetrica,
   totali,
   oggi,
+  tinte,
 }: {
   abbonamenti: readonly RigaAbbonamento[];
   metrica: readonly RigaMetrica[];
@@ -74,6 +75,8 @@ export function PannelloAbbonamenti({
   nellaMetrica: number;
   totali: number;
   oggi: string;
+  /** Il colore di ogni classe, dalla tabella delle classi. */
+  tinte: Tinte;
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function PannelloAbbonamenti({
   const [mostraTutti, setMostraTutti] = useState(false);
 
   const voci = ordinaPerPeso(metrica);
+  const fuori = voci.filter((v) => !v.nelRicorrente);
 
   /**
    * Predefinito: solo cio' che entra nel numero. Il resto resta contato e a un
@@ -128,7 +132,11 @@ export function PannelloAbbonamenti({
         </p>
       ) : (
         TIPI.map((t) => {
-          const suoi = voci.filter((v) => v.tipo === t.chiave);
+          // Solo le classi che entrano nel totale: quelle fuori hanno un blocco
+          // loro, sotto, perche' proporre di disdirle o di cambiarle sarebbe
+          // proporre esattamente cio' che l'utente ha dichiarato di non voler
+          // fare.
+          const suoi = voci.filter((v) => v.tipo === t.chiave && v.nelRicorrente);
           if (suoi.length === 0) return null;
           return (
             <Blocco
@@ -137,9 +145,30 @@ export function PannelloAbbonamenti({
               sottotitolo={t.sottotitolo}
               voci={suoi}
               totale={totalePerTipo(voci, t.chiave)}
+              tinte={tinte}
             />
           );
         })
+      )}
+
+      {/* -------------------------------------------------------------- */}
+      {/* SOTTO LA LINEA                                                  */}
+      {/* -------------------------------------------------------------- */}
+      {/* Il ricorrente che non si tocca. Non e' nascosto e non e' un avviso:
+          e' la parte della ripartizione che il totale non conta, e mostrarla
+          e' l'unica cosa che rende onesto il totale.
+
+          Non e' diviso fra abbonamenti e abitudini: quella distinzione esiste
+          per dire quale azione e' possibile, e qui non ne e' prevista
+          nessuna. */}
+      {fuori.length > 0 && (
+        <Blocco
+          titolo="Fuori dal totale"
+          sottotitolo="Ricorrente, ma dichiarato non da togliere. Resta nella ripartizione, non nella somma."
+          voci={fuori}
+          totale={fuori.reduce((s, v) => s + v.costoMensile, 0n)}
+          tinte={tinte}
+        />
       )}
 
       {/* -------------------------------------------------------------- */}
@@ -147,8 +176,8 @@ export function PannelloAbbonamenti({
       {/* -------------------------------------------------------------- */}
       {escluse.length > 0 && (
         <div className="nota nota-avviso text-[13px]">
-          <p className="font-medium text-utile">Cosa i numeri qui sopra non contano</p>
-          <ul className="mt-1 space-y-0.5 text-utile">
+          <p className="font-medium text-attenzione">Cosa i numeri qui sopra non contano</p>
+          <ul className="mt-1 space-y-0.5 text-attenzione">
             {escluse.map((e) => (
               <li key={e.motivo}>
                 {e.motivo}: {e.esercenti} {e.esercenti === 1 ? 'esercente' : 'esercenti'}, spesi in
@@ -163,7 +192,7 @@ export function PannelloAbbonamenti({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-utile">
+          <p className="mt-2 text-attenzione">
             Serve essere presenti in almeno tre mesi civili <em>e</em> su almeno 75 giorni coperti.
             La seconda condizione non &egrave; ridondante: un intervallo di 63 giorni attraversa
             sempre tre mesi civili, e senza di lei dieci addebiti concentrati in due mesi
@@ -347,11 +376,13 @@ function Blocco({
   sottotitolo,
   voci,
   totale,
+  tinte,
 }: {
   titolo: string;
   sottotitolo: string;
   voci: readonly VoceMetrica[];
   totale: bigint;
+  tinte: Tinte;
 }) {
   return (
     <div className="space-y-3">
@@ -366,7 +397,7 @@ function Blocco({
         </p>
       </div>
       {/* Il pallino della classe e' lo stesso del cruscotto e della barra
-          segmentata. Quattro tessere grigie identiche si distinguono solo
+          segmentata. Delle tessere grigie identiche si distinguono solo
           leggendole; con il colore la piu' pesante si riconosce prima. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {voci.map((v) => (
@@ -375,9 +406,9 @@ function Blocco({
               <span
                 aria-hidden="true"
                 className="size-2 shrink-0 rounded-full"
-                style={{ background: COLORE_CLASSE[v.discrezionalita] ?? 'var(--neutro)' }}
+                style={{ background: tinte[v.discrezionalita] ?? 'var(--neutro)' }}
               />
-              <span className="min-w-0 truncate capitalize">{v.discrezionalita}</span>
+              <span className="min-w-0 truncate">{v.classeNome}</span>
             </p>
             <p className="text-[12px] text-testo-3">{v.contesto}</p>
             <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">

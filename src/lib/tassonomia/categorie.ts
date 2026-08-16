@@ -1,8 +1,6 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { DISCREZIONALITA } from './interpreta';
-import type { Discretion } from '@/lib/db/types';
 
 /**
  * Correggere una categoria: nome, discrezionalita' predefinita, genitore.
@@ -39,10 +37,11 @@ export async function aggiornaCategoria(a: AggiornamentoCategoria): Promise<void
     throw new CategoriaNonValida('Il nome non puo’ essere vuoto.');
   }
 
+  // La classe non si valida qui. Da quando esiste `valida_classe` la regola
+  // sta in SQL, la funzione la applica, e il suo messaggio elenca le classi
+  // vere — che sono quelle di adesso, mentre una copia in TypeScript
+  // elencherebbe quelle di quando e' stata scritta.
   const d = a.discrezionalita ?? null;
-  if (d !== null && !DISCREZIONALITA.includes(d as Discretion)) {
-    throw new CategoriaNonValida(`Discrezionalità non ammessa: ${d}`);
-  }
 
   const cambiaPadre = a.cambiaPadre === true;
   const parentId = cambiaPadre ? (a.parentId ?? null) : null;
@@ -78,9 +77,6 @@ export async function creaCategoria(
 ): Promise<string> {
   const n = typeof nome === 'string' ? nome.trim() : '';
   if (n === '') throw new CategoriaNonValida('Il nome non puo’ essere vuoto.');
-  if (discrezionalita !== null && !DISCREZIONALITA.includes(discrezionalita as Discretion)) {
-    throw new CategoriaNonValida(`Discrezionalità non ammessa: ${discrezionalita}`);
-  }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc('crea_categoria', {

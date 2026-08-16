@@ -5,7 +5,6 @@ import { comeArray } from '@/lib/enablebanking/redact';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
 import {
   CONTESTI,
-  DISCREZIONALITA,
   PER_PAGINA,
   TIPI,
   descriviFiltri,
@@ -15,6 +14,7 @@ import {
 } from '@/lib/movimenti/filtri';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { categorieSceglibili } from '@/lib/tassonomia/categorie';
+import { leggiClassi } from '@/lib/tassonomia/classi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { SceltaCategoria } from '../scelta-categoria';
 
@@ -61,10 +61,11 @@ export default async function MovimentiPage({
   const supabase = await createSupabaseServerClient();
   // Gli esercenti variabili si leggono qui e non riga per riga: sono pochi, e
   // servono a sapere **fin dove arriva** il selettore di categoria di ogni riga.
-  const [esito, alberoCategorie, { data: variabili }] = await Promise.all([
+  const [esito, alberoCategorie, { data: variabili }, classi] = await Promise.all([
     cercaMovimenti(filtri),
     categorieSceglibili(),
     supabase.from('merchants').select('id').eq('classificazione_variabile', true),
+    leggiClassi(),
   ]);
 
   const eVariabile = new Set(comeArray<{ id: string }>(variabili).map((m) => m.id));
@@ -78,6 +79,9 @@ export default async function MovimentiPage({
   const descrizione = descriviFiltri(filtri, {
     categoria: alberoCategorie.find((c) => c.id === filtri.categoria)?.percorso ?? null,
     esercente: esito.righe[0]?.esercente ?? null,
+    // Il nome e non lo slug: dopo un rinomina la riga che descrive i filtri
+    // direbbe una parola che nel selettore accanto non compare piu'.
+    classe: classi.find((c) => c.slug === filtri.discrezionalita)?.nome ?? null,
   });
 
   return (
@@ -172,11 +176,13 @@ export default async function MovimentiPage({
                 className={CAMPO_PIENO}
               >
                 <option value="">tutte</option>
-                {DISCREZIONALITA.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
+                {classi
+                  .filter((c) => !c.is_archived)
+                  .map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.nome}
+                    </option>
+                  ))}
               </select>
             </label>
             <label className="block">

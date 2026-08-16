@@ -1,5 +1,6 @@
 'use client';
 
+import { useClassiSceglibili } from '../classi-note';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -40,8 +41,6 @@ import { Foglio } from '../foglio';
  * silenzio — la spesa sparirebbe dall'albero pur restando nel totale, ed e' il
  * guasto che si scopre guardando un numero che non torna.
  */
-
-const DISCREZIONALITA = ['essenziale', 'investimento', 'utile', 'voluttuario'] as const;
 
 /** `null` = nessun foglio aperto; `undefined` come genitore = una radice. */
 type DaCreare = { padre: NodoAlbero | null } | null;
@@ -287,6 +286,7 @@ function Creazione({
   onChiudi: () => void;
   onCrea: (corpo: Record<string, unknown>, nome: string) => void;
 }) {
+  const classiSceglibili = useClassiSceglibili();
   const [nome, setNome] = useState('');
   const [discrezionalita, setDiscrezionalita] = useState('');
   const padre = stato?.padre ?? null;
@@ -324,9 +324,9 @@ function Creazione({
             disabled={occupato}
           >
             <option value="">— nessuna —</option>
-            {DISCREZIONALITA.map((d) => (
-              <option key={d} value={d}>
-                {d}
+            {classiSceglibili.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.nome}
               </option>
             ))}
           </select>

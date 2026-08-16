@@ -27,7 +27,7 @@ export default async function AvvisiPage() {
         titolo="Avvisi"
         cifra={conta(aperti)}
         etichetta={aperti === 0 ? 'niente da leggere' : aperti === 1 ? 'da leggere' : 'da leggere'}
-        tinta={aperti === 0 ? 'var(--investimento)' : 'var(--utile)'}
+        tinta={aperti === 0 ? 'var(--conferma)' : 'var(--attenzione)'}
         perche={
           <p>
             Solo due cose meritano un avviso: che il <strong>costo ricorrente</strong> sia cambiato,

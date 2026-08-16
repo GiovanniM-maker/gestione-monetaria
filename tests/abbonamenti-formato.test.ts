@@ -72,6 +72,8 @@ describe('ordinaPerPeso', () => {
       {
         tipo: 'abbonamento',
         discrezionalita: 'utile',
+        classe_nome: 'Utile',
+        nel_ricorrente: true,
         contesto: 'business',
         ricorrenze: 4,
         costo_mensile: '-18.24',
@@ -79,6 +81,8 @@ describe('ordinaPerPeso', () => {
       {
         tipo: 'abbonamento',
         discrezionalita: 'voluttuario',
+        classe_nome: 'Voluttuario',
+        nel_ricorrente: true,
         contesto: 'personale',
         ricorrenze: 2,
         costo_mensile: '-187.00',
@@ -93,6 +97,8 @@ describe('ordinaPerPeso', () => {
       {
         tipo: 'abitudine',
         discrezionalita: 'essenziale',
+        classe_nome: 'Essenziale',
+        nel_ricorrente: true,
         contesto: 'personale',
         ricorrenze: 1,
         costo_mensile: null,
@@ -100,6 +106,8 @@ describe('ordinaPerPeso', () => {
       {
         tipo: 'abbonamento',
         discrezionalita: 'utile',
+        classe_nome: 'Utile',
+        nel_ricorrente: true,
         contesto: 'business',
         ricorrenze: 1,
         costo_mensile: '-5.00',
@@ -114,6 +122,8 @@ describe('totalePerTipo — i due numeri non si sommano fra loro', () => {
     {
       tipo: 'abbonamento',
       discrezionalita: 'utile',
+      classe_nome: 'Utile',
+      nel_ricorrente: true,
       contesto: 'business',
       ricorrenze: 2,
       costo_mensile: '-110.76',
@@ -121,6 +131,8 @@ describe('totalePerTipo — i due numeri non si sommano fra loro', () => {
     {
       tipo: 'abbonamento',
       discrezionalita: 'voluttuario',
+      classe_nome: 'Voluttuario',
+      nel_ricorrente: true,
       contesto: 'personale',
       ricorrenze: 1,
       costo_mensile: '-6.99',
@@ -128,6 +140,8 @@ describe('totalePerTipo — i due numeri non si sommano fra loro', () => {
     {
       tipo: 'abitudine',
       discrezionalita: 'essenziale',
+      classe_nome: 'Essenziale',
+      nel_ricorrente: true,
       contesto: 'personale',
       ricorrenze: 1,
       costo_mensile: '-47.08',

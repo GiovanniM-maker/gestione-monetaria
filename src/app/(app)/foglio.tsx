@@ -130,8 +130,29 @@ export function Dialogo({
     };
   }, [aperto]);
 
-  const dentroIlPannello = (e: { target: EventTarget | null }): boolean =>
-    e.target instanceof Node && pannello.current !== null && pannello.current.contains(e.target);
+  /**
+   * Il punto toccato sta dentro il pannello?
+   *
+   * Si guardano le **coordinate**, non il nodo colpito. Prima era
+   * `pannello.contains(event.target)`, e falliva in un modo che si vedeva solo
+   * col dito: fra il `pointerdown` e il `click` la lista sotto puo'
+   * ridisegnarsi — `router.refresh()` dopo una scrittura, o il contesto delle
+   * classi che cambia identita' — e il nodo colpito finisce **staccato dal
+   * documento**. Un nodo staccato non e' contenuto da niente, quindi il tocco
+   * risultava «fuori» e il foglio si chiudeva da solo mentre lo si stava
+   * compilando.
+   *
+   * Un rettangolo non ha questo problema: esiste finche' esiste il pannello, e
+   * risponde alla domanda che si voleva fare davvero — «il dito era sopra il
+   * foglio o sul fondo?».
+   */
+  const dentroIlPannello = (e: { clientX: number; clientY: number }): boolean => {
+    if (pannello.current === null) return false;
+    const r = pannello.current.getBoundingClientRect();
+    return (
+      e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
+    );
+  };
 
   /* ---------------------------------------------------------------------- */
   /* Il trascinamento                                                        */
@@ -220,7 +241,13 @@ export function Dialogo({
         partitoFuori.current = !dentroIlPannello(e);
       }}
       onClick={(e) => {
-        if (partitoFuori.current && !dentroIlPannello(e)) onChiudi();
+        const fuori = partitoFuori.current && !dentroIlPannello(e);
+        // Si azzera **sempre**, anche quando non si chiude. Restando vero,
+        // un tocco cominciato sul fondo e finito dentro lascerebbe la
+        // trappola armata per il clic successivo — che magari e' quello su
+        // «Salva».
+        partitoFuori.current = false;
+        if (fuori) onChiudi();
       }}
       aria-label={etichetta}
       className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0

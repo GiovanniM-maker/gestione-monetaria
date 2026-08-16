@@ -159,7 +159,7 @@ export default async function DebugSyncPage() {
                     <td className="py-1 text-right">
                       {m.totale_eur ?? '—'}
                       {m.senza_cambio > 0 && (
-                        <span className="text-utile"> · {m.senza_cambio} senza cambio</span>
+                        <span className="text-attenzione"> · {m.senza_cambio} senza cambio</span>
                       )}
                     </td>
                   </tr>
@@ -237,7 +237,7 @@ export default async function DebugSyncPage() {
                     <td className="py-1 pr-3">{r.rows_fetched}</td>
                     <td className="py-1 pr-3">{r.rows_new}</td>
                     <td className="py-1 pr-3">{r.rows_duplicate}</td>
-                    <td className="py-1 break-words text-voluttuario">{r.error_message ?? ''}</td>
+                    <td className="py-1 break-words text-allarme">{r.error_message ?? ''}</td>
                   </tr>
                 ))}
               </tbody>

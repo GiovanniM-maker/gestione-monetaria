@@ -4,7 +4,8 @@ import Link from 'next/link';
 import type { RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
 import {
   leggiAvvisiNuovi,
-  leggiClassi,
+  leggiCategorie,
+  leggiSpesaPerClasse,
   leggiConfronto,
   leggiDaConfermare,
   leggiEntrate,
@@ -18,12 +19,20 @@ import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale } from '@/l
 import { comeSiConfronta } from '@/lib/cruscotto/andamento';
 import { daQuanto, freschezza } from '@/lib/cruscotto/freschezza';
 import type { Variazione } from '@/lib/cruscotto/andamento';
-import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
+import {
+  formattaEuro,
+  fuoriDalTotale,
+  ordinaPerPeso,
+  sommaCosti,
+  totalePerTipo,
+} from '@/lib/abbonamenti/formato';
+import { leggiClassi } from '@/lib/tassonomia/classi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
-import { BarraClassi, COLORE_CLASSE, Freccia, ORDINE_CLASSI } from './grafici';
+import { BarraClassi, Freccia, ordineDelleClassi, tinteDelleClassi } from './grafici';
+import { Ripartizione } from './livello';
 import { SceltaMese } from './mese';
-import { ScheletroCoppia, ScheletroTestata } from './scheletri';
+import { ScheletroCoppia, ScheletroElenco, ScheletroTestata } from './scheletri';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -81,19 +90,23 @@ function sommaClassi(righe: readonly { spesa: string }[]): bigint {
 }
 
 /**
- * Le quattro classi, nell'ordine fisso della barra.
+ * Le classi, nell'ordine dichiarato della barra.
  *
  * `personale` e `business` si sommano **qui e solo qui**: la barra risponde a
- * «come si divide il mese fra le quattro classi», che ha sempre le stesse
- * quattro voci ed e' per questo che la sua forma si impara. La distinzione fra
- * i due contesti resta intera nell'elenco sotto, dove c'e' spazio per dirla.
+ * «come si divide il mese fra le classi», che ha sempre le stesse voci ed e'
+ * per questo che la sua forma si impara. La distinzione fra i due contesti
+ * resta intera nell'elenco sotto, dove c'e' spazio per dirla.
+ *
+ * L'ordine arriva da `sort_order` e non e' piu' una costante: le classi si
+ * riordinano, e una barra che le mettesse in ordine alfabetico cambierebbe
+ * forma a ogni rinomina.
  */
-function perLaBarra(classi: readonly RigaClasse[]) {
-  const note = ORDINE_CLASSI.map((nome) => ({
+function perLaBarra(classi: readonly RigaClasse[], ordine: readonly string[]) {
+  const note = ordine.map((nome) => ({
     chiave: nome,
     valore: sommaClassi(classi.filter((c) => c.discrezionalita === nome)),
   }));
-  const resto = classi.filter((c) => !ORDINE_CLASSI.includes(c.discrezionalita));
+  const resto = classi.filter((c) => !ordine.includes(c.discrezionalita));
   return resto.length === 0
     ? note
     : [...note, { chiave: 'non classificato', valore: sommaClassi(resto) }];
@@ -154,6 +167,20 @@ export default async function CruscottoPage({
         <QuantoHoSpeso mese={mese} rigaMese={rigaMese} />
       </Suspense>
 
+      {/* Le categorie di primo livello, subito sotto le classi.
+
+          Sono due tagli della stessa spesa e stanno vicini apposta: la classe
+          dice **che tipo** di spesa era, la categoria dice **in cosa**. Chi
+          apre l'app guarda quasi sempre la seconda — «quanto ho speso in
+          ristoranti» e' una domanda che ci si fa, «quanto ho speso in
+          voluttuario» e' una domanda che si impara a farsi.
+
+          Ha un `<Suspense>` suo e non quello sopra: cosi' il numerone e le
+          classi compaiono senza aspettare questa query. */}
+      <Suspense fallback={<ScheletroElenco righe={5} />}>
+        <InCosa mese={mese} />
+      </Suspense>
+
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           {/* «Di questo, quanto torna ogni mese» andava a capo e spingeva su
@@ -186,6 +213,36 @@ export default async function CruscottoPage({
 /* -------------------------------------------------------------------------- */
 /* I blocchi, ognuno con le sue letture                                        */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * In cosa: le categorie di primo livello del mese.
+ *
+ * **Solo le radici.** Con il roll-up la loro somma e' la spesa categorizzata
+ * del mese, esattamente una volta; mettendoci anche le figlie ogni euro
+ * comparirebbe due volte e il totale non vorrebbe piu' dire niente.
+ *
+ * Il tocco porta alla scheda della categoria col mese conservato, che e' dove
+ * si vede l'andamento e si scende agli esercenti. Per scendere restando qui
+ * c'e' `/dove`, ed e' il collegamento in fondo al cruscotto.
+ */
+async function InCosa({ mese }: { mese: string }) {
+  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
+  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
+
+  const radici = categorie
+    .filter((c) => c.parent_id === null)
+    .map((c) => ({
+      chiave: c.category_id,
+      etichetta: c.categoria,
+      dettaglio: `${c.movimenti} ${c.movimenti === 1 ? 'movimento' : 'movimenti'}`,
+      valore: centesimi(c.spesa),
+      href: `/categoria/${c.category_id}?mese=${mese}`,
+      variazione: perCategoria.get(c.category_id),
+    }))
+    .filter((v) => v.valore !== 0n);
+
+  return <Ripartizione titolo="In cosa" voci={radici} />;
+}
 
 /**
  * Il riquadro che va letto prima dei numeri, quando c'e'.
@@ -329,9 +386,9 @@ function Avviso({
 }) {
   const tinta =
     gravita === 'critical'
-      ? 'var(--voluttuario)'
+      ? 'var(--allarme)'
       : gravita === 'warning'
-        ? 'var(--utile)'
+        ? 'var(--attenzione)'
         : 'var(--neutro)';
 
   return (
@@ -360,13 +417,15 @@ async function QuantoHoSpeso({
   mese: string;
   rigaMese: RigaTotaleMese | null;
 }) {
-  const [classi, variazioni, confronto, { giorniCoperti }, entrate] = await Promise.all([
-    leggiClassi(mese),
-    leggiVariazioni(mese),
-    leggiConfronto(mese),
-    leggiFinestra(mese),
-    leggiEntrate(mese),
-  ]);
+  const [classi, definizioni, variazioni, confronto, { giorniCoperti }, entrate] =
+    await Promise.all([
+      leggiSpesaPerClasse(mese),
+      leggiClassi(),
+      leggiVariazioni(mese),
+      leggiConfronto(mese),
+      leggiFinestra(mese),
+      leggiEntrate(mese),
+    ]);
 
   // Il totale viene da `v_monthly_totals`, la vista che lo definisce. Le classi
   // darebbero lo stesso numero, ma farlo dipendere da due letture invece che da
@@ -378,9 +437,13 @@ async function QuantoHoSpeso({
   );
   const spiegaIlConfronto = comeSiConfronta(variazioni.classi[0]);
 
-  const perLaBarraOra = perLaBarra(classi);
+  // Le tinte e l'ordine vengono dalla tabella delle classi, non da una
+  // costante: si riordinano e si ricolorano, e una barra che se lo ricavasse da
+  // sola cambierebbe forma alla prima rinomina.
+  const tinte = tinteDelleClassi(definizioni);
+  const perLaBarraOra = perLaBarra(classi, ordineDelleClassi(definizioni));
   const dominante = classeDominante(perLaBarraOra);
-  const tinta = dominante === null ? null : (COLORE_CLASSE[dominante] ?? null);
+  const tinta = dominante === null ? null : (tinte[dominante] ?? null);
 
   return (
     <section className="space-y-4">
@@ -405,7 +468,7 @@ async function QuantoHoSpeso({
           <p className="cifra text-[13px] text-testo-2">
             di solito {formattaEuro(confronto.riferimento)}
             {confronto.scostamento !== null && (
-              <span className={confronto.scostamento > 0 ? 'text-utile' : 'text-investimento'}>
+              <span className={confronto.scostamento > 0 ? 'text-attenzione' : 'text-conferma'}>
                 {' '}
                 · {confronto.scostamento > 0 ? '▲' : '▼'}{' '}
                 {Math.abs(confronto.scostamento).toFixed(0)}%
@@ -418,48 +481,61 @@ async function QuantoHoSpeso({
           )
         )}
 
-        {classi.length > 0 && <BarraClassi voci={perLaBarraOra} />}
+        {classi.length > 0 && <BarraClassi voci={perLaBarraOra} tinte={tinte} />}
       </div>
 
       {classi.length === 0 ? (
         <p className="text-sm text-testo-2">Nessun movimento in questo mese.</p>
       ) : (
-        <div className="scheda px-4">
-          <ul className="elenco text-[15px]">
-            {classi.map((c) => (
-              <li key={`${c.discrezionalita}-${c.contesto}`}>
-                <Link
-                  href={perMese(mese, { classe: c.discrezionalita })}
-                  className="flex min-h-12 items-center gap-2.5"
-                >
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ background: COLORE_CLASSE[c.discrezionalita] ?? 'var(--neutro)' }}
-                  />
-                  {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
+        <>
+          {/* Un titolo su questo elenco, ora che sotto ce n'e' un secondo.
+              Due liste di importi una sotto l'altra, senza etichetta, non
+              dicono che rispondono a due domande diverse — e la prima delle
+              due e' anche quella che nessuno chiama «classi» finche' non
+              gliel'hai detto. */}
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Per classe</h2>
+          <div className="scheda px-4">
+            <ul className="elenco text-[15px]">
+              {classi.map((c) => (
+                <li key={`${c.discrezionalita}-${c.contesto}`}>
+                  <Link
+                    href={perMese(mese, { classe: c.discrezionalita })}
+                    className="flex min-h-12 items-center gap-2.5"
+                  >
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: tinte[c.discrezionalita] ?? 'var(--neutro)' }}
+                    />
+                    {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
                       Personale» accanto a un importo e a una freccia finiva
                       troncato a «Voluttuario · Per…», e il nome della classe e'
                       la cosa che si legge. */}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate capitalize">{c.discrezionalita}</span>
-                    {/* Su una riga non classificata classe e contesto sono la
+                    <span className="min-w-0 flex-1">
+                      {/* Il nome mostrato, non lo slug: dopo un rinomina sono
+                        due parole diverse, e quella che l'utente ha scelto e'
+                        la prima. */}
+                      <span className="block truncate">{c.classe_nome}</span>
+                      {/* Su una riga non classificata classe e contesto sono la
                         stessa parola, e ripeterla non aggiunge niente. */}
-                    {c.contesto !== c.discrezionalita && (
-                      <span className="block truncate text-[12px] text-testo-3">{c.contesto}</span>
-                    )}
-                  </span>
-                  <span className="cifra shrink-0 whitespace-nowrap">
-                    {formattaEuro(centesimi(c.spesa))}
-                    <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
-                  </span>
-                  <span aria-hidden="true" className="shrink-0 text-testo-3">
-                    ›
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+                      {c.contesto !== c.discrezionalita && (
+                        <span className="block truncate text-[12px] text-testo-3">
+                          {c.contesto}
+                        </span>
+                      )}
+                    </span>
+                    <span className="cifra shrink-0 whitespace-nowrap">
+                      {formattaEuro(centesimi(c.spesa))}
+                      <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
+                    </span>
+                    <span aria-hidden="true" className="shrink-0 text-testo-3">
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
       )}
 
       {incassato !== null && incassato !== 0n && (
@@ -473,7 +549,7 @@ async function QuantoHoSpeso({
           freccia che manca non si nota. Una riga, non un riquadro: le cifre
           sopra restano corrette, e non e' un allarme. */}
       {variazioni.mancanti !== null && (
-        <p className="text-[13px] text-utile">
+        <p className="text-[13px] text-attenzione">
           I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
           <strong>Le cifre qui sopra sono corrette.</strong>
         </p>
@@ -519,6 +595,7 @@ async function Ricorrente({ mese }: { mese: string }) {
   const voci = ordinaPerPeso(await leggiRicorrente());
   const abbonamenti = totalePerTipo(voci, 'abbonamento');
   const abitudini = totalePerTipo(voci, 'abitudine');
+  const fuori = fuoriDalTotale(voci);
 
   return (
     <>
@@ -540,6 +617,23 @@ async function Ricorrente({ mese }: { mese: string }) {
           </p>
         </div>
       </div>
+      {/* Sotto la linea: il ricorrente che l'utente ha dichiarato di non voler
+          togliere. Non e' un numero nascosto e non e' un avviso — e' la parte
+          della ripartizione che il totale non conta, e dirlo e' l'unica cosa
+          che rende onesto il totale.
+
+          Una riga sola, non due: qui la distinzione fra abbonamento e
+          abitudine non serve, perche' non c'e' niente da disdire ne' da
+          cambiare. */}
+      {fuori.costoMensile !== 0n && (
+        <p className="text-[13px] text-testo-3">
+          Fuori dal totale:{' '}
+          <span className="cifra font-medium text-testo-2">{formattaEuro(fuori.costoMensile)}</span>{' '}
+          al mese su {fuori.ricorrenze} {fuori.ricorrenze === 1 ? 'voce' : 'voci'} di{' '}
+          {fuori.classi.join(', ')} — ricorrente, ma non da togliere.
+        </p>
+      )}
+
       {/* Perche' i due numeri non si sommano e perche' non parlano di questo
           mese e' vero e va detto — ma non a ogni apertura, sopra i numeri. */}
       <details className="text-[13px] text-testo-2">
@@ -620,7 +714,9 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
 
   if (dove === 'fondo') return null;
 
-  const tinta = grave ? 'var(--voluttuario)' : 'var(--utile)';
+  // `--allarme` e `--attenzione` e non `--voluttuario` e `--utile`: le tinte
+  // non si chiamano piu' come le classi, perche' le classi si rinominano.
+  const tinta = grave ? 'var(--allarme)' : 'var(--attenzione)';
   // Il consenso viene prima: se e' scaduto, e' anche la ragione per cui i dati
   // sono fermi, e dire due volte la stessa cosa con due titoli diversi
   // manderebbe a rinnovare e a controllare lo scheduler per un guasto solo.

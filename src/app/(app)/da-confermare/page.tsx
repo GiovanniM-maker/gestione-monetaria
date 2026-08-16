@@ -67,7 +67,7 @@ export default async function DaConfermarePage() {
         titolo="Da confermare"
         cifra={conta(righe.length)}
         etichetta={righe.length === 0 ? 'sei in pari' : 'movimenti nuovi'}
-        tinta={righe.length === 0 ? 'var(--investimento)' : null}
+        tinta={righe.length === 0 ? 'var(--conferma)' : null}
         figure={
           righe.length === 0 ? undefined : [{ valore: formattaEuro(valgono), etichetta: 'valgono' }]
         }
