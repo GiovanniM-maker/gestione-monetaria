@@ -1,15 +1,13 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { RigaCategoria, RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
+import type { RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
 import {
   leggiAvvisiNuovi,
-  leggiCategorie,
   leggiClassi,
   leggiConfronto,
   leggiDaConfermare,
   leggiEntrate,
-  leggiEsercenti,
   leggiFinestra,
   leggiRicorrente,
   leggiStato,
@@ -22,33 +20,35 @@ import type { Variazione } from '@/lib/cruscotto/andamento';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
-import {
-  BarraClassi,
-  Ciambella,
-  COLORE_CLASSE,
-  fetteDellaCiambella,
-  Freccia,
-  ORDINE_CLASSI,
-  type FettaCategoria,
-} from './grafici';
-import { MesePerMese } from './livello';
-import {
-  ScheletroCiambella,
-  ScheletroCoppia,
-  ScheletroElenco,
-  ScheletroTestata,
-} from './scheletri';
+import { BarraClassi, COLORE_CLASSE, Freccia, ORDINE_CLASSI } from './grafici';
+import { SceltaMese } from './mese';
+import { ScheletroCoppia, ScheletroTestata } from './scheletri';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
 
 /**
- * Il cruscotto.
+ * Il cruscotto: **quello che si guarda in dieci secondi**.
  *
- * L'ordine dei blocchi e' l'ordine delle domande, non quello di importanza
- * grafica: **quanto ho speso**, **quanto di quello torna ogni mese**, **come si
- * muove nel tempo**, **in cosa**, **da chi**. Ogni blocco successivo spiega il
- * precedente, e si scende finche' la risposta e' azionabile.
+ * ---------------------------------------------------------------------------
+ * Cosa e' stato tolto, e perche'
+ * ---------------------------------------------------------------------------
+ * Rispondeva a sei domande una sotto l'altra — quanto ho speso, quanto torna
+ * ogni mese, come si muove nel tempo, in cosa, da chi, e c'e' qualcosa che non
+ * va — su cinque schermate di scorrimento. Cinque schermate sono il modo piu'
+ * sicuro di non far leggere **nessuna** delle sei: la prima risposta e' anche
+ * l'unica che si vede senza scorrere, e tutto il resto e' rumore che le sta
+ * intorno.
+ *
+ * Le quattro schede in basso sono quattro domande, e due di quelle stavano
+ * nella stessa pagina. «In cosa», «da chi», «mese per mese» e l'albero sono
+ * passati a **`/dove`**, che e' la scheda che risponde a quella domanda.
+ *
+ * Qui restano tre cose e un invito: **quanto** ho speso e come si divide,
+ * **quanto di quello torna ogni mese** — la metrica per cui l'app esiste — e
+ * **cosa c'e' da fare**. L'invito e' la riga che porta a «Dove».
+ *
+ * L'ordine e' l'ordine delle domande, non quello di importanza grafica.
  *
  * ---------------------------------------------------------------------------
  * Ogni blocco aspetta solo i propri dati
@@ -69,9 +69,6 @@ export const metadata: Metadata = { title: 'Cruscotto' };
  * la pagina resta un componente server e un mese si puo' mandare a se' stessi
  * come collegamento.
  */
-
-/** Quanti mesi mostra l'andamento. Un anno e' il minimo per vedere una stagione. */
-const MESI_ANDAMENTO = 12;
 
 function centesimi(valore: string | null): bigint {
   const { totale, nonLetti } = sommaCosti([valore]);
@@ -131,45 +128,19 @@ export default async function CruscottoPage({
   const parametri = await searchParams;
   // L'unica lettura che la pagina aspetta davvero: senza sapere quali mesi
   // esistono non si sa nemmeno quale mostrare.
-  const { mese, totali, rigaMese, mesePrecedente, meseSuccessivo, inCorso } = await scegliMese(
+  const { mese, rigaMese, mesePrecedente, meseSuccessivo, inCorso } = await scegliMese(
     meseValido(parametri['mese']),
   );
 
-  const andamento = totali.slice(-MESI_ANDAMENTO);
-
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[22px] font-bold tracking-[-0.03em] capitalize">
-          {etichettaMese(mese)}
-        </h1>
-        <nav className="flex items-center gap-1 text-sm">
-          {mesePrecedente !== null && (
-            <Link
-              className="inline-flex size-11 items-center justify-center rounded-full text-testo-2"
-              href={`/?mese=${mesePrecedente}`}
-              aria-label={`vai a ${etichettaMese(mesePrecedente)}`}
-            >
-              ‹
-            </Link>
-          )}
-          {inCorso ? (
-            <span className="rounded-full bg-s2 px-3 py-1 text-[11px] font-medium text-testo-2">
-              in corso
-            </span>
-          ) : (
-            meseSuccessivo !== null && (
-              <Link
-                className="inline-flex size-11 items-center justify-center rounded-full text-testo-2"
-                href={`/?mese=${meseSuccessivo}`}
-                aria-label={`vai a ${etichettaMese(meseSuccessivo)}`}
-              >
-                ›
-              </Link>
-            )
-          )}
-        </nav>
-      </div>
+      <SceltaMese
+        mese={mese}
+        precedente={mesePrecedente}
+        successivo={meseSuccessivo}
+        inCorso={inCorso}
+        indirizzo={(m) => `/?mese=${m}`}
+      />
 
       <Suspense fallback={<ScheletroTestata />}>
         <QuantoHoSpeso mese={mese} rigaMese={rigaMese} />
@@ -177,9 +148,9 @@ export default async function CruscottoPage({
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">
-            Di questo, quanto torna ogni mese
-          </h2>
+          {/* «Di questo, quanto torna ogni mese» andava a capo e spingeva su
+              il collegamento accanto. Quattro parole dicono la stessa cosa. */}
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Quanto torna ogni mese</h2>
           <Link
             className="inline-flex min-h-11 shrink-0 items-center text-[13px] text-essenziale sm:min-h-0"
             href="/abbonamenti"
@@ -192,31 +163,13 @@ export default async function CruscottoPage({
         </Suspense>
       </section>
 
-      {/* L'andamento non ha bisogno di nessuna query in piu': i totali di tutti
-          i mesi sono gia' quelli che hanno deciso quale mese mostrare. */}
-      <MesePerMese
-        titolo="Andamento"
-        righe={andamento.map((r) => ({ mese: r.mese, valore: centesimi(r.spesa) }))}
-        corrente={mese}
-        href={(m) => `/?mese=${m}`}
-      />
-
-      <Suspense fallback={<ScheletroCiambella />}>
-        <InCosa mese={mese} />
-      </Suspense>
-
-      <Suspense fallback={<ScheletroElenco />}>
-        <DaChi mese={mese} />
-      </Suspense>
-
-      {/* Lo stato e gli avvisi stanno **in fondo**, ed e' la decisione che
-          cambia di piu' la schermata. Prima occupavano tutta la prima vista: un
-          avviso che compare prima del numero si legge come «c'e' un problema»
-          ogni volta che apri l'app, e dopo una settimana non lo leggi piu'. E'
-          il modo in cui muoiono i canali di notifica, gia' scritto nelle
-          decisioni della Fase 8 — e rientrava dalla disposizione. */}
+      {/* Cosa c'e' da fare oggi, e lo stato del sistema. In fondo e non in
+          cima: un avviso che compare prima del numero si legge come «c'e' un
+          problema» ogni volta che apri l'app, e dopo una settimana non lo
+          leggi piu'. E' il modo in cui muoiono i canali di notifica, gia'
+          scritto nelle decisioni della Fase 8. */}
       <Suspense fallback={null}>
-        <StatoEAvvisi />
+        <DaFare mese={mese} rigaMese={rigaMese} />
       </Suspense>
     </div>
   );
@@ -226,7 +179,17 @@ export default async function CruscottoPage({
 /* I blocchi, ognuno con le sue letture                                        */
 /* -------------------------------------------------------------------------- */
 
-async function StatoEAvvisi() {
+/**
+ * Cosa c'e' da fare, e se ci si puo' fidare dei numeri.
+ *
+ * Le due cose stanno insieme perche' rispondono alla stessa domanda — «devo
+ * toccare qualcosa?» — e perche' separate erano due blocchi che finivano
+ * ognuno per conto suo in fondo alla schermata.
+ *
+ * La riga «dove sono finiti» chiude il cruscotto mandando alla scheda che
+ * risponde: qui si guarda **quanto**, li' si guarda **dove**.
+ */
+async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMese | null }) {
   const [stato, avvisi, daConfermare] = await Promise.all([
     leggiStato(),
     leggiAvvisiNuovi(),
@@ -235,6 +198,47 @@ async function StatoEAvvisi() {
 
   return (
     <div className="space-y-3">
+      <Link
+        href={`/dove?mese=${mese}`}
+        className="scheda flex min-h-14 items-center gap-3 px-4 text-[15px]"
+      >
+        <span className="flex-1">
+          <span className="block font-medium">Dove sono finiti</span>
+          <span className="block text-[12px] text-testo-3">
+            in cosa, da chi, e come si muove nel tempo
+            {rigaMese !== null && ` · ${rigaMese.movimenti} movimenti`}
+          </span>
+        </span>
+        <span aria-hidden="true" className="shrink-0 text-testo-3">
+          ›
+        </span>
+      </Link>
+
+      {/* Le due note che raccontano cosa manca al totale stanno qui e non
+          sotto il numerone: sono **cose da fare**, non parti della risposta, e
+          in mezzo alla risposta erano due riquadri fra l'utente e la metrica. */}
+      {rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0) && (
+        <p className="scheda p-4 text-[13px] text-testo-2">
+          {rigaMese.senza_cambio > 0 && (
+            <>
+              <strong className="text-testo">{rigaMese.senza_cambio}</strong> movimenti in valuta
+              senza tasso di cambio non sono nel totale.{' '}
+            </>
+          )}
+          {rigaMese.senza_categoria > 0 && (
+            <>
+              <strong className="text-testo">{rigaMese.senza_categoria}</strong> movimenti per{' '}
+              {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma senza
+              categoria.{' '}
+              <Link className="text-essenziale" href="/revisione">
+                Assegnali
+              </Link>
+              .
+            </>
+          )}
+        </p>
+      )}
+
       {/* Con il conteggio e non con un pallino: un numero e' un invito, un
           pallino rosso e' un'ansia. */}
       {daConfermare > 0 && (
@@ -439,6 +443,16 @@ async function QuantoHoSpeso({
         </p>
       )}
 
+      {/* Se i confronti non arrivano, le frecce spariscono senza dirlo — e una
+          freccia che manca non si nota. Una riga, non un riquadro: le cifre
+          sopra restano corrette, e non e' un allarme. */}
+      {variazioni.mancanti !== null && (
+        <p className="text-[13px] text-utile">
+          I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
+          <strong>Le cifre qui sopra sono corrette.</strong>
+        </p>
+      )}
+
       {/* La prosa metodologica sta sotto un «perche'?»: vera e ben scritta, ma
           alla decima volta occupa lo spazio dei numeri. */}
       {(confronto !== null || spiegaIlConfronto !== null) && (
@@ -471,42 +485,6 @@ async function QuantoHoSpeso({
           </div>
         </details>
       )}
-
-      {variazioni.mancanti !== null && (
-        <p className="scheda p-3 text-[13px] text-utile">
-          I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
-          <strong>Le cifre qui sopra sono corrette.</strong> Motivo: {variazioni.mancanti}
-        </p>
-      )}
-
-      {rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0) && (
-        <p className="scheda p-3 text-[13px] text-testo-2">
-          {rigaMese.senza_cambio > 0 && (
-            <>
-              <strong className="text-testo">{rigaMese.senza_cambio}</strong> movimenti in valuta
-              senza tasso di cambio non sono nel totale.{' '}
-            </>
-          )}
-          {rigaMese.senza_categoria > 0 && (
-            <>
-              <strong className="text-testo">{rigaMese.senza_categoria}</strong> movimenti per{' '}
-              {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma senza
-              categoria.{' '}
-              <Link className="text-essenziale" href="/revisione">
-                Assegnali
-              </Link>
-              .
-            </>
-          )}
-        </p>
-      )}
-
-      <Link
-        className="inline-flex min-h-11 items-center text-[13px] text-essenziale"
-        href={perMese(mese)}
-      >
-        vedi i {rigaMese?.movimenti ?? 0} movimenti del mese ›
-      </Link>
     </section>
   );
 }
@@ -546,185 +524,6 @@ async function Ricorrente({ mese }: { mese: string }) {
       </details>
     </>
   );
-}
-
-async function InCosa({ mese }: { mese: string }) {
-  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
-  if (categorie.length === 0) return null;
-
-  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
-
-  // Solo le **radici**: con il roll-up la loro somma e' la spesa categorizzata
-  // del mese, esattamente una volta. Mettendoci anche le figlie ogni euro
-  // comparirebbe due volte e il giro non vorrebbe piu' dire niente.
-  const radici: FettaCategoria[] = categorie
-    .filter((c) => c.parent_id === null)
-    .map((c) => ({
-      chiave: c.category_id,
-      etichetta: c.categoria,
-      valore: centesimi(c.spesa),
-      href: `/categoria/${c.category_id}?mese=${mese}`,
-      variazione: perCategoria.get(c.category_id),
-    }))
-    .filter((f) => f.valore !== 0n);
-  const inCategoria = radici.reduce((s, r) => s + r.valore, 0n);
-  const totale = sommaClassi(categorie.filter((c) => c.parent_id === null));
-
-  return (
-    <>
-      {radici.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">In cosa</h2>
-          <div className="scheda p-4">
-            <Ciambella voci={fetteDellaCiambella(radici)} totale={inCategoria} />
-          </div>
-        </section>
-      )}
-
-      {/* L'albero intero e' un inventario, non una risposta: sta chiuso, e si
-          apre quando la ciambella non basta. Aperto era la meta' della
-          schermata, ogni volta. */}
-      <details className="mt-8">
-        <summary className="inline-flex min-h-11 cursor-pointer items-center text-[15px] font-medium text-testo-2">
-          L&rsquo;albero intero ›
-        </summary>
-        <p className="mb-2 text-[13px] text-testo-3">
-          Ogni categoria porta la somma delle sue sottocategorie. Dove compare una seconda cifra,
-          &egrave; la parte finita direttamente su quel nodo invece che in un figlio.
-        </p>
-        <div className="scheda px-4">
-          <Albero righe={categorie} totale={totale} mese={mese} variazioni={perCategoria} />
-        </div>
-      </details>
-    </>
-  );
-}
-
-async function DaChi({ mese }: { mese: string }) {
-  const [esercenti, variazioni] = await Promise.all([leggiEsercenti(mese), leggiVariazioni(mese)]);
-  if (esercenti.length === 0) return null;
-
-  const perEsercente = new Map(variazioni.esercenti.map((v) => [v.merchant_id, v as Variazione]));
-
-  return (
-    <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Da chi</h2>
-      <div className="scheda px-4">
-        <ul className="elenco text-[15px]">
-          {esercenti.map((e, i) => {
-            const valore = centesimi(e.spesa);
-            const riga = (
-              <>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">{e.esercente}</span>
-                  <span className="text-[12px] text-testo-3">
-                    {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'} ·{' '}
-                    {e.discrezionalita}
-                  </span>
-                </span>
-                <span className="cifra shrink-0 whitespace-nowrap">
-                  {formattaEuro(valore)}
-                  <Freccia
-                    riga={e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id)}
-                  />
-                </span>
-              </>
-            );
-            return (
-              <li key={`${e.merchant_id ?? 'nessuno'}-${e.discrezionalita}-${i}`}>
-                {e.merchant_id === null ? (
-                  <span className="flex min-h-12 items-center gap-3">{riga}</span>
-                ) : (
-                  <Link
-                    href={`/esercente/${e.merchant_id}`}
-                    className="flex min-h-12 items-center gap-3"
-                  >
-                    {riga}
-                    <span aria-hidden="true" className="shrink-0 text-testo-3">
-                      ›
-                    </span>
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-/**
- * L'albero delle categorie.
- *
- * Si disegna dai `parent_id` invece di leggere una profondita' precalcolata:
- * una categoria il cui padre non ha spesa in questo mese non compare fra le
- * righe, e appesa a un livello che non esiste sparirebbe dal totale visibile
- * pur essendo nella somma. Qui invece risale come radice.
- */
-function Albero({
-  righe,
-  totale,
-  mese,
-  variazioni,
-}: {
-  righe: readonly RigaCategoria[];
-  totale: bigint;
-  mese: string;
-  variazioni: ReadonlyMap<string, Variazione>;
-}) {
-  const presenti = new Set(righe.map((r) => r.category_id));
-  const figli = new Map<string | null, RigaCategoria[]>();
-
-  for (const r of righe) {
-    const padre = r.parent_id !== null && presenti.has(r.parent_id) ? r.parent_id : null;
-    const gruppo = figli.get(padre);
-    if (gruppo === undefined) figli.set(padre, [r]);
-    else gruppo.push(r);
-  }
-
-  function rami(padre: string | null, livello: number): React.ReactNode[] {
-    const gruppo = figli.get(padre) ?? [];
-    return gruppo.flatMap((r) => {
-      const valore = centesimi(r.spesa);
-      const diretta = centesimi(r.spesa_diretta);
-      return [
-        <li key={r.category_id}>
-          <Link
-            href={`/categoria/${r.category_id}?mese=${mese}`}
-            className="flex min-h-12 items-center gap-3 py-1.5 text-[15px]"
-            style={{ paddingLeft: `${livello * 14}px` }}
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">{r.categoria}</span>
-              <span className="mt-1 flex items-center gap-2">
-                <span className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-s3">
-                  <span
-                    className="block h-full rounded-full bg-(--testo-3)"
-                    style={{ width: `${quotaPercentuale(valore, totale)}%` }}
-                  />
-                </span>
-                <span className="cifra truncate text-[12px] text-testo-3">
-                  {r.movimenti} mov.
-                  {diretta !== valore && diretta !== 0n && ` · ${formattaEuro(diretta)} qui`}
-                </span>
-              </span>
-            </span>
-            <span className="cifra shrink-0 whitespace-nowrap">
-              {formattaEuro(valore)}
-              <Freccia riga={variazioni.get(r.category_id)} />
-            </span>
-            <span aria-hidden="true" className="shrink-0 text-testo-3">
-              ›
-            </span>
-          </Link>
-        </li>,
-        ...rami(r.category_id, livello + 1),
-      ];
-    });
-  }
-
-  return <ul className="elenco">{rami(null, 0)}</ul>;
 }
 
 /**

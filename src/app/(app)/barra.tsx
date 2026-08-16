@@ -43,12 +43,12 @@ const SCHEDE: readonly Scheda[] = [
   { href: '/', nome: 'Oggi', icona: '◧' },
   { href: '/da-confermare', nome: 'Conferma', icona: '✓' },
   {
-    href: '/movimenti',
+    href: '/dove',
     nome: 'Dove',
     icona: '◍',
     // La discesa passa da queste schermate: la scheda resta accesa mentre si
     // scende, o sembrerebbe di essere usciti dalla sezione.
-    anche: ['/categoria', '/esercente', '/abbonamenti'],
+    anche: ['/movimenti', '/categoria', '/esercente', '/abbonamenti'],
   },
   { href: '/copilota', nome: 'Chiedi', icona: '✳' },
 ];

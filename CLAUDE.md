@@ -834,6 +834,29 @@ trasformano la lista della sera in quindici righe identiche, e una lista di arre
 smaltisce — si chiude. Non tocca `manually_categorized`, come la conferma singola: approvare in
 blocco non è una scorciatoia per incidere in blocco.
 
+#### Il cruscotto rispondeva a sei domande, e nessuna si leggeva
+
+Quanto ho speso, quanto torna ogni mese, come si muove nel tempo, in cosa, da chi, e c'è qualcosa
+che non va: sei risposte una sotto l'altra su **cinque schermate di scorrimento**. Cinque schermate
+sono il modo più sicuro di non far leggere nessuna delle sei — la prima è anche l'unica che si vede
+senza scorrere, e tutto il resto è rumore che le sta intorno.
+
+Le quattro schede in basso sono quattro domande, e **due di quelle stavano nella stessa pagina**.
+«In cosa», «da chi», «mese per mese» e l'albero sono passati a `/dove`, che è la scheda che risponde
+a quella domanda. Sul cruscotto restano tre cose e un invito: **quanto** e come si divide, **quanto
+di quello torna ogni mese** — la metrica per cui l'app esiste — e **cosa c'è da fare**. L'invito è
+la riga che porta a «Dove».
+
+Le due note diagnostiche (movimenti senza cambio, movimenti senza categoria) sono scese fra le cose
+da fare: sono compiti, non parti della risposta, e in mezzo alla risposta erano due riquadri fra
+l'utente e la metrica.
+
+Da **4.063 a 1.645 px**: due schermate invece di cinque, e la metrica principale entra nella
+seconda. `/dove` ne occupa 2.836.
+
+`SceltaMese` sta in un posto solo perché ora la usano due schede, e ognuna passa il proprio
+indirizzo: cambiando mese si resta dove si è invece di essere rimbalzati sull'altra.
+
 #### Il foglio dal basso, e non un menu a tendina
 
 Il selettore di categoria era un `<select>` nativo con trentacinque voci, ognuna un percorso intero
@@ -879,9 +902,14 @@ riconosce, e aperti erano due terzi della schermata.
 #### Misurato dopo, a 390 px, in tutti e due i temi
 
 Nessuna schermata sborda di lato; tre bersagli sotto i 44 px in tutta l'applicazione (erano 313 solo
-su `/revisione`); il cruscotto scende da 4.924 a 4.063 px e `/movimenti` da 7.163 a 6.057. I quattro
-livelli della discesa stanno in una schermata e mezza: categoria 1.359 px, esercente 994,
-movimento 1.213.
+su `/revisione`, e 18.227 dopo aver spostato i moduli nel foglio); il cruscotto scende da 4.924 a
+**1.645 px** e `/movimenti` da 7.163 a 6.057. I quattro livelli della discesa stanno in una
+schermata e mezza: categoria 1.359 px, esercente 994, movimento 1.213.
+
+**Il controllo del traboccamento va fatto contro la larghezza del dispositivo**, non contro
+`window.innerWidth`: su un telefono la finestra di layout si allarga da sola per contenere ciò che
+sborda, i due crescono insieme e `scrollWidth > innerWidth` resta falso. `/esercenti` sbordava da
+giorni senza che la misura se ne accorgesse.
 
 ### Le decisioni della Fase 6-bis
 
