@@ -849,6 +849,33 @@ perché un'applicazione con dieci bottoni neri non ha una voce.
 Sul nero l'indaco va alzato di luminosità: a `#7b72ff` un collegamento stava sotto i 5:1 e si
 leggeva come grigio-viola.
 
+#### Aggiunta alla schermata iniziale, l'app resta ferma al deploy di ieri
+
+Non è un'ipotesi: un pulsante esisteva in produzione e sul telefono non c'era. Una finestra aggiunta
+alla schermata Home si apre e chiude col gesto, non si ricarica quasi mai, e quella che hai davanti
+può essere la pagina di tre deploy fa senza che nulla lo dica. Un browser normale lo risolve da solo
+perché ricarichi di continuo; questa app no, ed è proprio il modo in cui si usa.
+
+`VERSIONE` è `VERCEL_GIT_COMMIT_SHA` accorciato: **non un numero che qualcuno deve ricordarsi di
+alzare**, che è il modo in cui i numeri di versione smettono di essere veri. Fuori da Vercel vale
+`sviluppo`, e il controllo non parte nemmeno — inventare un numero farebbe scattare l'avviso a ogni
+ricarica.
+
+`/api/versione` dice quale versione serve il server **adesso**, con `no-store`: è l'unica risposta
+dell'applicazione che deve saltare ogni cache, perché memorizzata direbbe per sempre «sei
+aggiornato».
+
+Il confronto parte quando l'app **torna in primo piano** — il momento in cui ha senso — più un giro
+ogni quarto d'ora per chi la lascia aperta. **Non al montaggio**: una pagina appena caricata è
+l'ultima versione per definizione, l'ha appena chiesta al server. Se non c'è niente di nuovo non si
+vede niente: un avviso che c'è sempre non è un avviso.
+
+Il pulsante non fa `location.reload()` e basta — su una finestra installata il browser può riservire
+quel che ha in pancia. In ordine: si tolgono gli eventuali service worker (oggi non ce ne sono, ma
+se un giorno ce ne fosse uno sarebbe **lui** a servire la pagina vecchia), si svuota la Cache
+Storage, e solo allora si ricarica. Nel menu c'è sempre, con la versione accanto: sapere **cosa**
+stai guardando vale quanto poterlo cambiare.
+
 #### I gesti che l'interfaccia prometteva e non manteneva
 
 Tre difetti, tutti e tre trovati col dito e invisibili col mouse.

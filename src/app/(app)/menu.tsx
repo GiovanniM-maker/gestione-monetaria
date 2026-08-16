@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SignOutButton } from './sign-out-button';
 import { Dialogo } from './foglio';
+import { BottoneAggiorna } from './aggiornamento';
 
 /**
  * Il menu, come cassetto che entra da destra.
@@ -67,7 +68,7 @@ const GRUPPI: { titolo: string; voci: Voce[] }[] = [
   },
 ];
 
-export function Menu({ email }: { email: string | null }) {
+export function Menu({ email, versione }: { email: string | null; versione: string }) {
   const percorso = usePathname();
 
   /**
@@ -127,6 +128,13 @@ export function Menu({ email }: { email: string | null }) {
               </ul>
             </div>
           ))}
+
+          {/* Aggiungendo l'app alla schermata iniziale la pagina puo' restare
+              quella di tre deploy fa: questo e' il modo di forzarla, e sta nel
+              menu perche' e' manutenzione come tutto il resto qui dentro. */}
+          <div className="scheda px-3">
+            <BottoneAggiorna versione={versione} />
+          </div>
 
           {/* Uscire e' l'azione piu' rara dell'applicazione, e stava nell'angolo
               piu' visibile della schermata. Qui accanto all'indirizzo, che e'

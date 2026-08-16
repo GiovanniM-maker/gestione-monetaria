@@ -27,5 +27,11 @@ declare namespace NodeJS {
     readonly EB_APPLICATION_ID?: string;
     /** Chiave privata Enable Banking (.pem) codificata in base64. SEGRETO. */
     readonly EB_PRIVATE_KEY_BASE64?: string;
+    /**
+     * Il commit da cui e' fatto questo deploy. La mette Vercel da sola: non va
+     * impostata a mano e non sta in `.env.example`. Fuori da Vercel non esiste,
+     * e la versione diventa `sviluppo`. NON e' un segreto.
+     */
+    readonly VERCEL_GIT_COMMIT_SHA?: string;
   }
 }

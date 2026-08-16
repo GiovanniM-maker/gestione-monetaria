@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth/session';
 import { Menu } from './menu';
 import { Barra } from './barra';
+import { Aggiornamento } from './aggiornamento';
+import { VERSIONE } from '@/lib/versione';
 
 /**
  * Layout delle pagine autenticate. La guardia sta qui, non nelle singole
@@ -41,13 +43,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         >
           Gestione monetaria
         </Link>
-        <Menu email={user.email ?? null} />
+        <Menu email={user.email ?? null} versione={VERSIONE} />
       </header>
 
       {/* Lo spazio in fondo e' la barra piu' un respiro: senza, l'ultima riga
           di ogni schermata finisce sotto le quattro schede. */}
-      <main className="flex-1 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))]">{children}</main>
+      <main className="flex-1 pt-2 pb-[calc(5.5rem+var(--barra-aggiornamento,0px)+env(safe-area-inset-bottom))]">
+        {children}
+      </main>
 
+      <Aggiornamento versione={VERSIONE} />
       <Barra />
     </div>
   );
