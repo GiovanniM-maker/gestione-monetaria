@@ -51,10 +51,23 @@ export type Esito = {
   pagine: number;
 };
 
-export async function cercaMovimenti(filtri: Filtri): Promise<Esito> {
+/**
+ * `soloQuesta` esclude le categorie discendenti.
+ *
+ * Serve a un caso solo, e non e' un caso limite: nella fisarmonica un nodo con
+ * delle figlie **e** della spesa propria mostra le figlie piu' una riga
+ * «direttamente qui». Se quella riga scendesse al ramo intero, ogni euro
+ * comparirebbe due volte — una nelle figlie e una qui.
+ *
+ * Predefinito falso: ogni chiamata gia' scritta si comporta come prima, e il
+ * filtro per categoria continua a comprendere le discendenti, che e' quello che
+ * serve a `/movimenti`.
+ */
+export async function cercaMovimenti(filtri: Filtri, soloQuesta = false): Promise<Esito> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase.rpc('cerca_movimenti', {
+    p_solo_questa: soloQuesta,
     p_id: null,
     p_da: filtri.da,
     p_a: filtri.a,

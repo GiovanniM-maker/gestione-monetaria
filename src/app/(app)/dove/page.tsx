@@ -1,52 +1,78 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { RigaCategoria } from '@/lib/cruscotto/leggi';
-import {
-  leggiCategorie,
-  leggiEsercenti,
-  leggiVariazioni,
-  scegliMese,
-} from '@/lib/cruscotto/letture';
-import { etichettaMese, meseValido, quotaPercentuale } from '@/lib/cruscotto/mesi';
-import type { Variazione } from '@/lib/cruscotto/andamento';
+import { leggiEsercenti, leggiSpesaPerClasse, scegliMese } from '@/lib/cruscotto/letture';
+import { etichettaMese, meseValido } from '@/lib/cruscotto/mesi';
+import { leggiRipartizione } from '@/lib/dove/leggi';
+import { leggiClassi } from '@/lib/tassonomia/classi';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
-import { Ciambella, fetteDellaCiambella, Freccia, type FettaCategoria } from '../grafici';
+import { tinteDelleClassi } from '../grafici';
 import { MesePerMese, Ripartizione } from '../livello';
 import { TestataPagina } from '../testata';
-import { ScheletroCiambella, ScheletroElenco } from '../scheletri';
+import { ScheletroElenco } from '../scheletri';
 import { SceltaMese } from '../mese';
+import { Fisarmonica, type Nodo } from './fisarmonica';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Dove' };
 
 /**
- * «Dove sono finiti i soldi».
+ * «Dove sono finiti i soldi», in una schermata sola.
  *
  * ---------------------------------------------------------------------------
- * Perche' esiste, e perche' non stava gia' sul cruscotto
+ * Perche' la discesa non e' piu' quattro pagine
  * ---------------------------------------------------------------------------
- * Stava. Il cruscotto rispondeva a **sei domande** una sotto l'altra — quanto
- * ho speso, quanto torna ogni mese, come si muove nel tempo, in cosa, da chi,
- * e c'e' qualcosa che non va — e cinque schermate di scorrimento sono il modo
- * piu' sicuro di non far leggere nessuna delle sei.
+ * Classe, categoria, esercente, movimento: quattro schermate, quattro
+ * caricamenti, quattro tasti indietro. Ma non sono quattro domande — sono la
+ * stessa guardata da piu' vicino, e a ogni pagina nuova si perdeva il contesto:
+ * quanto pesa questo ramo sul totale, e cosa c'e' accanto. Che e' esattamente
+ * l'informazione per cui si apre questa schermata.
  *
- * Le quattro schede in basso sono quattro **domande**, e due di quelle
- * domande stavano nella stessa pagina. Qui c'e' la seconda, per intero: in
- * cosa e' finito il mese, da chi, come si muove nel tempo, e l'albero
- * completo per chi vuole scendere.
+ * Ora si apre in loco. Il primo livello arriva con la pagina; gli altri al
+ * tocco, uno per volta — su un mese pieno, caricare tutto vorrebbe dire
+ * spedire mille movimenti al browser perche' magari se ne guardano cinque.
  *
- * Il cruscotto resta con cio' che si guarda **in dieci secondi**: quanto,
- * come si divide, quanto di quello torna ogni mese, e cosa c'e' da fare oggi.
+ * ---------------------------------------------------------------------------
+ * Due modi, e la differenza non e' cosmetica
+ * ---------------------------------------------------------------------------
+ * **Per classe** risponde a «quanto di questo mese era voluttuario», che e' la
+ * dimensione per cui l'applicazione esiste. **Per categoria** risponde a «in
+ * cosa», che e' come si ragiona quando si cerca una spesa precisa.
  *
- * Il mese sta nell'indirizzo (`/dove?mese=2026-07`) come sul cruscotto: la
- * pagina resta un componente server, e passando da una scheda all'altra il
- * mese si porta dietro.
+ * Non sono la stessa cosa con un ordinamento diverso: aperta la classe
+ * «voluttuario · personale», sotto compaiono le categorie **dentro quella
+ * classe**, con i loro totali parziali — che nell'altro modo non esistono da
+ * nessuna parte.
+ *
+ * Il modo sta nell'indirizzo come il mese (`/dove?mese=2026-07&modo=classe`):
+ * la pagina resta un componente server, e un modo si puo' mandare a se' stessi
+ * come collegamento.
+ *
+ * ---------------------------------------------------------------------------
+ * Cosa e' sparito da qui, e perche'
+ * ---------------------------------------------------------------------------
+ * La **ciambella** rispondeva a «in cosa si divide il mese»: e' letteralmente
+ * il primo livello della fisarmonica, disegnato peggio — su un telefono una
+ * fetta e' larga venti pixel e si sbaglia col pollice.
+ *
+ * L'**albero intero** era un inventario chiuso dentro un «apri». La
+ * fisarmonica e' lo stesso albero, ma si apre dove serve invece che tutto
+ * insieme.
+ *
+ * **«Da chi» resta**, in fondo: e' l'unica domanda che la discesa non sa
+ * rispondere, perche' un esercente attraversa le categorie e la classifica dei
+ * maggiori non si ottiene scendendo in nessun ramo.
  */
 
 const MESI_ANDAMENTO = 12;
+const MODI = ['classe', 'categoria'] as const;
+type Modo = (typeof MODI)[number];
+
+function modoValido(v: string | string[] | undefined): Modo {
+  return typeof v === 'string' && (MODI as readonly string[]).includes(v) ? (v as Modo) : 'classe';
+}
 
 export default async function DovePage({
   searchParams,
@@ -54,6 +80,7 @@ export default async function DovePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const parametri = await searchParams;
+  const modo = modoValido(parametri['modo']);
   const { mese, totali, rigaMese, mesePrecedente, meseSuccessivo, inCorso } = await scegliMese(
     meseValido(parametri['mese']),
   );
@@ -64,13 +91,13 @@ export default async function DovePage({
     periodo === null ? '/movimenti' : `/movimenti?da=${periodo.da}&a=${periodo.a}`;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <SceltaMese
         mese={mese}
         precedente={mesePrecedente}
         successivo={meseSuccessivo}
         inCorso={inCorso}
-        indirizzo={(m) => `/dove?mese=${m}`}
+        indirizzo={(m) => `/dove?mese=${m}&modo=${modo}`}
       />
 
       <TestataPagina
@@ -84,68 +111,152 @@ export default async function DovePage({
             tutti i movimenti del mese
           </Link>
         }
+        perche={
+          <p>
+            Ogni riga si apre dove sta, e sotto compare di cosa &egrave; fatta: dalla classe alla
+            categoria, alla sottocategoria, al singolo movimento. Un ramo con delle sottocategorie
+            <em> e</em> della spesa propria mostra anche una riga
+            <strong> &laquo;direttamente qui&raquo;</strong>: senza, la somma delle sottocategorie
+            sarebbe minore del totale del ramo e la differenza non avrebbe un posto dove vedersi.
+          </p>
+        }
       />
 
-      <Suspense fallback={<ScheletroCiambella />}>
-        <InCosa mese={mese} />
-      </Suspense>
+      <Interruttore mese={mese} modo={modo} />
 
-      <Suspense fallback={<ScheletroElenco />}>
-        <DaChi mese={mese} />
+      <Suspense key={`${mese}-${modo}`} fallback={<ScheletroElenco />}>
+        <PrimoLivello mese={mese} modo={modo} />
       </Suspense>
 
       <MesePerMese
         titolo="Mese per mese"
         righe={andamento.map((r) => ({ mese: r.mese, valore: centesimiDi(r.spesa) }))}
         corrente={mese}
-        href={(m) => `/dove?mese=${m}`}
+        href={(m) => `/dove?mese=${m}&modo=${modo}`}
       />
 
-      <Suspense fallback={null}>
-        <AlberoIntero mese={mese} />
+      <Suspense fallback={<ScheletroElenco />}>
+        <DaChi mese={mese} />
       </Suspense>
     </div>
   );
 }
 
-async function InCosa({ mese }: { mese: string }) {
-  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
-  if (categorie.length === 0) return null;
-
-  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
-
-  // Solo le **radici**: con il roll-up la loro somma e' la spesa categorizzata
-  // del mese, esattamente una volta. Mettendoci anche le figlie ogni euro
-  // comparirebbe due volte e il giro non vorrebbe piu' dire niente.
-  const radici: FettaCategoria[] = categorie
-    .filter((c) => c.parent_id === null)
-    .map((c) => ({
-      chiave: c.category_id,
-      etichetta: c.categoria,
-      valore: centesimiDi(c.spesa),
-      href: `/categoria/${c.category_id}?mese=${mese}`,
-      variazione: perCategoria.get(c.category_id),
-    }))
-    .filter((f) => f.valore !== 0n);
-  if (radici.length === 0) return null;
-
-  const inCategoria = radici.reduce((s, r) => s + r.valore, 0n);
+/**
+ * L'interruttore fra i due modi.
+ *
+ * Due collegamenti e non due bottoni: cambiare modo cambia cosa si sta
+ * guardando, quindi e' un indirizzo diverso — si puo' aprire in una scheda
+ * nuova, tornare indietro, mandarselo. Un bottone che riscrive lo stato del
+ * browser non fa nessuna di queste tre cose.
+ */
+function Interruttore({ mese, modo }: { mese: string; modo: Modo }) {
+  const voci: readonly { chiave: Modo; testo: string }[] = [
+    { chiave: 'classe', testo: 'per classe' },
+    { chiave: 'categoria', testo: 'per categoria' },
+  ];
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold tracking-[-0.02em]">In cosa</h2>
-      <div className="scheda p-4">
-        <Ciambella voci={fetteDellaCiambella(radici)} totale={inCategoria} />
-      </div>
-    </section>
+    <div className="flex gap-2" role="group" aria-label="Come dividere il mese">
+      {voci.map((v) => {
+        const attivo = v.chiave === modo;
+        return (
+          <Link
+            key={v.chiave}
+            href={`/dove?mese=${mese}&modo=${v.chiave}`}
+            aria-current={attivo ? 'true' : undefined}
+            className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo px-4 text-[14px] font-medium ${
+              attivo ? 'bg-accento text-accento-testo' : 'bg-s2 text-testo-2'
+            }`}
+          >
+            {v.testo}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
-async function DaChi({ mese }: { mese: string }) {
-  const [esercenti, variazioni] = await Promise.all([leggiEsercenti(mese), leggiVariazioni(mese)]);
-  if (esercenti.length === 0) return null;
+/**
+ * Il primo livello, disegnato dal server.
+ *
+ * Solo questo: e' quello che si vede senza toccare niente, e caricarlo qui
+ * toglie un viaggio al momento in cui la pagina compare. Tutto il resto arriva
+ * al tocco.
+ */
+async function PrimoLivello({ mese, modo }: { mese: string; modo: Modo }) {
+  const radici = modo === 'classe' ? await perClasse(mese) : await perCategoria(mese);
 
-  const perEsercente = new Map(variazioni.esercenti.map((v) => [v.merchant_id, v as Variazione]));
+  if (radici.length === 0) {
+    return <p className="text-[14px] text-testo-2">Nessun movimento in questo mese.</p>;
+  }
+
+  return <Fisarmonica mese={mese} radici={radici} />;
+}
+
+async function perClasse(mese: string): Promise<readonly Nodo[]> {
+  const [classi, definizioni] = await Promise.all([leggiSpesaPerClasse(mese), leggiClassi()]);
+  const tinte = tinteDelleClassi(definizioni);
+
+  return classi.map((c) => ({
+    chiave: `${mese}|classe|${c.discrezionalita}|${c.contesto}`,
+    // Il nome mostrato piu' il contesto: `utile · business` e `utile ·
+    // personale` sono due righe diverse e devono leggersi come tali, o si
+    // cerca per dieci secondi perche' la stessa classe compare due volte.
+    etichetta:
+      c.contesto === c.discrezionalita ? c.classe_nome : `${c.classe_nome} · ${c.contesto}`,
+    dettaglio: `${c.movimenti} ${c.movimenti === 1 ? 'movimento' : 'movimenti'}`,
+    importo: c.spesa,
+    tinta: tinte[c.discrezionalita] ?? 'var(--neutro)',
+    apertura: {
+      tipo: 'categorie' as const,
+      classe: c.discrezionalita,
+      contesto: c.contesto,
+      categoria: null,
+    },
+    href: null,
+  }));
+}
+
+async function perCategoria(mese: string): Promise<readonly Nodo[]> {
+  const righe = await leggiRipartizione({
+    mese: `${mese}-01`,
+    classe: null,
+    contesto: null,
+    categoria: null,
+  });
+
+  return righe.map((r) => ({
+    chiave: `${mese}|cat|${r.category_id ?? 'nessuna'}`,
+    etichetta: r.nome,
+    dettaglio: `${r.movimenti} ${r.movimenti === 1 ? 'movimento' : 'movimenti'}`,
+    importo: r.spesa,
+    tinta: null,
+    apertura:
+      r.figli > 0
+        ? { tipo: 'categorie' as const, classe: null, contesto: null, categoria: r.category_id }
+        : {
+            tipo: 'movimenti' as const,
+            classe: null,
+            contesto: null,
+            categoria: r.category_id,
+            soloQuesta: true,
+          },
+    href: null,
+  }));
+}
+
+/**
+ * Da chi.
+ *
+ * L'unica domanda che la discesa non sa rispondere: un esercente attraversa le
+ * categorie, e la classifica dei maggiori non si ottiene scendendo in nessun
+ * ramo. Resta in fondo perche' e' una seconda domanda, non un secondo modo di
+ * fare la prima.
+ */
+async function DaChi({ mese }: { mese: string }) {
+  const esercenti = await leggiEsercenti(mese);
+  if (esercenti.length === 0) return null;
 
   return (
     <Ripartizione
@@ -153,110 +264,10 @@ async function DaChi({ mese }: { mese: string }) {
       voci={esercenti.map((e, i) => ({
         chiave: `${e.merchant_id ?? 'nessuno'}-${e.discrezionalita}-${i}`,
         etichetta: e.esercente,
-        dettaglio: `${e.movimenti} ${e.movimenti === 1 ? 'movimento' : 'movimenti'} · ${e.discrezionalita}`,
+        dettaglio: `${e.movimenti} ${e.movimenti === 1 ? 'movimento' : 'movimenti'}`,
         valore: centesimiDi(e.spesa),
         href: e.merchant_id === null ? null : `/esercente/${e.merchant_id}`,
-        variazione: e.merchant_id === null ? undefined : perEsercente.get(e.merchant_id),
       }))}
     />
   );
-}
-
-async function AlberoIntero({ mese }: { mese: string }) {
-  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
-  if (categorie.length === 0) return null;
-
-  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
-  const totale = categorie
-    .filter((c) => c.parent_id === null)
-    .reduce((s, c) => s + centesimiDi(c.spesa), 0n);
-
-  return (
-    // Chiuso: e' un inventario, non una risposta. Aperto era meta' schermata.
-    <details>
-      <summary className="inline-flex min-h-11 cursor-pointer items-center text-[15px] font-medium text-testo-2">
-        L&rsquo;albero intero ›
-      </summary>
-      <p className="mb-2 text-[13px] text-testo-3">
-        Ogni categoria porta la somma delle sue sottocategorie. Dove compare una seconda cifra,
-        &egrave; la parte finita direttamente su quel nodo invece che in un figlio.
-      </p>
-      <div className="scheda px-4">
-        <Albero righe={categorie} totale={totale} mese={mese} variazioni={perCategoria} />
-      </div>
-    </details>
-  );
-}
-
-/**
- * L'albero delle categorie.
- *
- * Si disegna dai `parent_id` invece di leggere una profondita' precalcolata:
- * una categoria il cui padre non ha spesa in questo mese non compare fra le
- * righe, e appesa a un livello che non esiste sparirebbe dal totale visibile
- * pur essendo nella somma. Qui invece risale come radice.
- */
-function Albero({
-  righe,
-  totale,
-  mese,
-  variazioni,
-}: {
-  righe: readonly RigaCategoria[];
-  totale: bigint;
-  mese: string;
-  variazioni: ReadonlyMap<string, Variazione>;
-}) {
-  const presenti = new Set(righe.map((r) => r.category_id));
-  const figli = new Map<string | null, RigaCategoria[]>();
-
-  for (const r of righe) {
-    const padre = r.parent_id !== null && presenti.has(r.parent_id) ? r.parent_id : null;
-    const gruppo = figli.get(padre);
-    if (gruppo === undefined) figli.set(padre, [r]);
-    else gruppo.push(r);
-  }
-
-  function rami(padre: string | null, livello: number): React.ReactNode[] {
-    const gruppo = figli.get(padre) ?? [];
-    return gruppo.flatMap((r) => {
-      const valore = centesimiDi(r.spesa);
-      const diretta = centesimiDi(r.spesa_diretta);
-      return [
-        <li key={r.category_id}>
-          <Link
-            href={`/categoria/${r.category_id}?mese=${mese}`}
-            className="flex min-h-12 items-center gap-3 py-1.5 text-[15px]"
-            style={{ paddingLeft: `${livello * 14}px` }}
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">{r.categoria}</span>
-              <span className="mt-1 flex items-center gap-2">
-                <span className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-s3">
-                  <span
-                    className="block h-full rounded-full bg-(--testo-3)"
-                    style={{ width: `${quotaPercentuale(valore, totale)}%` }}
-                  />
-                </span>
-                <span className="cifra truncate text-[12px] text-testo-3">
-                  {r.movimenti} mov.
-                  {diretta !== valore && diretta !== 0n && ` · ${formattaEuro(diretta)} qui`}
-                </span>
-              </span>
-            </span>
-            <span className="cifra shrink-0 whitespace-nowrap">
-              {formattaEuro(valore)}
-              <Freccia riga={variazioni.get(r.category_id)} />
-            </span>
-            <span aria-hidden="true" className="shrink-0 text-testo-3">
-              ›
-            </span>
-          </Link>
-        </li>,
-        ...rami(r.category_id, livello + 1),
-      ];
-    });
-  }
-
-  return <ul className="elenco">{rami(null, 0)}</ul>;
 }
