@@ -46,6 +46,51 @@ export async function leggiDaConfermare(): Promise<readonly RigaDaConfermare[]> 
   return comeArray<RigaDaConfermare>(data);
 }
 
+/**
+ * I pagamenti delle ultime ventiquattro ore, confermati o no.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' accanto a quelli da confermare, e non al posto loro
+ * ---------------------------------------------------------------------------
+ * Le due liste rispondono a due domande diverse. «Da confermare» chiede
+ * un'azione e si svuota: e' la lista della sera, e il suo pregio e' che
+ * finisce. «Ultime 24 ore» non si svuota mai e non chiede niente: serve a
+ * **rivedere**, cioe' a riconoscere una spesa che non ricordi o accorgerti di
+ * un addebito che non hai fatto — e per quello contano anche le righe che hai
+ * gia' approvato dieci minuti fa.
+ *
+ * La finestra e' sulla **data contabile**, che e' un giorno civile: «ultime 24
+ * ore» significa oggi e ieri. Non si converte niente in fusi orari, per la
+ * stessa ragione di sempre — una conversione UTC sposterebbe i movimenti di
+ * inizio e fine giornata nel giorno sbagliato.
+ *
+ * Ci sono anche le `pending`: qui non si conferma niente, e un addebito appena
+ * fatto e' proprio quello che si vuole vedere. Sulla lista da confermare invece
+ * restano fuori, perche' possono cambiare importo.
+ */
+/** Come una riga da confermare, piu' il fatto che possa esserlo gia'. */
+export type RigaRecente = RigaDaConfermare & { confermato_at: string | null };
+
+export async function leggiUltime24Ore(): Promise<readonly RigaRecente[]> {
+  const supabase = await createSupabaseServerClient();
+  // Il giorno civile di Roma, non quello del server: il fuso applicativo e'
+  // `Europe/Rome`, e su una macchina in UTC dopo le 23 «oggi» sarebbe domani.
+  const oggi = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+  const ieri = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString('sv-SE', {
+    timeZone: 'Europe/Rome',
+  });
+
+  const { data } = await supabase
+    .from('v_ultimi_movimenti')
+    .select('*')
+    .gte('booking_date', ieri)
+    .lte('booking_date', oggi)
+    .order('booking_date', { ascending: false })
+    .limit(100);
+
+  return comeArray<RigaRecente>(data);
+}
+
 /** Quante ne restano da confermare. Serve al conteggio sul cruscotto. */
 export async function quanteDaConfermare(): Promise<number> {
   const supabase = await createSupabaseServerClient();

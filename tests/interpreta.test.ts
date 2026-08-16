@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { validaPerLaProva } from '@/lib/tassonomia/assegna';
 import { interpretaProposta } from '@/lib/tassonomia/interpreta';
 
 /**
@@ -154,5 +155,25 @@ describe('interpretaProposta — il guasto vero del 12 agosto', () => {
       LOTTO_CANVA,
     );
     expect('proposta' in esito && esito.proposta.frammento).toBeNull();
+  });
+});
+
+describe('aggiornaMerchant — un campo assente non e’ un valore da validare', () => {
+  it('il selettore di categoria manda solo la categoria, e deve passare', () => {
+    // `undefined` = «non toccarlo». Ammetterlo era il difetto che rispondeva
+    // «Discrezionalita' non ammessa: undefined» a ogni cambio di categoria
+    // fatto dall'elenco degli esercenti.
+    expect(() => validaPerLaProva({ discretion: undefined, context: undefined })).not.toThrow();
+  });
+
+  it('null resta ammesso: e’ la scelta di svuotare il campo', () => {
+    expect(() => validaPerLaProva({ discretion: null, context: null })).not.toThrow();
+  });
+
+  it('un valore inventato viene ancora rifiutato', () => {
+    expect(() => validaPerLaProva({ discretion: 'inventata', context: null })).toThrow(
+      /Discrezionalita/,
+    );
+    expect(() => validaPerLaProva({ discretion: null, context: 'altrove' })).toThrow(/Contesto/);
   });
 });

@@ -115,27 +115,46 @@ export async function assegnaEtichetta(richiesta: RichiestaAssegnazione) {
   return applicaTassonomia();
 }
 
+/**
+ * Un aggiornamento **parziale**, e i campi sono opzionali di proposito.
+ *
+ * Un campo **assente** vuol dire «non toccarlo»; un campo a `null` vuol dire
+ * «svuotalo». Sono due cose diverse, e confonderle e' costato un difetto vero:
+ * il selettore di categoria dentro le righe manda solo `{ id, category_id }` —
+ * e' l'unica cosa che cambia — e la validazione, che ammetteva `null` ma non
+ * l'assenza, rispondeva
+ * «Discrezionalita' non ammessa: undefined» a ogni cambio di categoria fatto
+ * dall'elenco degli esercenti. La scrittura non arrivava mai al database.
+ */
 export type AggiornamentoMerchant = {
   id: string;
-  category_id: string | null;
-  discretion: Discretion | null;
-  context: Context | null;
-  is_subscription: boolean;
+  category_id?: string | null;
+  discretion?: Discretion | null;
+  context?: Context | null;
+  is_subscription?: boolean;
 };
 
 export async function aggiornaMerchant(aggiornamento: AggiornamentoMerchant) {
+  if (typeof aggiornamento.id !== 'string' || aggiornamento.id.trim() === '') {
+    throw new AssegnazioneNonValida('Esercente non indicato.');
+  }
   validaClassificazione(aggiornamento.discretion, aggiornamento.context);
 
+  // Si scrivono **solo** i campi arrivati. Mandarli tutti significherebbe
+  // azzerare quelli che il chiamante non ha nominato: cambiare la categoria da
+  // una riga d'elenco cancellerebbe discrezionalita' e contesto dell'esercente.
+  const campi: Record<string, unknown> = {};
+  if ('category_id' in aggiornamento) campi['category_id'] = aggiornamento.category_id;
+  if ('discretion' in aggiornamento) campi['discretion'] = aggiornamento.discretion;
+  if ('context' in aggiornamento) campi['context'] = aggiornamento.context;
+  if ('is_subscription' in aggiornamento) campi['is_subscription'] = aggiornamento.is_subscription;
+
+  if (Object.keys(campi).length === 0) {
+    throw new AssegnazioneNonValida('Non c\u2019e\u2019 niente da cambiare.');
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
-    .from('merchants')
-    .update({
-      category_id: aggiornamento.category_id,
-      discretion: aggiornamento.discretion,
-      context: aggiornamento.context,
-      is_subscription: aggiornamento.is_subscription,
-    })
-    .eq('id', aggiornamento.id);
+  const { error } = await supabase.from('merchants').update(campi).eq('id', aggiornamento.id);
 
   if (error !== null) throw new Error(`Aggiornamento esercente fallito: ${error.message}`);
 
@@ -147,14 +166,29 @@ export async function aggiornaMerchant(aggiornamento: AggiornamentoMerchant) {
 /**
  * Il database ha gia' i `check`, ma un errore di vincolo arriva all'utente come
  * un messaggio di Postgres. Qui si sbaglia prima e si dice cosa era ammesso.
+ *
+ * Esportata solo per poterla provare: e' pura, e la distinzione fra `null` e
+ * `undefined` che difende e' esattamente il difetto che si vuole non far
+ * tornare.
  */
+export function validaPerLaProva(v: { discretion: unknown; context: unknown }): void {
+  validaClassificazione(v.discretion, v.context);
+}
+
 function validaClassificazione(discretion: unknown, context: unknown): void {
-  if (discretion !== null && !DISCREZIONALITA.includes(discretion as Discretion)) {
+  // `undefined` significa «campo non mandato», e non e' un valore da validare:
+  // e' l'assenza. `null` invece e' una scelta — «togli la discrezionalita'» — e
+  // resta ammesso.
+  if (
+    discretion !== null &&
+    discretion !== undefined &&
+    !DISCREZIONALITA.includes(discretion as Discretion)
+  ) {
     throw new AssegnazioneNonValida(
       `Discrezionalita' non ammessa: ${String(discretion)}. Valori validi: ${DISCREZIONALITA.join(', ')}.`,
     );
   }
-  if (context !== null && !CONTESTI.includes(context as Context)) {
+  if (context !== null && context !== undefined && !CONTESTI.includes(context as Context)) {
     throw new AssegnazioneNonValida(
       `Contesto non ammesso: ${String(context)}. Valori validi: ${CONTESTI.join(', ')}.`,
     );

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
-import type { RigaDaConfermare } from '@/lib/conferma/leggi';
+import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { COLORE_CLASSE } from '../grafici';
 import { Foglio } from '../foglio';
@@ -42,7 +42,13 @@ function euro(valore: string | null): string {
   return nonLetti > 0 ? '—' : formattaEuro(totale);
 }
 
-export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[] }) {
+export function PannelloConferma({
+  righe,
+  recenti,
+}: {
+  righe: readonly RigaDaConfermare[];
+  recenti: readonly RigaRecente[];
+}) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
@@ -82,26 +88,30 @@ export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[]
    */
   if (righe.length === 0) {
     return (
-      <div className="scheda space-y-3 p-6 text-center">
-        <p
-          className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
-          style={{
-            background: 'color-mix(in oklab, var(--investimento) 18%, transparent)',
-            color: 'var(--investimento)',
-          }}
-          aria-hidden="true"
-        >
-          ✓
-        </p>
-        <p className="text-[17px] font-semibold">Sei in pari.</p>
-        <p className="text-[13px] text-testo-2">
-          Tutti i movimenti contabilizzati sono stati visti.
-        </p>
-        <p className="text-[12px] text-testo-3">
-          Quelli ancora <strong>provvisori</strong> non compaiono qui: la banca non li ha
-          contabilizzati, l&rsquo;importo pu&ograve; cambiare, e confermarli adesso vorrebbe dire
-          riconfermarli dopo.
-        </p>
+      <div className="space-y-6">
+        <div className="scheda space-y-3 p-6 text-center">
+          <p
+            className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
+            style={{
+              background: 'color-mix(in oklab, var(--investimento) 18%, transparent)',
+              color: 'var(--investimento)',
+            }}
+            aria-hidden="true"
+          >
+            ✓
+          </p>
+          <p className="text-[17px] font-semibold">Sei in pari.</p>
+          <p className="text-[13px] text-testo-2">
+            Tutti i movimenti contabilizzati sono stati visti.
+          </p>
+          <p className="text-[12px] text-testo-3">
+            Quelli ancora <strong>provvisori</strong> non compaiono qui: la banca non li ha
+            contabilizzati, l&rsquo;importo pu&ograve; cambiare, e confermarli adesso vorrebbe dire
+            riconfermarli dopo.
+          </p>
+        </div>
+
+        <Ultime24Ore righe={recenti} />
       </div>
     );
   }
@@ -196,7 +206,87 @@ export function PannelloConferma({ righe }: { righe: readonly RigaDaConfermare[]
             Va bene tutte
           </button>
         ))}
+
+      <div className="pt-3">
+        <Ultime24Ore righe={recenti} />
+      </div>
     </div>
+  );
+}
+
+/**
+ * Cosa e' stato pagato oggi e ieri, confermato o no.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' e' una lista a parte
+ * ---------------------------------------------------------------------------
+ * «Da confermare» chiede un'azione e **si svuota**: e' la lista della sera, e
+ * il suo pregio e' che finisce. Questa non si svuota mai e non chiede niente —
+ * serve a **rivedere**: riconoscere una spesa che non ricordi, o accorgerti di
+ * un addebito che non hai fatto.
+ *
+ * Sono due bisogni diversi, e tenerli nella stessa lista li rovinava entrambi:
+ * appena approvavi una riga spariva, quindi dieci minuti dopo l'addebito che
+ * volevi ricontrollare non c'era piu' — e proprio l'averlo approvato lo aveva
+ * nascosto.
+ *
+ * Chiusa di suo: chi apre questa schermata la apre per premere «va bene». Il
+ * titolo dice gia' quanti e quanto, che e' la meta' dell'informazione, e si
+ * apre solo quando qualcosa non torna.
+ */
+function Ultime24Ore({ righe }: { righe: readonly RigaRecente[] }) {
+  const totale = righe.reduce((s, r) => {
+    const { totale: v, nonLetti } = sommaCosti([r.amount_eur ?? r.amount]);
+    return nonLetti > 0 ? s : s + v;
+  }, 0n);
+
+  return (
+    <details className="scheda p-4">
+      <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-medium">Pagato oggi e ieri</span>
+          <span className="block text-[12px] text-testo-3">
+            {righe.length === 0
+              ? 'nessun pagamento nelle ultime 24 ore'
+              : `${righe.length} ${righe.length === 1 ? 'pagamento' : 'pagamenti'} · ${formattaEuro(totale)}`}
+          </span>
+        </span>
+        <span aria-hidden="true" className="shrink-0 text-testo-3">
+          ›
+        </span>
+      </summary>
+
+      {righe.length > 0 && (
+        <ul className="elenco pt-2 text-[15px]">
+          {righe.map((r) => (
+            <li key={r.id}>
+              <Link href={`/movimenti/${r.id}`} className="flex min-h-12 items-center gap-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">
+                    {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
+                  </span>
+                  <span className="block truncate text-[12px] text-testo-3">
+                    {r.booking_date}
+                    {r.categoria !== null && ` · ${r.categoria}`}
+                    {/* Le due cose che cambiano come si legge la riga: una
+                        provvisoria puo' ancora muoversi, una non confermata e'
+                        ancora nella lista sopra. */}
+                    {r.stato === 'pending' && ' · provvisorio'}
+                    {r.confermato_at === null && ' · da confermare'}
+                  </span>
+                </span>
+                <span className="cifra shrink-0 whitespace-nowrap">
+                  {euro(r.amount_eur ?? r.amount)}
+                </span>
+                <span aria-hidden="true" className="shrink-0 text-testo-3">
+                  ›
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
   );
 }
 

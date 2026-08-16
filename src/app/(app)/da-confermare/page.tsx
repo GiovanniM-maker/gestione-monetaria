@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { leggiDaConfermare } from '@/lib/conferma/leggi';
+import { leggiDaConfermare, leggiUltime24Ore } from '@/lib/conferma/leggi';
 import { PannelloConferma } from './pannello-conferma';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { conta, TestataPagina } from '../testata';
@@ -25,7 +25,7 @@ export const metadata: Metadata = { title: 'Da confermare' };
  * che si rimanda.
  */
 export default async function DaConfermarePage() {
-  const righe = await leggiDaConfermare();
+  const [righe, recenti] = await Promise.all([leggiDaConfermare(), leggiUltime24Ore()]);
   const valgono = righe.reduce((s, r) => s + centesimiDi(r.amount_eur ?? r.amount), 0n);
 
   return (
@@ -48,7 +48,7 @@ export default async function DaConfermarePage() {
         }
       />
 
-      <PannelloConferma righe={righe} />
+      <PannelloConferma righe={righe} recenti={recenti} />
     </div>
   );
 }
