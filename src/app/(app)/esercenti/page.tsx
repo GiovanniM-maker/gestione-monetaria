@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { comeArray } from '@/lib/enablebanking/redact';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { CAMPO_PIENO, BOTTONE, BOTTONE_MINORE } from '@/lib/ui/controlli';
+import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { filtroValido, leggiEsercenti, PER_PAGINA, type Filtro } from '@/lib/tassonomia/esercenti';
 import { Interruttore } from './interruttore';
 import { SceltaCategoria } from '../scelta-categoria';
@@ -57,13 +56,10 @@ export default async function EsercentiPage({
   const cerca = primo(p['cerca']);
   const pagina = Math.max(0, Number(primo(p['pagina']) ?? 0) || 0);
 
-  const supabase = await createSupabaseServerClient();
-  const [{ righe, totale }, { data: albero }] = await Promise.all([
+  const [{ righe, totale }, categorie] = await Promise.all([
     leggiEsercenti(filtro, cerca, pagina),
-    supabase.from('v_categorie_albero').select('id, percorso').order('percorso'),
+    categorieSceglibili(),
   ]);
-
-  const categorie = comeArray<{ id: string; percorso: string }>(albero);
 
   // Un solo posto costruisce gli indirizzi: filtro, ricerca e pagina viaggiano
   // insieme, e cambiarne uno non deve far perdere gli altri. Stringa vuota =

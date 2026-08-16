@@ -1205,6 +1205,91 @@ Chiama **la stessa funzione** del cron. Senza, l'automazione si potrebbe osserva
 le 05:00, e un lavoro che si prova una volta al giorno di fatto non si prova. Se le due strade
 divergessero, provarne una non direbbe niente sull'altra.
 
+#### Ogni quattro ore, più a ogni apertura — e perché non sono la stessa cosa
+
+Corretto il 16 agosto 2026, dopo che i dati sono rimasti fermi tre giorni. La diagnosi conta più
+del rimedio: in `sync_runs` non c'era **nessuna** riga alle 05:00, mai, da quando il cron esiste.
+Non si era fermato — non era mai partito. La causa sta in un pannello di Vercel: `CRON_SECRET`
+assente (la route risponde 500 **prima** di scrivere qualsiasi cosa), Deployment Protection che
+intercetta l'invocazione, o nessun deployment di produzione che contenga quel `vercel.json`. Si
+distinguono in _Settings → Cron Jobs_: lista vuota è il terzo caso, 500 il primo, 401 il secondo.
+
+**Una riga `cron` adesso prova che lo scheduler ha girato.** Fino a quel giorno il bottone di
+`/debug/sync` scriveva anche lui `trigger: 'cron'`, e le uniche quattro righe esistenti erano
+indistinguibili da quattro tocchi sul bottone — il che ha reso la diagnosi molto più lenta di
+quanto dovesse. Ora l'apertura e il bottone scrivono `manual`, che è anche vero: c'è una sessione,
+quindi il cliente **è presente**.
+
+**Il tetto è della PSD2, non nostro**: quattro letture del conto in ventiquattr'ore senza nessuno
+davanti. La schedulazione è `0 */4 * * *` — sei giri — e i giri che troverebbero il tetto pieno
+**non chiamano la banca**: fanno lo stesso il lavoro locale, che è gratis, e restituiscono il
+motivo. L'alternativa era che dal quinto in poi la banca rispondesse di no, riempiendo `sync_runs`
+di fallimenti e mettendo il consenso in uno stato che non si capisce più.
+
+L'invariante che regge il conteggio è **una riga `cron` = una lettura non presidiata**, ed è il
+motivo per cui un giro saltato non lascia nessuna riga: registrarlo gonfierebbe il contatore da
+solo, e dopo quattro salti si bloccherebbe anche chi non ha mai chiamato la banca.
+
+**La freschezza vera non la dà il tetto, la dà l'app aperta.** `Sincronizza` sta nel layout e
+scarica all'apertura, a ogni ritorno in primo piano, e poi **ogni cinque minuti finché l'app resta
+davanti**. Sono accessi con il cliente presente, quindi fuori dal tetto, e tolgono la dipendenza da
+uno scheduler che vive fuori dal repository e che ha già fallito in silenzio una volta.
+
+Il pendolo batte **solo a pagina visibile**, e non è un'ottimizzazione: è ciò che tiene onesta la
+distinzione. Un timer che continuasse con l'app in secondo piano starebbe dichiarando presente un
+cliente che non c'è. Il freno vero è nel server — quattro minuti fra due scarichi — perché un
+contatore nel browser si azzera ricaricando e due schede aperte ne avrebbero due. Quattro e non
+cinque di proposito: una soglia uguale al passo del pendolo verrebbe mancata di un soffio una volta
+su due, e l'aggiornamento arriverebbe ogni dieci minuti invece che ogni cinque.
+
+Si vede **solo se ha portato qualcosa**. Una barra «sto aggiornando» a ogni apertura sarebbe la
+prima cosa che si legge ogni volta, e dopo tre giorni non la si legge più: la stessa fine degli
+avvisi che ci sono sempre.
+
+#### «Ogni cinque minuti» e «la sequenza intera ogni cinque minuti» non sono la stessa richiesta
+
+Dopo lo scarico la sequenza chiede al modello di classificare gli esercenti mai visti, cerca sul web
+chi sono, ricalcola tutte le ricorrenze e rigenera gli avvisi. È lavoro che costa denaro a ogni
+chiamata e che **non ha niente di nuovo da fare** dodici volte all'ora: un movimento nuovo arriva a
+ogni ora del giorno, un esercente mai visto no, e una ricorrenza cambia di mese in mese.
+
+Da qui i due profili, che sono un parametro e non due funzioni — se divergessero, provarne una non
+direbbe niente sull'altra, che è la stessa ragione per cui il bottone chiama la funzione del cron:
+
+- **`veloce`** (`/api/admin/aggiorna`, ogni cinque minuti): scarica, normalizza, applica gli alias
+  che ci sono già. Sono i tre passi che rispondono a «è arrivato qualcosa?», e i soli che non
+  costano niente oltre alla chiamata alla banca. Un movimento il cui esercente non si conosce
+  ancora finisce in «Da confermare» come **senza categoria** — visibile, non perso, ed è
+  esattamente il caso per cui la `0042` esiste.
+- **`completo`** (`/api/admin/quotidiano` e il cron): tutto il resto, quattro volte al giorno.
+
+`maxDuration` è **60 secondi** sul veloce contro i 300 del completo, e non per ottimizzare: un tetto
+alto lì non servirebbe a finire — servirebbe a restare appeso cinque minuti quando la banca non
+risponde, mentre il browser ne lancia un altro.
+
+#### La sorveglianza non può vivere dentro la cosa che sorveglia
+
+`sync_failed` della Fase 8 lo genera il lavoro notturno. Se il lavoro notturno non gira, l'avviso
+che dovrebbe dirlo non nasce — e infatti per tre giorni il cruscotto ha mostrato «consenso valido
+ancora 175 giorni» in grigio, cioè l'aria di quando va tutto bene, mentre i numeri erano di
+mercoledì. `sync_runs` non aveva nemmeno una riga `failed`: non c'era un errore, c'era un'assenza.
+
+`freschezza()` fa il controllo **in lettura**, quando la schermata si apre, sul dato che c'è già:
+non ha bisogno che qualcosa funzioni per funzionare. Oltre 48 ore i dati sono fermi, oltre 120 è
+grave — una notte saltata si ripara da sola al giro dopo, e un riquadro per un intoppo che si
+risolve insegna a ignorare i riquadri.
+
+Il riquadro sale **in cima**, ed è l'unica eccezione alla regola degli avvisi in fondo: non è un
+avviso su un numero, dice che i numeri sotto sono vecchi, e sotto ai numeri che invalida servirebbe
+a chi ha già finito di crederci. La riga grigia resta in fondo, e la condizione che decide quale
+delle due si vede sta in un posto solo.
+
+Ne discende una regola generale, sorella di quella della `0023` sui rilevatori alla prima
+esecuzione: **ogni schermata che risponde «niente» deve poter distinguere «niente» da «non lo so»**.
+`/da-confermare` diceva «nessun pagamento nelle ultime 24 ore» mentre i pagamenti c'erano ed era lo
+scarico a essere fermo; le due risposte si assomigliano solo finché tutto funziona, e la prima detta
+al posto della seconda è il modo più rapido di far smettere di credere a una schermata.
+
 ### Le decisioni della Fase 8
 
 #### Solo due cose meritano un avviso
@@ -1570,10 +1655,21 @@ inventare un identificativo di categoria.
 1. `/debug/sync` → **`8 · Sequenza quotidiana`**. Deve stampare quattro righe: scarico,
    normalizzazione, categorizzazione, ricorrenze — e la durata.
 2. Rilanciare: le righe nuove devono essere **0** e i numeri di copertura identici. È idempotente.
-3. `/` in cima: `ultima sincronizzazione riuscita` deve essere di oggi.
+   La seconda volta deve anche dire che lo scarico è stato **saltato**, perché sono passati meno di
+   dieci minuti: se richiama la banca, il freno del server non c'è.
+3. `/` in cima: `ultima sincronizzazione riuscita` deve essere di oggi. Se è di più di due giorni
+   fa deve comparire il riquadro ambra **sopra** il numerone, non la riga grigia in fondo.
 4. Su Vercel, `CRON_SECRET` impostata sul progetto e il cron visibile in _Settings → Cron Jobs_.
    Senza la variabile la route risponde **500**, non 200: meglio rifiutare tutto che accettare
-   tutto quando la configurazione è rotta.
+   tutto quando la configurazione è rotta. **Guardare il log delle invocazioni, non solo che il job
+   esista**: è la differenza fra «schedulato» e «girato», e per tre giorni sono state due cose
+   diverse.
+5. In `sync_runs`, una riga con `trigger = 'cron'` significa che **lo scheduler ha girato**. Il
+   bottone e l'apertura dell'app scrivono `manual`: se dopo aver premuto il bottone compare una
+   riga `cron`, la distinzione si è rotta e la diagnostica torna cieca.
+6. Aprire l'app: entro un paio di secondi deve partire una `POST /api/admin/aggiorna` — quella
+   **veloce**, non `/quotidiano`. Tornare in primo piano subito dopo **non** deve rifarla, e con la
+   scheda in secondo piano il pendolo dei cinque minuti non deve battere.
 
 ### Prova manuale della Fase 6-bis, sotto i 5 minuti
 

@@ -46,6 +46,20 @@ const SOGLIA = 0.25;
 /** Uno strappo veloce chiude comunque: px al secondo. */
 const STRAPPO = 550;
 
+/**
+ * Il blocco dello scorrimento si conta, perche' i pannelli si annidano.
+ *
+ * Dal foglio «Correggi» si apre quello della categoria, e sono due `<dialog>`
+ * uno dentro l'altro. Senza questo conteggio il secondo rileggerebbe
+ * `window.scrollY` a corpo gia' fissato — che vale **zero** — e riscriverebbe
+ * `top: -0px`: la pagina dietro salterebbe in cima, e chiudendo il secondo lo
+ * scorrimento si sbloccherebbe mentre il primo e' ancora aperto.
+ *
+ * Fissa il primo che apre, ripristina l'ultimo che chiude.
+ */
+let pannelliAperti = 0;
+let sbloccaCorpo: (() => void) | null = null;
+
 export function Dialogo({
   aperto,
   etichetta,
@@ -88,21 +102,31 @@ export function Dialogo({
    */
   useEffect(() => {
     if (!aperto) return;
-    const y = window.scrollY;
-    const corpo = document.body;
-    const prima = {
-      position: corpo.style.position,
-      top: corpo.style.top,
-      width: corpo.style.width,
-    };
-    corpo.style.position = 'fixed';
-    corpo.style.top = `-${y}px`;
-    corpo.style.width = '100%';
+    pannelliAperti += 1;
+    if (pannelliAperti === 1) {
+      const y = window.scrollY;
+      const corpo = document.body;
+      const prima = {
+        position: corpo.style.position,
+        top: corpo.style.top,
+        width: corpo.style.width,
+      };
+      corpo.style.position = 'fixed';
+      corpo.style.top = `-${y}px`;
+      corpo.style.width = '100%';
+      sbloccaCorpo = () => {
+        corpo.style.position = prima.position;
+        corpo.style.top = prima.top;
+        corpo.style.width = prima.width;
+        window.scrollTo(0, y);
+      };
+    }
     return () => {
-      corpo.style.position = prima.position;
-      corpo.style.top = prima.top;
-      corpo.style.width = prima.width;
-      window.scrollTo(0, y);
+      pannelliAperti -= 1;
+      if (pannelliAperti === 0 && sbloccaCorpo !== null) {
+        sbloccaCorpo();
+        sbloccaCorpo = null;
+      }
     };
   }, [aperto]);
 
@@ -201,7 +225,18 @@ export function Dialogo({
   return (
     <dialog
       ref={dialogo}
-      onClose={onChiudi}
+      /**
+       * Solo se a chiudersi e' **questo** dialogo.
+       *
+       * `close` non risale nel DOM, ma React lo consegna lungo il proprio
+       * albero: con il selettore di categoria dentro il foglio «Correggi», un
+       * Esc sul pannello interno arrivava anche a quello esterno e si
+       * chiudevano tutti e due. Misurato — due dialoghi aperti diventavano
+       * zero con un tasto solo.
+       */
+      onClose={(e) => {
+        if (e.target === dialogo.current) onChiudi();
+      }}
       onPointerDown={(e) => {
         partitoFuori.current = !dentroIlPannello(e);
       }}

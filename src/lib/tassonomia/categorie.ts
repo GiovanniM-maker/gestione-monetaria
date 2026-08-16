@@ -111,6 +111,28 @@ export async function eliminaCategoria(id: string, spostaSu: string | null): Pro
 
 export type CategoriaSceglibile = { id: string; percorso: string };
 
+/**
+ * Le categorie che si possono scegliere da un selettore.
+ *
+ * Stessa query e stesso filtro in cinque schermate — movimenti, scheda del
+ * movimento, esercenti, da confermare — e cinque copie divergono: `/esercenti`
+ * era gia' l'eccezione, offriva anche le **archiviate** perche' quella copia
+ * non aveva il filtro. Archiviare una categoria vuol dire «non metterci piu'
+ * niente», e un elenco che la propone lo contraddice nel punto esatto in cui
+ * conta.
+ */
+export async function categorieSceglibili(): Promise<readonly CategoriaSceglibile[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('v_categorie_albero')
+    .select('id, percorso, archiviata')
+    .order('percorso');
+
+  return comeArray<{ id: string; percorso: string; archiviata: boolean }>(data)
+    .filter((c) => !c.archiviata)
+    .map((c) => ({ id: c.id, percorso: c.percorso }));
+}
+
 /** L'albero con quanto pesa ogni nodo: serve a sapere cosa si sta eliminando. */
 export type NodoAlbero = {
   id: string;

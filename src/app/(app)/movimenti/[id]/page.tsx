@@ -7,8 +7,7 @@ import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { tinteDelleClassi } from '../../grafici';
 import { TestataLivello } from '../../livello';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { comeArray } from '@/lib/enablebanking/redact';
+import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { SpostaMovimento } from './sposta';
 import { CorreggiMovimento } from '../../correggi';
 import { esercenteVariabile } from '@/lib/movimenti/classifica';
@@ -53,16 +52,12 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
   const m = await leggiMovimento(id);
   if (m === null) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const [{ data: albero }, variabile, classi] = await Promise.all([
-    supabase.from('v_categorie_albero').select('id, percorso, archiviata').order('percorso'),
+  const [categorie, variabile, classi] = await Promise.all([
+    categorieSceglibili(),
     esercenteVariabile(m.merchant_id),
     leggiClassi(),
   ]);
   const tinte = tinteDelleClassi(classi);
-  const categorie = comeArray<{ id: string; percorso: string; archiviata: boolean }>(albero)
-    .filter((c) => !c.archiviata)
-    .map((c) => ({ id: c.id, percorso: c.percorso }));
 
   return (
     <div className="space-y-6">

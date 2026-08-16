@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { daQuanto, freschezza } from '@/lib/cruscotto/freschezza';
 import { PannelloBackfill } from './pannello-backfill';
 import type { AccountRow, BankConnectionRow, SyncRunRow } from '@/lib/db/types';
 
@@ -33,10 +34,23 @@ export default async function DebugSyncPage() {
       supabase.from('raw_transactions').select('*', { count: 'exact', head: true }),
     ]);
 
-  const [{ count: movimenti }, { data: perMese }] = await Promise.all([
+  const [{ count: movimenti }, { data: perMese }, { data: ultimoCron }] = await Promise.all([
     supabase.from('transactions').select('*', { count: 'exact', head: true }),
     supabase.from('v_expenses_by_month').select('*').order('mese', { ascending: false }),
+    // Solo le righe `cron`, che sono per costruzione le invocazioni dello
+    // scheduler: l'apertura dell'app e questi bottoni scrivono `manual`.
+    supabase
+      .from('sync_runs')
+      .select('started_at, status, rows_new, error_message')
+      .eq('trigger', 'cron')
+      .order('started_at', { ascending: false })
+      .limit(1),
   ]);
+  const cron = comeArray<{ started_at: string; status: string; rows_new: number }>(ultimoCron)[0];
+  // `freschezza` invece di un `Date.now()` scritto qui: il «quanto tempo fa» e'
+  // gia' definito in un posto solo, e quel posto e' anche l'unico dove sta
+  // scritto quando diventa un problema.
+  const dalCron = cron === undefined ? null : daQuanto(freschezza(cron.started_at));
   const mesi = comeArray<{
     mese: string;
     movimenti: number;
@@ -157,6 +171,41 @@ export default async function DebugSyncPage() {
               importo zero. E&rsquo; il numero da confrontare con l&rsquo;app della banca.
             </p>
           </>
+        )}
+      </Riquadro>
+
+      {/* La domanda a cui il 16 agosto 2026 non si riusciva a rispondere, e che
+          e' costata la diagnosi piu' lenta del progetto: **lo scheduler ha mai
+          girato?** Allora non si poteva sapere, perche' i bottoni di questa
+          pagina scrivevano anche loro `trigger: 'cron'`. Ora no, quindi la
+          risposta e' una riga sola. */}
+      <Riquadro titolo="Lo scheduler">
+        {cron === undefined ? (
+          <div className="space-y-2 text-sm">
+            <p className="nota nota-avviso">
+              <strong>Il cron non ha mai girato.</strong> Nessuna riga con{' '}
+              <code>trigger = cron</code> in <code>sync_runs</code>.
+            </p>
+            <p className="text-testo-2">
+              Non e&rsquo; un guasto dell&rsquo;applicazione: la schedulazione vive su Vercel. In{' '}
+              <em>Settings &rarr; Cron Jobs</em>, guardare il <strong>log delle invocazioni</strong>{' '}
+              e non solo che il lavoro esista — «schedulato» e «girato» sono due cose diverse. Lista
+              vuota significa che nessun deployment di <strong>produzione</strong> contiene{' '}
+              <code>vercel.json</code>; <strong>500</strong> significa <code>CRON_SECRET</code> non
+              impostata sull&rsquo;ambiente Production, perche&rsquo; la route rifiuta prima di
+              scrivere qualsiasi cosa; <strong>401</strong> significa Deployment Protection che
+              intercetta l&rsquo;invocazione, o un segreto diverso.
+            </p>
+            <p className="text-testo-3">
+              Finche&rsquo; e&rsquo; cosi&rsquo; i movimenti arrivano lo stesso: l&rsquo;app aperta
+              scarica ogni cinque minuti, ed e&rsquo; un accesso con il cliente presente.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm">
+            Ultima invocazione dello scheduler: <strong>{quando(cron.started_at)}</strong>
+            {dalCron !== null && ` (${dalCron})`} · {cron.status} · {cron.rows_new} righe nuove
+          </p>
         )}
       </Riquadro>
 

@@ -16,6 +16,12 @@ export const maxDuration = 300;
  *
  * Sotto `/api/admin/*`, quindi dietro sessione e non dietro il segreto cron:
  * la lancia un browser autenticato.
+ *
+ * Da qui l'origine e' sempre `apertura`, ed e' un fatto e non una comodita':
+ * c'e' una sessione valida, quindi il cliente **e' presente**. Due conseguenze
+ * — non conta nel tetto PSD2 delle quattro letture al giorno, e lascia una riga
+ * `manual` invece di `cron`, cosi' una riga `cron` continua a voler dire
+ * «lo scheduler ha girato» e non «qualcuno ha premuto un bottone».
  */
 export async function POST(): Promise<NextResponse> {
   if ((await getAuthorizedUser()) === null) {
@@ -23,7 +29,12 @@ export async function POST(): Promise<NextResponse> {
   }
 
   try {
-    return risposta(await eseguiSincronizzazioneQuotidiana(RICERCA_COL_BROWSER_MS));
+    return risposta(
+      await eseguiSincronizzazioneQuotidiana({
+        budgetRicercaMs: RICERCA_COL_BROWSER_MS,
+        origine: 'apertura',
+      }),
+    );
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     console.error('[quotidiano] fallita:', messaggio);

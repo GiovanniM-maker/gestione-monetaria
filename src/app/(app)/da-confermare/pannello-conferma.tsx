@@ -47,11 +47,14 @@ export function PannelloConferma({
   righe,
   recenti,
   categorie,
+  fermi,
 }: {
   righe: readonly RigaDaConfermare[];
   recenti: readonly RigaRecente[];
   /** L'albero, per dare una categoria a una riga che non ce l'ha. */
   categorie: readonly { id: string; percorso: string }[];
+  /** Perche' quel che si vede e' vecchio, o `null` se non lo e'. */
+  fermi: string | null;
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
@@ -91,22 +94,36 @@ export function PannelloConferma({
    * dica una cosa buona invece di sembrare rotta.
    */
   if (righe.length === 0) {
+    /* Con i dati fermi «sei in pari» e' una bugia detta con un segno di spunta
+       verde: non c'e' niente da confermare perche' non e' arrivato niente. Il
+       segno resta — la lista e' davvero vuota — ma smette di essere una lode. */
+    const inPari = fermi === null;
     return (
       <div className="space-y-6">
+        {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
+
         <div className="scheda space-y-3 p-6 text-center">
           <p
             className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
             style={{
-              background: 'color-mix(in oklab, var(--conferma) 18%, transparent)',
-              color: 'var(--conferma)',
+              // `--conferma` e non `--investimento`: le tinte non si chiamano
+              // piu' come le classi, perche' le classi si rinominano.
+              background: inPari
+                ? 'color-mix(in oklab, var(--conferma) 18%, transparent)'
+                : 'var(--s3)',
+              color: inPari ? 'var(--conferma)' : 'var(--testo-3)',
             }}
             aria-hidden="true"
           >
             ✓
           </p>
-          <p className="text-[17px] font-semibold">Sei in pari.</p>
+          <p className="text-[17px] font-semibold">
+            {inPari ? 'Sei in pari.' : 'Niente da confermare.'}
+          </p>
           <p className="text-[13px] text-testo-2">
-            Tutti i movimenti contabilizzati sono stati visti.
+            {inPari
+              ? 'Tutti i movimenti contabilizzati sono stati visti.'
+              : 'Di quello che è arrivato, tutto è stato visto. Quello che non è arrivato non si può contare.'}
           </p>
           <p className="text-[12px] text-testo-3">
             Quelli ancora <strong>provvisori</strong> non compaiono qui: la banca non li ha
@@ -115,7 +132,7 @@ export function PannelloConferma({
           </p>
         </div>
 
-        <Ultime24Ore righe={recenti} />
+        <Ultime24Ore righe={recenti} fermi={fermi} />
       </div>
     );
   }
@@ -125,6 +142,9 @@ export function PannelloConferma({
   return (
     <div className="space-y-3">
       {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      {/* Anche con la lista piena: quello che c'e' e' vecchio, e confermarlo
+          non fa arrivare il resto. */}
+      {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
 
       <p className="text-[13px] text-testo-2">
         {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
@@ -159,6 +179,7 @@ export function PannelloConferma({
                 stava guardando finiva fuori schermo. */}
             <Correzione
               riga={r}
+              categorie={categorie}
               aperta={aperta === r.id}
               occupato={occupato}
               onAnnulla={() => setAperta(null)}
@@ -212,7 +233,7 @@ export function PannelloConferma({
         ))}
 
       <div className="pt-3">
-        <Ultime24Ore righe={recenti} />
+        <Ultime24Ore righe={recenti} fermi={fermi} />
       </div>
     </div>
   );
@@ -237,8 +258,17 @@ export function PannelloConferma({
  * Chiusa di suo: chi apre questa schermata la apre per premere «va bene». Il
  * titolo dice gia' quanti e quanto, che e' la meta' dell'informazione, e si
  * apre solo quando qualcosa non torna.
+ *
+ * ---------------------------------------------------------------------------
+ * Vuota non vuol dire «non hai speso»
+ * ---------------------------------------------------------------------------
+ * Diceva «nessun pagamento nelle ultime 24 ore», e il 16 agosto 2026 era falso:
+ * i pagamenti c'erano, era lo **scarico** a essere fermo da tre giorni. Le due
+ * risposte sono «non hai pagato niente» e «non lo so», si assomigliano solo
+ * finche' tutto funziona, e la prima detta al posto della seconda e' il modo
+ * piu' rapido di far smettere di credere a una schermata.
  */
-function Ultime24Ore({ righe }: { righe: readonly RigaRecente[] }) {
+function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: string | null }) {
   const totale = righe.reduce((s, r) => {
     const { totale: v, nonLetti } = sommaCosti([r.amount_eur ?? r.amount]);
     return nonLetti > 0 ? s : s + v;
@@ -250,9 +280,11 @@ function Ultime24Ore({ righe }: { righe: readonly RigaRecente[] }) {
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-medium">Pagato oggi e ieri</span>
           <span className="block text-[12px] text-testo-3">
-            {righe.length === 0
-              ? 'nessun pagamento nelle ultime 24 ore'
-              : `${righe.length} ${righe.length === 1 ? 'pagamento' : 'pagamenti'} · ${formattaEuro(totale)}`}
+            {righe.length > 0
+              ? `${righe.length} ${righe.length === 1 ? 'pagamento' : 'pagamenti'} · ${formattaEuro(totale)}`
+              : fermi === null
+                ? 'nessun pagamento nelle ultime 24 ore'
+                : 'non lo sappiamo: lo scarico dalla banca è fermo'}
           </span>
         </span>
         <span aria-hidden="true" className="shrink-0 text-testo-3">
@@ -374,12 +406,14 @@ function Carta({
 
 function Correzione({
   riga,
+  categorie,
   aperta,
   occupato,
   onAnnulla,
   onSalva,
 }: {
   riga: RigaDaConfermare;
+  categorie: readonly { id: string; percorso: string }[];
   aperta: boolean;
   occupato: boolean;
   onAnnulla: () => void;
@@ -397,12 +431,30 @@ function Correzione({
       nota="Vale solo per questa spesa, e la marca come corretta a mano."
       onChiudi={onAnnulla}
     >
+      {/* La categoria si sceglie **qui**, o il messaggio sulla carta manderebbe
+          su un foglio che non sa fare la cosa per cui ci ha mandati. Vale per
+          questa riga sola, come tutto il resto del foglio: la classificazione
+          di tutte le occorrenze dell'esercente sta sulla sua scheda, dove la
+          portata e' scritta sopra. */}
+      <div className="mb-2 space-y-1">
+        <span className="text-[12px] text-testo-2">categoria</span>
+        <SceltaCategoria
+          ambito={{ tipo: 'movimento', movimentoId: riga.id }}
+          categoriaId={riga.category_id}
+          categorie={categorie}
+        />
+      </div>
+
+      {/* Due righe e non un paragrafo. I due fatti che servono sono che si
+          applica subito — i due campi sotto invece dicono «non cambiare» e
+          aspettano Salva — e dove si va per cambiarla a tutte. Il resto e'
+          prosa in mezzo ai controlli. */}
       <p className="mb-3 text-[12px] text-testo-3">
-        La categoria resta quella dell&rsquo;esercente: si cambia da{' '}
+        Si applica appena la scegli. Per <strong>tutte</strong> le spese dell&rsquo;esercente:{' '}
         <Link className="text-accento" href="/revisione">
           revisione
         </Link>
-        , dove vale per tutte le sue occorrenze.
+        .
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block">

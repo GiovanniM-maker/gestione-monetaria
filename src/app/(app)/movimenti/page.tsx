@@ -13,6 +13,7 @@ import {
   leggiFiltri,
 } from '@/lib/movimenti/filtri';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
+import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { SceltaCategoria } from '../scelta-categoria';
@@ -60,16 +61,13 @@ export default async function MovimentiPage({
   const supabase = await createSupabaseServerClient();
   // Gli esercenti variabili si leggono qui e non riga per riga: sono pochi, e
   // servono a sapere **fin dove arriva** il selettore di categoria di ogni riga.
-  const [esito, { data: categorie }, { data: variabili }, classi] = await Promise.all([
+  const [esito, alberoCategorie, { data: variabili }, classi] = await Promise.all([
     cercaMovimenti(filtri),
-    supabase.from('v_categorie_albero').select('id, percorso, archiviata').order('percorso'),
+    categorieSceglibili(),
     supabase.from('merchants').select('id').eq('classificazione_variabile', true),
     leggiClassi(),
   ]);
 
-  const alberoCategorie = comeArray<{ id: string; percorso: string; archiviata: boolean }>(
-    categorie,
-  ).filter((c) => !c.archiviata);
   const eVariabile = new Set(comeArray<{ id: string }>(variabili).map((m) => m.id));
   const primaDellaPagina = (filtri.pagina - 1) * PER_PAGINA;
 

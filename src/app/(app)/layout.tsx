@@ -5,6 +5,7 @@ import { ClassiNote } from './classi-note';
 import { Menu } from './menu';
 import { Barra } from './barra';
 import { Aggiornamento } from './aggiornamento';
+import { Sincronizza } from './sincronizza';
 import { VERSIONE } from '@/lib/versione';
 
 /**
@@ -58,6 +59,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <ClassiNote classi={classi}>{children}</ClassiNote>
       </main>
 
+      {/* Nel layout e non in una pagina: aprire l'app deve scaricare i
+          movimenti qualunque sia la schermata su cui si atterra, e da qui non
+          si rimonta navigando fra le schede. */}
+      <Sincronizza />
       <Aggiornamento versione={VERSIONE} />
       <Barra />
     </div>
