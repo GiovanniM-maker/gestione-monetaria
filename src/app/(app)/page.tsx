@@ -16,6 +16,7 @@ import {
 } from '@/lib/cruscotto/letture';
 import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import { comeSiConfronta } from '@/lib/cruscotto/andamento';
+import { daQuanto, freschezza } from '@/lib/cruscotto/freschezza';
 import type { Variazione } from '@/lib/cruscotto/andamento';
 import { formattaEuro, ordinaPerPeso, sommaCosti, totalePerTipo } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
@@ -142,6 +143,13 @@ export default async function CruscottoPage({
         indirizzo={(m) => `/?mese=${m}`}
       />
 
+      {/* Prima dei numeri, e solo quando c'e' qualcosa che li rende falsi:
+          dire «sono di tre giorni fa» sotto ai numeri e' dirlo a chi ha gia'
+          finito di leggerli. Quando va tutto bene qui non c'e' niente. */}
+      <Suspense fallback={null}>
+        <PrimaDiCrederci />
+      </Suspense>
+
       <Suspense fallback={<ScheletroTestata />}>
         <QuantoHoSpeso mese={mese} rigaMese={rigaMese} />
       </Suspense>
@@ -178,6 +186,24 @@ export default async function CruscottoPage({
 /* -------------------------------------------------------------------------- */
 /* I blocchi, ognuno con le sue letture                                        */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Il riquadro che va letto prima dei numeri, quando c'e'.
+ *
+ * `leggiStato` e' memorizzata per richiesta, quindi questo blocco e quello in
+ * fondo leggono la stessa risposta: e' un componente in piu', non una query in
+ * piu'.
+ */
+async function PrimaDiCrederci() {
+  const stato = await leggiStato();
+  return (
+    <>
+      {stato.map((s) => (
+        <StatoSistema key={s.connection_id} riga={s} dove="cima" />
+      ))}
+    </>
+  );
+}
 
 /**
  * Cosa c'e' da fare, e se ci si puo' fidare dei numeri.
@@ -275,7 +301,7 @@ async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
       )}
 
       {stato.map((s) => (
-        <StatoSistema key={s.connection_id} riga={s} />
+        <StatoSistema key={s.connection_id} riga={s} dove="fondo" />
       ))}
     </div>
   );
@@ -543,15 +569,46 @@ async function Ricorrente({ mese }: { mese: string }) {
  * Quando va tutto bene e' una riga grigia di una frase. Compare in evidenza
  * solo quando c'e' qualcosa da fare, perche' un avviso che c'e' sempre non e'
  * piu' un avviso.
+ *
+ * ---------------------------------------------------------------------------
+ * Il consenso non e' l'unico modo in cui i dati smettono di arrivare
+ * ---------------------------------------------------------------------------
+ * Questo riquadro sorvegliava una scadenza sola, e il 16 agosto 2026 il guasto
+ * e' arrivato dall'altra parte: il **lavoro notturno non e' partito** per tre
+ * giorni. Il consenso era valido ancora 175 giorni, quindi qui si leggeva una
+ * riga grigia — cioe' l'aria di quando va tutto bene — mentre l'applicazione
+ * mostrava i numeri di mercoledi'.
+ *
+ * `sync_runs` non aveva nemmeno una riga `failed`: non c'era un errore, c'era
+ * un'assenza. Ed e' il motivo per cui il controllo sta **qui e non fra gli
+ * avvisi**: l'avviso `sync_failed` lo genera il lavoro notturno, e un
+ * sorvegliante che vive dentro la cosa che sorveglia non puo' accorgersi che
+ * quella cosa e' ferma.
+ *
+ * ---------------------------------------------------------------------------
+ * Due posti, una regola sola
+ * ---------------------------------------------------------------------------
+ * Gli avvisi stanno in fondo al cruscotto, e resta giusto: un riquadro prima
+ * del numero si legge come «c'e' un problema» a ogni apertura, e dopo una
+ * settimana non lo si legge piu'.
+ *
+ * Questo pero' non e' un avviso su un numero: dice che i numeri **sotto sono
+ * vecchi**. Sotto ai numeri che invalida servirebbe a chi ha gia' finito di
+ * crederci. Quindi il riquadro sale in cima e la riga grigia resta in fondo —
+ * ma la condizione che decide quale delle due si vede e' scritta **una volta
+ * sola**, qui dentro, perche' due copie divergono e la schermata finirebbe per
+ * mostrarle tutte e due o nessuna.
  */
-function StatoSistema({ riga }: { riga: RigaStato }) {
+function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' }) {
   const giorni = riga.giorni_al_rinnovo;
   const scaduto = giorni !== null && giorni < 0;
   const inScadenza = giorni !== null && giorni >= 0 && giorni <= 30;
-  const grave = scaduto || riga.stato_connessione === 'error';
+  const f = freschezza(riga.ultima_sync_riuscita);
+  const grave = scaduto || riga.stato_connessione === 'error' || f.grave;
+  const daMostrare = grave || inScadenza || f.ferma;
 
-  if (!grave && !inScadenza) {
-    return (
+  if (!daMostrare) {
+    return dove === 'cima' ? null : (
       <p className="text-[12px] text-testo-3">
         {riga.banca}: ultimo movimento {riga.ultimo_movimento ?? '—'}
         {giorni !== null && ` · consenso valido ancora ${giorni} giorni`}
@@ -561,7 +618,13 @@ function StatoSistema({ riga }: { riga: RigaStato }) {
     );
   }
 
+  if (dove === 'fondo') return null;
+
   const tinta = grave ? 'var(--voluttuario)' : 'var(--utile)';
+  // Il consenso viene prima: se e' scaduto, e' anche la ragione per cui i dati
+  // sono fermi, e dire due volte la stessa cosa con due titoli diversi
+  // manderebbe a rinnovare e a controllare lo scheduler per un guasto solo.
+  const parlaDelConsenso = scaduto || inScadenza || riga.stato_connessione === 'error';
 
   return (
     <div
@@ -574,18 +637,33 @@ function StatoSistema({ riga }: { riga: RigaStato }) {
           className="size-2 shrink-0 rounded-full"
           style={{ background: tinta }}
         />
-        {scaduto
-          ? `Il consenso ${riga.banca} è scaduto da ${-(giorni ?? 0)} giorni.`
-          : `Il consenso ${riga.banca} scade fra ${giorni} giorni.`}
+        {parlaDelConsenso
+          ? scaduto
+            ? `Il consenso ${riga.banca} è scaduto da ${-(giorni ?? 0)} giorni.`
+            : `Il consenso ${riga.banca} scade fra ${giorni} giorni.`
+          : `I dati sono fermi: ultimo scarico dalla banca ${daQuanto(f)}.`}
       </p>
       <p className="mt-1.5 text-testo-2">
-        {scaduto
-          ? 'I movimenti nuovi non arrivano più, e i numeri smettono di aggiornarsi senza che nulla lo segnali. Va rinnovato dal '
-          : 'Va rinnovato prima della scadenza, altrimenti i dati smettono di arrivare in silenzio. Si rinnova dal '}
-        <Link className="text-accento" href="/debug/eb">
-          pannello Enable Banking
-        </Link>
-        .
+        {parlaDelConsenso ? (
+          <>
+            {scaduto
+              ? 'I movimenti nuovi non arrivano più, e i numeri smettono di aggiornarsi senza che nulla lo segnali. Va rinnovato dal '
+              : 'Va rinnovato prima della scadenza, altrimenti i dati smettono di arrivare in silenzio. Si rinnova dal '}
+            <Link className="text-accento" href="/debug/eb">
+              pannello Enable Banking
+            </Link>
+            .
+          </>
+        ) : (
+          <>
+            Il consenso è valido: quello che non è partito è la sincronizzazione. Ogni numero qui
+            sotto è vecchio di altrettanto. Si recupera subito dalla{' '}
+            <Link className="text-accento" href="/debug/sync">
+              sequenza quotidiana
+            </Link>
+            , che scarica anche i giorni saltati.
+          </>
+        )}
       </p>
       <p className="mt-1.5 text-[12px] text-testo-3">
         Ultimo movimento {riga.ultimo_movimento ?? '—'} · ultima sincronizzazione riuscita{' '}
