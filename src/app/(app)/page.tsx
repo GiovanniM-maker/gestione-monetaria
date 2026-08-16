@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
 import {
   leggiAvvisiNuovi,
+  leggiCategorie,
   leggiSpesaPerClasse,
   leggiConfronto,
   leggiDaConfermare,
@@ -28,8 +29,9 @@ import { leggiClassi } from '@/lib/tassonomia/classi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
 import { BarraClassi, Freccia, ordineDelleClassi, tinteDelleClassi } from './grafici';
+import { Ripartizione } from './livello';
 import { SceltaMese } from './mese';
-import { ScheletroCoppia, ScheletroTestata } from './scheletri';
+import { ScheletroCoppia, ScheletroElenco, ScheletroTestata } from './scheletri';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -157,6 +159,20 @@ export default async function CruscottoPage({
         <QuantoHoSpeso mese={mese} rigaMese={rigaMese} />
       </Suspense>
 
+      {/* Le categorie di primo livello, subito sotto le classi.
+
+          Sono due tagli della stessa spesa e stanno vicini apposta: la classe
+          dice **che tipo** di spesa era, la categoria dice **in cosa**. Chi
+          apre l'app guarda quasi sempre la seconda — «quanto ho speso in
+          ristoranti» e' una domanda che ci si fa, «quanto ho speso in
+          voluttuario» e' una domanda che si impara a farsi.
+
+          Ha un `<Suspense>` suo e non quello sopra: cosi' il numerone e le
+          classi compaiono senza aspettare questa query. */}
+      <Suspense fallback={<ScheletroElenco righe={5} />}>
+        <InCosa mese={mese} />
+      </Suspense>
+
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           {/* «Di questo, quanto torna ogni mese» andava a capo e spingeva su
@@ -189,6 +205,36 @@ export default async function CruscottoPage({
 /* -------------------------------------------------------------------------- */
 /* I blocchi, ognuno con le sue letture                                        */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * In cosa: le categorie di primo livello del mese.
+ *
+ * **Solo le radici.** Con il roll-up la loro somma e' la spesa categorizzata
+ * del mese, esattamente una volta; mettendoci anche le figlie ogni euro
+ * comparirebbe due volte e il totale non vorrebbe piu' dire niente.
+ *
+ * Il tocco porta alla scheda della categoria col mese conservato, che e' dove
+ * si vede l'andamento e si scende agli esercenti. Per scendere restando qui
+ * c'e' `/dove`, ed e' il collegamento in fondo al cruscotto.
+ */
+async function InCosa({ mese }: { mese: string }) {
+  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
+  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
+
+  const radici = categorie
+    .filter((c) => c.parent_id === null)
+    .map((c) => ({
+      chiave: c.category_id,
+      etichetta: c.categoria,
+      dettaglio: `${c.movimenti} ${c.movimenti === 1 ? 'movimento' : 'movimenti'}`,
+      valore: centesimi(c.spesa),
+      href: `/categoria/${c.category_id}?mese=${mese}`,
+      variazione: perCategoria.get(c.category_id),
+    }))
+    .filter((v) => v.valore !== 0n);
+
+  return <Ripartizione titolo="In cosa" voci={radici} />;
+}
 
 /**
  * Cosa c'e' da fare, e se ci si puo' fidare dei numeri.
@@ -415,45 +461,55 @@ async function QuantoHoSpeso({
       {classi.length === 0 ? (
         <p className="text-sm text-testo-2">Nessun movimento in questo mese.</p>
       ) : (
-        <div className="scheda px-4">
-          <ul className="elenco text-[15px]">
-            {classi.map((c) => (
-              <li key={`${c.discrezionalita}-${c.contesto}`}>
-                <Link
-                  href={perMese(mese, { classe: c.discrezionalita })}
-                  className="flex min-h-12 items-center gap-2.5"
-                >
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ background: tinte[c.discrezionalita] ?? 'var(--neutro)' }}
-                  />
-                  {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
+        <>
+          {/* Un titolo su questo elenco, ora che sotto ce n'e' un secondo.
+              Due liste di importi una sotto l'altra, senza etichetta, non
+              dicono che rispondono a due domande diverse — e la prima delle
+              due e' anche quella che nessuno chiama «classi» finche' non
+              gliel'hai detto. */}
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Per classe</h2>
+          <div className="scheda px-4">
+            <ul className="elenco text-[15px]">
+              {classi.map((c) => (
+                <li key={`${c.discrezionalita}-${c.contesto}`}>
+                  <Link
+                    href={perMese(mese, { classe: c.discrezionalita })}
+                    className="flex min-h-12 items-center gap-2.5"
+                  >
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: tinte[c.discrezionalita] ?? 'var(--neutro)' }}
+                    />
+                    {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
                       Personale» accanto a un importo e a una freccia finiva
                       troncato a «Voluttuario · Per…», e il nome della classe e'
                       la cosa che si legge. */}
-                  <span className="min-w-0 flex-1">
-                    {/* Il nome mostrato, non lo slug: dopo un rinomina sono
+                    <span className="min-w-0 flex-1">
+                      {/* Il nome mostrato, non lo slug: dopo un rinomina sono
                         due parole diverse, e quella che l'utente ha scelto e'
                         la prima. */}
-                    <span className="block truncate">{c.classe_nome}</span>
-                    {/* Su una riga non classificata classe e contesto sono la
+                      <span className="block truncate">{c.classe_nome}</span>
+                      {/* Su una riga non classificata classe e contesto sono la
                         stessa parola, e ripeterla non aggiunge niente. */}
-                    {c.contesto !== c.discrezionalita && (
-                      <span className="block truncate text-[12px] text-testo-3">{c.contesto}</span>
-                    )}
-                  </span>
-                  <span className="cifra shrink-0 whitespace-nowrap">
-                    {formattaEuro(centesimi(c.spesa))}
-                    <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
-                  </span>
-                  <span aria-hidden="true" className="shrink-0 text-testo-3">
-                    ›
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+                      {c.contesto !== c.discrezionalita && (
+                        <span className="block truncate text-[12px] text-testo-3">
+                          {c.contesto}
+                        </span>
+                      )}
+                    </span>
+                    <span className="cifra shrink-0 whitespace-nowrap">
+                      {formattaEuro(centesimi(c.spesa))}
+                      <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
+                    </span>
+                    <span aria-hidden="true" className="shrink-0 text-testo-3">
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
       )}
 
       {incassato !== null && incassato !== 0n && (
