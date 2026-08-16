@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 /**
- * Aprire l'app scarica i movimenti nuovi.
+ * Finche' l'app e' aperta, i movimenti arrivano da soli ogni cinque minuti.
  *
  * ---------------------------------------------------------------------------
  * Perche' non basta lo scheduler
@@ -15,26 +15,38 @@ import { useRouter } from 'next/navigation';
  * Vercel, cioe' fuori da questo repository e invisibile da dentro l'app.
  *
  * Uno scheduler che non si vede e' un pezzo di infrastruttura di cui ci si
- * accorge solo dal danno. Questo componente toglie la dipendenza: **quando
- * apri l'app, i movimenti arrivano**. Se poi il cron funziona, tanto meglio —
+ * accorge solo dal danno. Questo componente toglie la dipendenza: **mentre
+ * guardi l'app, i movimenti arrivano**. Se poi il cron funziona, tanto meglio —
  * ma non e' piu' l'unica strada perche' un dato entri nel database.
  *
- * E' anche la mezza decisione gia' scritta in `docs/direzione.md`: «quattro
- * sincronizzazioni al giorno **piu' una a ogni apertura**». Le quattro sono il
- * tetto della PSD2 sugli accessi senza nessuno davanti; questa non ci rientra,
- * perche' il cliente e' presente per definizione — sta guardando lo schermo.
+ * ---------------------------------------------------------------------------
+ * Cinque minuti si puo', e non e' in contrasto col tetto delle quattro
+ * ---------------------------------------------------------------------------
+ * Il tetto della PSD2 — quattro letture del conto in ventiquattr'ore — vale per
+ * gli accessi **senza nessuno davanti**. Qui l'app e' in primo piano e c'e' una
+ * sessione valida: il cliente e' presente, e quegli accessi non sono
+ * contingentati. E' la stessa distinzione su cui poggia `Origine`.
+ *
+ * Il pendolo batte **solo a pagina visibile**, e non e' un'ottimizzazione: e'
+ * cio' che tiene onesta quella distinzione. Un timer che continuasse con l'app
+ * in secondo piano starebbe dichiarando presente un cliente che non c'e'.
+ *
+ * E chiama il giro **veloce**, non la sequenza intera: scarica, normalizza,
+ * applica gli alias. Chiedere al modello di classificare, cercare sul web e
+ * ricalcolare tutte le ricorrenze dodici volte all'ora vorrebbe dire pagare
+ * dodici volte all'ora per sentirsi rispondere «niente di nuovo».
  *
  * ---------------------------------------------------------------------------
  * Quando parte, e quando invece no
  * ---------------------------------------------------------------------------
- * Al montaggio e ogni volta che l'app **torna in primo piano**, che sul
- * telefono e' il gesto con cui la si usa. Non a ogni navigazione: il componente
- * sta nel layout, quindi passare da «Oggi» a «Dove» non lo rimonta.
+ * Al montaggio, ogni volta che l'app **torna in primo piano**, e ogni cinque
+ * minuti finche' resta davanti. Non a ogni navigazione: il componente sta nel
+ * layout, quindi passare da «Oggi» a «Dove» non lo rimonta.
  *
  * La difesa vera pero' non e' qui: e' nel server, che rifiuta di richiamare la
- * banca se l'ha gia' fatto da meno di dieci minuti. Un contatore nel browser lo
- * si azzera ricaricando, e la protezione di una risorsa non puo' stare dalla
- * parte che chiede.
+ * banca se l'ha gia' fatto da meno di quattro minuti. Un contatore nel browser
+ * lo si azzera ricaricando, e due schede aperte ne avrebbero due — la
+ * protezione di una risorsa non puo' stare dalla parte che chiede.
  *
  * ---------------------------------------------------------------------------
  * Si vede solo se ha portato qualcosa
@@ -46,16 +58,26 @@ import { useRouter } from 'next/navigation';
  * l'informazione serve, perche' spiega perche' la schermata e' appena cambiata.
  */
 
-/** Per chi lascia l'app aperta tutto il giorno senza mai chiuderla. */
-const INTERVALLO = 30 * 60 * 1000;
+/**
+ * Ogni cinque minuti, finche' l'app e' davanti.
+ *
+ * Non e' un numero scelto per prudenza: e' il piu' fitto che abbia senso. Il
+ * giro veloce costa una chiamata alla banca e qualche secondo, e il tetto della
+ * PSD2 — quattro letture al giorno — vale per gli accessi **senza nessuno
+ * davanti**. Qui l'app e' in primo piano, quindi il cliente e' presente e
+ * quegli accessi non sono contingentati.
+ */
+const INTERVALLO = 5 * 60 * 1000;
 
 /**
- * Freno del browser, deliberatamente piu' corto di quello del server.
+ * Freno del browser, un filo piu' corto di quello del server.
  *
  * Serve solo a non sprecare una chiamata che il server rifiuterebbe comunque;
- * il tetto vero e' di la'.
+ * il freno vero e' di la', ed e' di quattro minuti. Se qui ci fosse lo stesso
+ * numero, un pendolo da cinque minuti lo mancherebbe di un soffio una volta su
+ * due e l'aggiornamento arriverebbe ogni dieci.
  */
-const RIPOSO = 5 * 60 * 1000;
+const RIPOSO = 4.5 * 60 * 1000;
 
 type Esito = { righeNuove?: unknown };
 
@@ -67,11 +89,15 @@ export function Sincronizza() {
 
   const aggiorna = useCallback(async () => {
     if (inCorso.current) return;
+    // Con la pagina nascosta non si chiede niente: l'app in secondo piano su un
+    // telefono e' l'app che non stai usando, e un pendolo che batte lo stesso
+    // trasformerebbe «il cliente e' presente» in una finzione.
+    if (document.visibilityState !== 'visible') return;
     if (Date.now() - ultimo.current < RIPOSO) return;
     inCorso.current = true;
     ultimo.current = Date.now();
     try {
-      const risposta = await fetch('/api/admin/quotidiano', { method: 'POST' });
+      const risposta = await fetch('/api/admin/aggiorna', { method: 'POST' });
       if (!risposta.ok) return;
       const esito = (await risposta.json()) as Esito;
       const righe = typeof esito.righeNuove === 'number' ? esito.righeNuove : 0;

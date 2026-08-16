@@ -29,7 +29,12 @@ export async function POST(): Promise<NextResponse> {
   }
 
   try {
-    return risposta(await eseguiSincronizzazioneQuotidiana(RICERCA_COL_BROWSER_MS, 'apertura'));
+    return risposta(
+      await eseguiSincronizzazioneQuotidiana({
+        budgetRicercaMs: RICERCA_COL_BROWSER_MS,
+        origine: 'apertura',
+      }),
+    );
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     console.error('[quotidiano] fallita:', messaggio);

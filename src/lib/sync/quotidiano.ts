@@ -68,15 +68,19 @@ const GIORNI_INDIETRO = 7;
 const ACCESSI_NON_PRESIDIATI_AL_GIORNO = 4;
 
 /**
- * Quanto deve essere vecchio l'ultimo scarico perche' aprire l'app ne lanci
- * un altro.
+ * Quanto deve passare fra due scarichi con il cliente presente.
  *
  * Senza questa soglia, passare da «Oggi» a «Dove» e tornare indietro
- * chiamerebbe la banca tre volte in un minuto. Con il cliente presente non c'e'
- * un tetto normativo da rispettare, ma non e' un buon motivo per bussare
- * quando la risposta e' gia' in mano.
+ * chiamerebbe la banca tre volte in un minuto, e due schede aperte
+ * raddoppierebbero tutto. Con il cliente presente non c'e' un tetto normativo
+ * da rispettare, ma non e' un buon motivo per bussare quando la risposta e'
+ * gia' in mano.
+ *
+ * Quattro e non cinque: il browser ricontrolla ogni cinque minuti, e una
+ * soglia uguale al passo del pendolo verrebbe mancata di un soffio una volta
+ * su due, dando un aggiornamento ogni dieci minuti invece che ogni cinque.
  */
-const MINUTI_FRA_DUE_APERTURE = 10;
+const MINUTI_FRA_DUE_SCARICHI = 4;
 
 /**
  * Chi ha chiesto la sincronizzazione, e cambia due cose sole.
@@ -93,6 +97,37 @@ const MINUTI_FRA_DUE_APERTURE = 10;
  * una riga `cron` **prova** che lo scheduler ha girato.
  */
 export type Origine = 'schedulata' | 'apertura';
+
+/**
+ * Quanto lavoro fare dopo aver scaricato.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' due profili e non uno solo piu' frequente
+ * ---------------------------------------------------------------------------
+ * «Aggiorna le spese ogni cinque minuti» e «rifai tutta la sequenza ogni
+ * cinque minuti» sembrano la stessa richiesta e non lo sono. Dopo lo scarico la
+ * sequenza chiede al modello di classificare gli esercenti mai visti, cerca sul
+ * web chi sono, ricalcola tutte le ricorrenze e rigenera gli avvisi: e' lavoro
+ * che costa denaro a ogni chiamata e che **non ha niente di nuovo da fare**
+ * dodici volte all'ora. Un movimento nuovo arriva a ogni ora del giorno; un
+ * esercente mai visto no, e una ricorrenza cambia di mese in mese.
+ *
+ * `veloce` — scarica, normalizza, applica la tassonomia che c'e' gia'. Sono i
+ * passi che rispondono alla domanda «e' arrivato qualcosa?», e sono anche i soli
+ * che non costano niente oltre alla chiamata alla banca. Il movimento nuovo
+ * compare subito, e se il suo esercente non si conosce ancora finisce in «Da
+ * confermare» come **senza categoria** — che e' visibile, non perso.
+ *
+ * `completo` — tutto il resto, e resta dove stava: i quattro giri schedulati e
+ * il bottone di `/debug/sync`.
+ */
+export type Profilo = 'completo' | 'veloce';
+
+export type OpzioniSincronizzazione = {
+  budgetRicercaMs?: number;
+  origine?: Origine;
+  profilo?: Profilo;
+};
 
 /** Budget del ciclo di fette. Sta sotto `maxDuration`, con margine per il resto. */
 const BUDGET_CICLO_MS = 150_000;
@@ -189,9 +224,11 @@ function giorniFa(giorni: number): string {
 export const RICERCA_COL_BROWSER_MS = 20_000;
 
 export async function eseguiSincronizzazioneQuotidiana(
-  budgetRicercaMs: number = BUDGET_SENZA_BROWSER,
-  origine: Origine = 'schedulata',
+  opzioni: OpzioniSincronizzazione = {},
 ): Promise<EsitoQuotidiano> {
+  const budgetRicercaMs = opzioni.budgetRicercaMs ?? BUDGET_SENZA_BROWSER;
+  const origine = opzioni.origine ?? 'schedulata';
+  const profilo = opzioni.profilo ?? 'completo';
   const avvio = Date.now();
   const esito = vuoto();
   const traccia: SyncTrigger = origine === 'apertura' ? 'manual' : 'cron';
@@ -313,7 +350,21 @@ export async function eseguiSincronizzazioneQuotidiana(
   // disallineamento gratuito — e per giunta invisibile.
   try {
     esito.normalizzazione = await normalizzaTutto();
-    await applicaTassonomia();
+    const primaPassata = await applicaTassonomia();
+
+    // Il profilo veloce si ferma qui, ed e' tutta la differenza fra un
+    // aggiornamento che si puo' fare ogni cinque minuti e uno che non si puo'.
+    // Quello che resta sotto — la ricerca sul web, le proposte del modello, il
+    // rilevamento delle ricorrenze, gli avvisi — costa denaro a ogni chiamata e
+    // non ha niente di nuovo da fare dodici volte all'ora.
+    if (profilo === 'veloce') {
+      esito.categorizzazione = {
+        speseAbbinate: primaPassata.speseAbbinate,
+        speseEsaminate: primaPassata.speseEsaminate,
+      };
+      esito.durataMs = Date.now() - avvio;
+      return esito;
+    }
 
     // Prima di chiedere al modello di indovinare, si va a vedere cosa dice il
     // mondo. E' l'ordine che conta: la ricerca serve ad arricchire il contesto
@@ -428,7 +479,7 @@ async function sipuoChiamareLaBanca(
     nonPresidiatiIn24Ore: await conta(new Date(adesso - 24 * 60 * 60 * 1000), true),
     scarichiRecenti:
       origine === 'apertura'
-        ? await conta(new Date(adesso - MINUTI_FRA_DUE_APERTURE * 60 * 1000), false)
+        ? await conta(new Date(adesso - MINUTI_FRA_DUE_SCARICHI * 60 * 1000), false)
         : 0,
   });
 }
@@ -444,13 +495,13 @@ export function decidiAccesso(input: {
   origine: Origine;
   /** Letture `cron` nelle ultime 24 ore: sono per costruzione quelle senza nessuno davanti. */
   nonPresidiatiIn24Ore: number;
-  /** Scarichi di qualunque origine negli ultimi `MINUTI_FRA_DUE_APERTURE` minuti. */
+  /** Scarichi di qualunque origine negli ultimi `MINUTI_FRA_DUE_SCARICHI` minuti. */
   scarichiRecenti: number;
 }): string | null {
   if (input.origine === 'apertura') {
     return input.scarichiRecenti === 0
       ? null
-      : `Scarico già fatto meno di ${MINUTI_FRA_DUE_APERTURE} minuti fa: si è aggiornato ` +
+      : `Scarico già fatto meno di ${MINUTI_FRA_DUE_SCARICHI} minuti fa: si è aggiornato ` +
           'solo ciò che non costa una chiamata alla banca.';
   }
 

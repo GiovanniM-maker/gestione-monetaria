@@ -34,10 +34,13 @@ describe('quando si puo’ chiamare la banca', () => {
     ).toBeNull();
   });
 
-  it('ma non due volte in dieci minuti', () => {
+  it('ma non due volte di fila', () => {
+    // Il freno del cliente presente e' di quattro minuti, e sta nel server: nel
+    // browser il pendolo batte ogni cinque, ma un contatore nel browser si
+    // azzera ricaricando e due schede aperte ne avrebbero due.
     expect(
       decidiAccesso({ origine: 'apertura', nonPresidiatiIn24Ore: 0, scarichiRecenti: 1 }),
-    ).toContain('meno di 10 minuti fa');
+    ).toContain('meno di 4 minuti fa');
   });
 
   it('il riposo dell’apertura non frena il giro schedulato', () => {
