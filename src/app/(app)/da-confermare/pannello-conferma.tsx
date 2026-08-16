@@ -323,6 +323,21 @@ function Carta({ riga: r }: { riga: RigaDaConfermare }) {
         )}
       </p>
 
+      {/* Una riga scoperta non si sistema con «va bene»: confermare non da' una
+          categoria, e senza quella la spesa resta fuori da ogni aggregato pur
+          restando nel totale. Va detto sulla carta, o il bottone sbagliato
+          sembra quello giusto. */}
+      {r.motivo === 'senza categoria' && (
+        <p className="nota nota-avviso mt-3 text-[13px]">
+          <strong>Manca la categoria.</strong> Confermare non gliela d&agrave;: apri{' '}
+          <strong>Correggi</strong>, oppure assegnala all&rsquo;esercente da{' '}
+          <Link className="text-accento" href="/esercenti">
+            Esercenti
+          </Link>
+          .
+        </p>
+      )}
+
       {/* Una proposta mai confermata va detta: vale per i conteggi, ma nessuno
           l'ha ancora guardata, ed e' la prima da mettere in dubbio. */}
       {r.origine_classificazione === 'ai' && r.esercente_confermato_at === null && (

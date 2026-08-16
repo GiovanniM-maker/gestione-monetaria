@@ -34,6 +34,17 @@ export type RigaDaConfermare = {
   motivazione: string | null;
   category_id: string | null;
   categoria: string | null;
+  /**
+   * Perche' questa riga e' nella lista: `nuovo` o `senza categoria`.
+   *
+   * Le due chiedono due gesti diversi — su una nuova «va bene» e' la risposta,
+   * su una scoperta non serve a niente — e senza questa parola la schermata
+   * offrirebbe lo stesso bottone per due situazioni diverse.
+   *
+   * Opzionale perche' arriva dalla 0042: finche' non e' applicata la vista non
+   * la manda, e la schermata deve continuare a funzionare.
+   */
+  motivo?: string | null;
 };
 
 export async function leggiDaConfermare(): Promise<readonly RigaDaConfermare[]> {
