@@ -1,3 +1,5 @@
+import { comeArray } from '@/lib/enablebanking/redact';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { leggiDaConfermare, leggiUltime24Ore } from '@/lib/conferma/leggi';
 import { PannelloConferma } from './pannello-conferma';
@@ -25,7 +27,15 @@ export const metadata: Metadata = { title: 'Da confermare' };
  * che si rimanda.
  */
 export default async function DaConfermarePage() {
-  const [righe, recenti] = await Promise.all([leggiDaConfermare(), leggiUltime24Ore()]);
+  const supabase = await createSupabaseServerClient();
+  const [righe, recenti, { data: albero }] = await Promise.all([
+    leggiDaConfermare(),
+    leggiUltime24Ore(),
+    supabase.from('v_categorie_albero').select('id, percorso, archiviata').order('percorso'),
+  ]);
+  const categorie = comeArray<{ id: string; percorso: string; archiviata: boolean }>(albero)
+    .filter((c) => !c.archiviata)
+    .map((c) => ({ id: c.id, percorso: c.percorso }));
   const valgono = righe.reduce((s, r) => s + centesimiDi(r.amount_eur ?? r.amount), 0n);
 
   return (
@@ -48,7 +58,7 @@ export default async function DaConfermarePage() {
         }
       />
 
-      <PannelloConferma righe={righe} recenti={recenti} />
+      <PannelloConferma righe={righe} recenti={recenti} categorie={categorie} />
     </div>
   );
 }

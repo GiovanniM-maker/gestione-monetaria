@@ -9,6 +9,7 @@ import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { tinteDelleClassi } from '../grafici';
 import { Foglio } from '../foglio';
+import { SceltaCategoria } from '../scelta-categoria';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -45,9 +46,12 @@ function euro(valore: string | null): string {
 export function PannelloConferma({
   righe,
   recenti,
+  categorie,
 }: {
   righe: readonly RigaDaConfermare[];
   recenti: readonly RigaRecente[];
+  /** L'albero, per dare una categoria a una riga che non ce l'ha. */
+  categorie: readonly { id: string; percorso: string }[];
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
@@ -129,7 +133,7 @@ export function PannelloConferma({
       <ul className="space-y-3">
         {righe.map((r) => (
           <li key={r.id} className="scheda p-4">
-            <Carta riga={r} />
+            <Carta riga={r} categorie={categorie} />
 
             <div className="mt-4 flex gap-2">
               <button
@@ -291,7 +295,13 @@ function Ultime24Ore({ righe }: { righe: readonly RigaRecente[] }) {
 }
 
 /** Il corpo della carta: chi, quanto, quando, e cosa ne pensa l'applicazione. */
-function Carta({ riga: r }: { riga: RigaDaConfermare }) {
+function Carta({
+  riga: r,
+  categorie,
+}: {
+  riga: RigaDaConfermare;
+  categorie: readonly { id: string; percorso: string }[];
+}) {
   const tinte = tinteDelleClassi(useClassi());
   const tinta = r.discrezionalita === null ? null : (tinte[r.discrezionalita] ?? null);
 
@@ -326,17 +336,29 @@ function Carta({ riga: r }: { riga: RigaDaConfermare }) {
 
       {/* Una riga scoperta non si sistema con «va bene»: confermare non da' una
           categoria, e senza quella la spesa resta fuori da ogni aggregato pur
-          restando nel totale. Va detto sulla carta, o il bottone sbagliato
-          sembra quello giusto. */}
+          restando nel totale.
+
+          Qui c'era **solo** una nota che diceva di aprire «Correggi». Era un
+          vicolo cieco: quel foglio cambia discrezionalita', contesto e note, e
+          la categoria non la tocca — lo dice lui stesso, «si cambia da
+          revisione». E per un bonifico a un privato non c'e' nemmeno un
+          esercente da correggere, quindi non c'era **nessuna** strada.
+
+          Adesso il controllo sta qui, dove si vede il problema. E' lo stesso
+          selettore di `/movimenti` e `/esercenti`: foglio dal basso, ricerca,
+          e la categoria si puo' creare da dentro se non esiste. */}
       {r.motivo === 'senza categoria' && (
-        <p className="nota nota-avviso mt-3 text-[13px]">
-          <strong>Manca la categoria.</strong> Confermare non gliela d&agrave;: apri{' '}
-          <strong>Correggi</strong>, oppure assegnala all&rsquo;esercente da{' '}
-          <Link className="text-accento" href="/esercenti">
-            Esercenti
-          </Link>
-          .
-        </p>
+        <div className="nota nota-avviso mt-3 space-y-2 text-[13px]">
+          <p>
+            <strong>Manca la categoria.</strong> Confermare non gliela d&agrave;: la spesa
+            resterebbe nel totale ma fuori da ogni aggregato.
+          </p>
+          <SceltaCategoria
+            ambito={{ tipo: 'movimento', movimentoId: r.id }}
+            categoriaId={r.category_id}
+            categorie={categorie}
+          />
+        </div>
       )}
 
       {/* Una proposta mai confermata va detta: vale per i conteggi, ma nessuno
