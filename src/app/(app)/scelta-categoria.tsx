@@ -75,11 +75,61 @@ export function SceltaCategoria({
   const [cerca, setCerca] = useState('');
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+  /** Quando si sta scrivendo il nome di una categoria che non esiste ancora. */
+  const [creando, setCreando] = useState(false);
+  const [nuova, setNuova] = useState('');
+  const [dentro, setDentro] = useState('');
 
   const attuale = categorie.find((c) => c.id === valore)?.percorso ?? null;
   const ago = cerca.trim().toLowerCase();
   const viste =
     ago === '' ? categorie : categorie.filter((c) => c.percorso.toLowerCase().includes(ago));
+
+  /**
+   * Creare una categoria da qui, senza uscire.
+   *
+   * E' il buco che si sentiva usando l'app: stai classificando un esercente,
+   * la categoria giusta non c'e', e per crearla devi abbandonare quello che
+   * stai facendo, andare in `/categorie`, crearla, tornare indietro e
+   * ritrovare la riga. Cinque passi per una parola.
+   *
+   * La creazione e l'assegnazione sono **due scritture separate** e restano
+   * tali: `crea_categoria` fa la prima e torna l'identificativo, che diventa
+   * subito l'argomento della seconda. E' anche rieseguibile — se la categoria
+   * esiste gia' con quel nome sotto quel padre, la funzione SQL restituisce
+   * quella invece di crearne una seconda.
+   */
+  async function creaEAssegna() {
+    const nome = nuova.trim();
+    if (nome === '') return;
+    setInCorso(true);
+    setErrore(null);
+    try {
+      const risposta = await fetch('/api/admin/categorie', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nome, padreId: dentro === '' ? null : dentro }),
+      });
+      const esito = (await risposta.json()) as Record<string, unknown>;
+      if (!risposta.ok) {
+        setErrore(String(esito['error'] ?? risposta.status));
+        return;
+      }
+      const id = typeof esito['id'] === 'string' ? esito['id'] : null;
+      if (id === null) {
+        setErrore('La categoria e\u2019 stata creata ma non so quale sia.');
+        return;
+      }
+      setCreando(false);
+      setNuova('');
+      setDentro('');
+      await cambia(id);
+    } catch (e) {
+      setErrore(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInCorso(false);
+    }
+  }
 
   async function cambia(nuovo: string) {
     const prima = valore;
@@ -166,38 +216,112 @@ export function SceltaCategoria({
         onChiudi={() => {
           setAperto(false);
           setCerca('');
+          setCreando(false);
         }}
       >
-        <input
-          type="search"
-          value={cerca}
-          onChange={(e) => setCerca(e.target.value)}
-          placeholder="cerca una categoria"
-          className="mb-2 min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
-        />
-
-        <ul className="elenco text-[15px]">
-          <Riga
-            testo="senza categoria"
-            scelta={valore === ''}
-            spenta
-            onScegli={() => void cambia('')}
-          />
-          {viste.map((c) => (
-            <Riga
-              key={c.id}
-              testo={c.percorso}
-              scelta={c.id === valore}
-              onScegli={() => void cambia(c.id)}
+        {creando ? (
+          <div className="space-y-3">
+            <input
+              value={nuova}
+              onChange={(e) => setNuova(e.target.value)}
+              placeholder="nome della categoria"
+              className="min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
+              disabled={inCorso}
+              autoFocus
             />
-          ))}
-        </ul>
+            <label className="block">
+              <span className="text-[12px] text-testo-2">dove</span>
+              <select
+                value={dentro}
+                onChange={(e) => setDentro(e.target.value)}
+                className="min-h-11 w-full rounded-controllo bg-s3 px-3 text-[15px]"
+                disabled={inCorso}
+              >
+                <option value="">di primo livello</option>
+                {categorie.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    dentro {c.percorso}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-[12px] text-testo-3">
+              Appena creata viene assegnata a questa voce. Se esiste gi&agrave; con lo stesso nome
+              nello stesso posto, si usa quella.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void creaEAssegna()}
+                disabled={inCorso || nuova.trim() === ''}
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-testo text-[15px] font-semibold text-s1 disabled:opacity-40"
+              >
+                {inCorso ? '…' : 'Crea e assegna'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreando(false)}
+                disabled={inCorso}
+                className="inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 px-3.5 text-[13px] font-medium"
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <input
+              type="search"
+              value={cerca}
+              onChange={(e) => setCerca(e.target.value)}
+              placeholder="cerca una categoria"
+              className="mb-2 min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
+            />
 
-        {viste.length === 0 && (
-          <p className="py-6 text-center text-[14px] text-testo-2">
-            Nessuna categoria con questo nome.
-          </p>
+            {/* Il posto in cui ci si accorge che una categoria manca e' questo:
+            stai scegliendo e non la trovi. Crearla da qui costa un tocco;
+            uscire, andare in `/categorie`, tornare e ritrovare la riga ne
+            costa cinque. */}
+            <button
+              type="button"
+              onClick={() => {
+                setCreando(true);
+                setNuova(cerca.trim());
+              }}
+              className="mb-1 flex min-h-12 w-full items-center gap-2 text-left text-[15px] text-essenziale"
+            >
+              <span aria-hidden="true" className="text-[19px] leading-none">
+                +
+              </span>
+              {cerca.trim() === '' ? 'Nuova categoria' : `Crea «${cerca.trim()}»`}
+            </button>
+
+            <ul className="elenco text-[15px]">
+              <Riga
+                testo="senza categoria"
+                scelta={valore === ''}
+                spenta
+                onScegli={() => void cambia('')}
+              />
+              {viste.map((c) => (
+                <Riga
+                  key={c.id}
+                  testo={c.percorso}
+                  scelta={c.id === valore}
+                  onScegli={() => void cambia(c.id)}
+                />
+              ))}
+            </ul>
+
+            {viste.length === 0 && (
+              <p className="py-6 text-center text-[14px] text-testo-2">
+                Nessuna categoria con questo nome.
+              </p>
+            )}
+          </>
         )}
+
+        {errore !== null && <p className="nota nota-errore mt-2 text-[13px]">{errore}</p>}
       </Foglio>
     </div>
   );

@@ -834,6 +834,32 @@ trasformano la lista della sera in quindici righe identiche, e una lista di arre
 smaltisce — si chiude. Non tocca `manually_categorized`, come la conferma singola: approvare in
 blocco non è una scorciatoia per incidere in blocco.
 
+#### La profondità: il token c'era e non lo usava nessuno
+
+«Non c'è profondità nella carta, non mi salta subito l'occhio.» `--ombra` era definito in
+`globals.css` da giorni, in entrambi i temi, e **`.scheda` non lo applicava**: le schede erano
+rettangoli di un grigio appena diverso, non fogli appoggiati sopra.
+
+Chiaro e scuro sollevano in due modi opposti, ed è fisica e non gusto. Sul chiaro l'oggetto
+**proietta** un'ombra sul fondo — tre ombre sovrapposte e non una: contatto stretto, diffusione
+media, alone largo; una sola produce quella macchia grigia uniforme che si riconosce come «ombra
+CSS». Sul nero un'ombra nera non si vede, e a sollevare è la **luce sul bordo alto**, un filo chiaro
+di mezzo pixel. Nel tema scuro le superfici sono anche salite (`--s2` da `#17171c` a `#1c1c22`):
+ventitré punti di luminosità fra il fondo e la scheda, su OLED al buio, non bastano a dire «questa
+è sopra».
+
+#### Una categoria si crea dal punto in cui la stai scegliendo
+
+Il posto in cui ci si accorge che una categoria manca è il selettore: stai classificando e non la
+trovi. Prima da lì si poteva solo uscire — andare in `/categorie`, crearla, tornare, ritrovare la
+riga: cinque passi per una parola. Ora il foglio ha in cima **«+ Nuova categoria»**, che diventa
+**«Crea "pizzeria"»** se hai già scritto qualcosa nella ricerca.
+
+Creazione e assegnazione restano **due scritture separate**: `crea_categoria` torna
+l'identificativo, che diventa subito l'argomento della seconda. È rieseguibile — stesso nome sotto
+lo stesso padre restituisce quella che c'è già, e un tocco ripetuto su un telefono non deve creare
+«Ristoranti» due volte.
+
 #### Il cruscotto rispondeva a sei domande, e nessuna si leggeva
 
 Quanto ho speso, quanto torna ogni mese, come si muove nel tempo, in cosa, da chi, e c'è qualcosa

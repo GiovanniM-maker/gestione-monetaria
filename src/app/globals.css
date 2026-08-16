@@ -41,7 +41,16 @@
   --testo-3: rgb(5 7 10 / 0.34);
   --filo: rgb(5 7 10 / 0.09);
   --velo: rgb(255 255 255 / 0.72);
-  --ombra: 0 1px 2px rgb(5 7 10 / 0.04), 0 8px 26px rgb(5 7 10 / 0.06);
+
+  /* Tre ombre sovrapposte e non una: il contatto stretto, la diffusione media,
+     l'alone largo. Una sola produce quella macchia grigia uniforme che si
+     riconosce come «ombra CSS»; tre approssimano come cade la luce, ed e' la
+     differenza fra una scheda appoggiata e un rettangolo colorato. */
+  --ombra:
+    0 1px 2px rgb(5 7 10 / 0.05), 0 4px 10px rgb(5 7 10 / 0.05), 0 14px 34px rgb(5 7 10 / 0.06);
+  /* Sul chiaro il rilievo e' un filo di contorno: una scheda bianca su un
+     fondo quasi bianco ha bisogno di un bordo definito, non di piu' ombra. */
+  --rilievo: 0 0 0 0.5px rgb(5 7 10 / 0.05);
 
   /* le quattro classi, ai valori di sistema: piu' saturi e leggibili sul nero */
   --essenziale: #0a84ff;
@@ -56,17 +65,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* Le superfici salgono di piu' che prima: fra il fondo nero e la scheda
+       c'erano ventitre' punti di luminosita', che su uno schermo OLED al buio
+       non bastano a dire «questa e' sopra». */
     --s0: #000000;
-    --s1: #0d0d10;
-    --s2: #17171c;
-    --s3: #1f1f26;
+    --s1: #101014;
+    --s2: #1c1c22;
+    --s3: #26262e;
 
     --testo: #f5f5f7;
     --testo-2: rgb(245 245 247 / 0.6);
     --testo-3: rgb(245 245 247 / 0.36);
     --filo: rgb(245 245 247 / 0.11);
     --velo: rgb(20 20 24 / 0.68);
-    --ombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 30px rgb(0 0 0 / 0.4);
+
+    /* Al buio un'ombra nera su fondo nero non si vede: quello che solleva una
+       scheda e' la **luce sul bordo alto**, come su un oggetto illuminato da
+       sopra. L'ombra resta per staccarla dal fondo, ma il lavoro lo fa il filo
+       chiaro di un mezzo pixel. */
+    --ombra: 0 1px 2px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.45);
+    --rilievo: inset 0 0.5px 0 0 rgb(255 255 255 / 0.07), 0 0 0 0.5px rgb(255 255 255 / 0.04);
 
     --essenziale: #409cff;
     --utile: #ffb340;
@@ -124,10 +142,22 @@ body {
   line-height: 1;
 }
 
-/* La scheda: superficie, raggio, nessun bordo. */
+/**
+ * La scheda: superficie, raggio, e **profondita'**.
+ *
+ * Le prime versioni avevano solo la superficie, e il difetto si vedeva senza
+ * saperlo nominare: le schede non «saltavano all'occhio», sembravano rettangoli
+ * di un grigio appena diverso invece che fogli appoggiati sopra. Il token
+ * `--ombra` esisteva gia' in `:root` da giorni — e non lo usava nessuno.
+ *
+ * Chiaro e scuro sollevano in due modi opposti, ed e' fisica e non gusto: sul
+ * chiaro l'oggetto **proietta** un'ombra sul fondo, sul nero l'ombra sparisce e
+ * a sollevarlo e' la **luce sul bordo alto**.
+ */
 .scheda {
   background: var(--s2);
   border-radius: var(--r-scheda);
+  box-shadow: var(--ombra), var(--rilievo);
 }
 
 /**

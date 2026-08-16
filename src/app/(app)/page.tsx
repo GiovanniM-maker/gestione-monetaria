@@ -499,12 +499,16 @@ async function Ricorrente({ mese }: { mese: string }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="scheda p-4">
           <p className="text-[13px] text-testo-2">Abbonamenti</p>
-          <p className="numerone mt-1.5 text-[26px]">{formattaEuro(abbonamenti)}</p>
+          {/* Diciannove e non ventisei: mezza colonna larga 141 pixel non
+              tiene «−1.610,17 €» a ventisei, e l'euro andava a capo da solo. */}
+          <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
+            {formattaEuro(abbonamenti)}
+          </p>
           <p className="mt-1.5 text-[12px] text-testo-3">Si disdicono. Il risparmio è certo.</p>
         </div>
         <div className="scheda p-4">
           <p className="text-[13px] text-testo-2">Abitudini</p>
-          <p className="numerone mt-1.5 text-[26px]">{formattaEuro(abitudini)}</p>
+          <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">{formattaEuro(abitudini)}</p>
           <p className="mt-1.5 text-[12px] text-testo-3">
             Niente da disdire: si ripete perché lo si rifà.
           </p>

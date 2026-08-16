@@ -380,7 +380,9 @@ function Blocco({
               <span className="min-w-0 truncate capitalize">{v.discrezionalita}</span>
             </p>
             <p className="text-[12px] text-testo-3">{v.contesto}</p>
-            <p className="numerone mt-1.5 text-[22px]">{formattaEuro(v.costoMensile)}</p>
+            <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
+              {formattaEuro(v.costoMensile)}
+            </p>
             <p className="mt-0.5 text-[12px] text-testo-3">
               {v.ricorrenze} {v.ricorrenze === 1 ? 'voce' : 'voci'}
             </p>
