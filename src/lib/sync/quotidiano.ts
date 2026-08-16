@@ -13,7 +13,7 @@ import {
 } from '@/lib/tassonomia/ricerca';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
 import { generaAvvisi } from '@/lib/avvisi/leggi';
-import type { AccountRow, BankConnectionRow } from '@/lib/db/types';
+import type { AccountRow, BankConnectionRow, SyncTrigger } from '@/lib/db/types';
 
 /**
  * La sequenza quotidiana, senza nessuno che la guardi.
@@ -46,6 +46,53 @@ import type { AccountRow, BankConnectionRow } from '@/lib/db/types';
 
 /** Giorni indietro da richiedere alla banca a ogni giro. */
 const GIORNI_INDIETRO = 7;
+
+/**
+ * Quante volte al giorno si puo' chiamare la banca **senza nessuno davanti**.
+ *
+ * Non e' una scelta di prudenza: e' il tetto della PSD2. Un AISP puo' leggere
+ * il conto **quattro volte in ventiquattr'ore** quando il cliente non e'
+ * presente; oltre, l'ASPSP pretende una nuova autenticazione forte. E' anche
+ * il motivo per cui `docs/direzione.md` aveva deciso «quattro al giorno».
+ *
+ * Quindi la schedulazione a quattro ore c'e' — sei giri, uno ogni quattro ore
+ * — ma i giri che troverebbero il tetto gia' pieno **non chiamano la banca**:
+ * fanno lo stesso il lavoro locale, che e' gratis, e scrivono perche' hanno
+ * saltato. L'alternativa era che dal quinto giro in poi la banca rispondesse
+ * di no, riempiendo `sync_runs` di fallimenti e mettendo il consenso in uno
+ * stato che non si capisce piu'.
+ *
+ * La freschezza vera non la da' comunque il tetto: la da' l'apertura
+ * dell'app, che e' un accesso **con il cliente presente** e non conta.
+ */
+const ACCESSI_NON_PRESIDIATI_AL_GIORNO = 4;
+
+/**
+ * Quanto deve essere vecchio l'ultimo scarico perche' aprire l'app ne lanci
+ * un altro.
+ *
+ * Senza questa soglia, passare da «Oggi» a «Dove» e tornare indietro
+ * chiamerebbe la banca tre volte in un minuto. Con il cliente presente non c'e'
+ * un tetto normativo da rispettare, ma non e' un buon motivo per bussare
+ * quando la risposta e' gia' in mano.
+ */
+const MINUTI_FRA_DUE_APERTURE = 10;
+
+/**
+ * Chi ha chiesto la sincronizzazione, e cambia due cose sole.
+ *
+ * `schedulata` — nessuno davanti: conta nel tetto delle quattro, e lascia una
+ * riga `cron` in `sync_runs`.
+ * `apertura` — l'utente ha aperto l'app o premuto il bottone: e' un accesso
+ * «customer present», non conta nel tetto, e lascia una riga `manual`.
+ *
+ * Che le due lascino tracce **diverse** non e' un dettaglio. Fino al 16 agosto
+ * 2026 il bottone scriveva anche lui `cron`, e quando e' servito capire se lo
+ * scheduler avesse mai girato le uniche quattro righe che c'erano erano
+ * indistinguibili dai tocchi sul bottone di quel pomeriggio. Da qui in avanti
+ * una riga `cron` **prova** che lo scheduler ha girato.
+ */
+export type Origine = 'schedulata' | 'apertura';
 
 /** Budget del ciclo di fette. Sta sotto `maxDuration`, con margine per il resto. */
 const BUDGET_CICLO_MS = 150_000;
@@ -143,9 +190,11 @@ export const RICERCA_COL_BROWSER_MS = 20_000;
 
 export async function eseguiSincronizzazioneQuotidiana(
   budgetRicercaMs: number = BUDGET_SENZA_BROWSER,
+  origine: Origine = 'schedulata',
 ): Promise<EsitoQuotidiano> {
   const avvio = Date.now();
   const esito = vuoto();
+  const traccia: SyncTrigger = origine === 'apertura' ? 'manual' : 'cron';
   const supabase = await createSupabaseServerClient();
 
   const { data: connessioni } = await supabase
@@ -175,7 +224,7 @@ export async function eseguiSincronizzazioneQuotidiana(
 
     await supabase.from('sync_runs').insert({
       connection_id: connessione.id,
-      trigger: 'cron',
+      trigger: traccia,
       status: 'failed',
       finished_at: new Date().toISOString(),
       error_message: motivo,
@@ -200,51 +249,59 @@ export async function eseguiSincronizzazioneQuotidiana(
   }
 
   // ---------------------------------------------------------------------
-  // 1. Scarico
+  // 1. Scarico — se si puo' chiamare la banca
   // ---------------------------------------------------------------------
-  try {
-    const corsa = await creaBackfill({
-      connectionId: connessione.id,
-      accountUids: uid,
-      dateFrom: giorniFa(GIORNI_INDIETRO),
-      dateTo: null,
-      trigger: 'cron',
-    });
-    esito.runId = corsa.id;
+  // I passi locali girano comunque, come gia' girano quando lo scarico
+  // fallisce: sono idempotenti, lavorano su cio' che c'e', e non costano una
+  // chiamata alla banca.
+  const permesso = await sipuoChiamareLaBanca(connessione.id, origine);
+  if (permesso !== null) esito.avvisi = [permesso];
 
-    const scadenza = avvio + BUDGET_CICLO_MS;
-    const avvisi: string[] = [];
+  if (permesso === null) {
+    try {
+      const corsa = await creaBackfill({
+        connectionId: connessione.id,
+        accountUids: uid,
+        dateFrom: giorniFa(GIORNI_INDIETRO),
+        dateTo: null,
+        trigger: traccia,
+      });
+      esito.runId = corsa.id;
 
-    // Il ciclo sta qui e non nel browser. Si ferma per budget, non per numero
-    // di giri: e' il tempo la risorsa scarsa di una funzione serverless.
-    for (;;) {
-      const fetta = await eseguiFettaBackfill(corsa.id, BUDGET_FETTA_MS);
-      esito.fette += 1;
-      esito.righeLette += fetta.righeLette;
-      esito.righeNuove += fetta.righeNuove;
-      esito.righeDuplicate += fetta.righeDuplicate;
-      avvisi.push(...fetta.avvisi);
+      const scadenza = avvio + BUDGET_CICLO_MS;
+      const avvisi: string[] = [];
 
-      if (fetta.errore !== null) {
-        esito.errore = fetta.errore;
-        break;
+      // Il ciclo sta qui e non nel browser. Si ferma per budget, non per numero
+      // di giri: e' il tempo la risorsa scarsa di una funzione serverless.
+      for (;;) {
+        const fetta = await eseguiFettaBackfill(corsa.id, BUDGET_FETTA_MS);
+        esito.fette += 1;
+        esito.righeLette += fetta.righeLette;
+        esito.righeNuove += fetta.righeNuove;
+        esito.righeDuplicate += fetta.righeDuplicate;
+        avvisi.push(...fetta.avvisi);
+
+        if (fetta.errore !== null) {
+          esito.errore = fetta.errore;
+          break;
+        }
+        if (fetta.completato) {
+          esito.completato = true;
+          break;
+        }
+        if (Date.now() >= scadenza) {
+          avvisi.push(
+            'Budget esaurito con lo scarico non finito. Il cursore e’ salvato: ' +
+              'il prossimo giro riprende da li’.',
+          );
+          break;
+        }
       }
-      if (fetta.completato) {
-        esito.completato = true;
-        break;
-      }
-      if (Date.now() >= scadenza) {
-        avvisi.push(
-          'Budget esaurito con lo scarico non finito. Il cursore e’ salvato: ' +
-            'il prossimo giro riprende da li’.',
-        );
-        break;
-      }
+
+      esito.avvisi = avvisi;
+    } catch (errore) {
+      esito.errore = errore instanceof Error ? errore.message : String(errore);
     }
-
-    esito.avvisi = avvisi;
-  } catch (errore) {
-    esito.errore = errore instanceof Error ? errore.message : String(errore);
   }
 
   // ---------------------------------------------------------------------
@@ -315,6 +372,93 @@ export async function eseguiSincronizzazioneQuotidiana(
 
   esito.durataMs = Date.now() - avvio;
   return esito;
+}
+
+/**
+ * Se questo giro puo' chiamare la banca. `null` = si', altrimenti il perche' no.
+ *
+ * ---------------------------------------------------------------------------
+ * Due domande diverse, non la stessa con due soglie
+ * ---------------------------------------------------------------------------
+ * **Schedulata**: quante volte abbiamo gia' letto il conto oggi senza nessuno
+ * davanti? Il tetto e' quattro in ventiquattr'ore ed e' della PSD2, non nostro.
+ * Si contano solo le righe `cron`, che sono per costruzione gli accessi non
+ * presidiati — e' esattamente per poterle contare che dal 16 agosto 2026 il
+ * bottone e l'apertura scrivono `manual`.
+ *
+ * **Apertura**: nessun tetto, perche' il cliente e' presente. La sola domanda
+ * e' se valga la pena: se l'ultimo scarico e' di pochi minuti fa la risposta e'
+ * gia' in mano, e passare da una scheda all'altra non deve bussare alla banca
+ * ogni volta.
+ *
+ * Si guarda l'**inizio** della corsa e non la fine: una corsa ancora aperta ha
+ * `finished_at` nullo, e ordinare su una colonna che puo' essere nulla farebbe
+ * sembrare che non abbiamo mai chiamato proprio mentre stiamo chiamando.
+ *
+ * ---------------------------------------------------------------------------
+ * Un giro che salta non lascia una riga, ed e' voluto
+ * ---------------------------------------------------------------------------
+ * L'invariante su cui poggia tutto e' **una riga `cron` = una lettura del conto
+ * senza nessuno davanti**. Registrare anche i giri saltati la romperebbe: il
+ * conteggio si gonfierebbe da solo, e dopo quattro salti si bloccherebbe anche
+ * chi non ha mai chiamato la banca. Il motivo del salto torna comunque nella
+ * risposta — che e' cio' che si legge nel log del cron di Vercel e su
+ * `/debug/sync` — e `ultima_sync_riuscita` non avanza, che e' giusto: non e'
+ * arrivato niente.
+ */
+async function sipuoChiamareLaBanca(
+  connectionId: string,
+  origine: Origine,
+): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const conta = async (da: Date, soloCron: boolean): Promise<number> => {
+    let query = supabase
+      .from('sync_runs')
+      .select('id', { count: 'exact', head: true })
+      .eq('connection_id', connectionId)
+      .gte('started_at', da.toISOString());
+    if (soloCron) query = query.eq('trigger', 'cron');
+    const { count } = await query;
+    return count ?? 0;
+  };
+
+  const adesso = Date.now();
+  return decidiAccesso({
+    origine,
+    nonPresidiatiIn24Ore: await conta(new Date(adesso - 24 * 60 * 60 * 1000), true),
+    scarichiRecenti:
+      origine === 'apertura'
+        ? await conta(new Date(adesso - MINUTI_FRA_DUE_APERTURE * 60 * 1000), false)
+        : 0,
+  });
+}
+
+/**
+ * La regola, senza database intorno: `null` = si puo' chiamare la banca.
+ *
+ * Separata perche' e' l'unica parte che si puo' sbagliare in silenzio — un
+ * `<` al posto di un `<=` qui vuol dire cinque letture al giorno invece di
+ * quattro, e la banca lo scopre prima di noi.
+ */
+export function decidiAccesso(input: {
+  origine: Origine;
+  /** Letture `cron` nelle ultime 24 ore: sono per costruzione quelle senza nessuno davanti. */
+  nonPresidiatiIn24Ore: number;
+  /** Scarichi di qualunque origine negli ultimi `MINUTI_FRA_DUE_APERTURE` minuti. */
+  scarichiRecenti: number;
+}): string | null {
+  if (input.origine === 'apertura') {
+    return input.scarichiRecenti === 0
+      ? null
+      : `Scarico già fatto meno di ${MINUTI_FRA_DUE_APERTURE} minuti fa: si è aggiornato ` +
+          'solo ciò che non costa una chiamata alla banca.';
+  }
+
+  return input.nonPresidiatiIn24Ore < ACCESSI_NON_PRESIDIATI_AL_GIORNO
+    ? null
+    : `Tetto PSD2 raggiunto: ${input.nonPresidiatiIn24Ore} letture del conto nelle ultime 24 ore ` +
+        `senza nessuno davanti, e il massimo è ${ACCESSI_NON_PRESIDIATI_AL_GIORNO}. ` +
+        'Aprendo l’app si scarica lo stesso: con il cliente presente non c’è tetto.';
 }
 
 /**
