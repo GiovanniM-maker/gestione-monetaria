@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { leggiDaConfermare, leggiUltime24Ore } from '@/lib/conferma/leggi';
+import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { PannelloConferma } from './pannello-conferma';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { conta, TestataPagina } from '../testata';
@@ -25,7 +26,11 @@ export const metadata: Metadata = { title: 'Da confermare' };
  * che si rimanda.
  */
 export default async function DaConfermarePage() {
-  const [righe, recenti] = await Promise.all([leggiDaConfermare(), leggiUltime24Ore()]);
+  const [righe, recenti, categorie] = await Promise.all([
+    leggiDaConfermare(),
+    leggiUltime24Ore(),
+    categorieSceglibili(),
+  ]);
   const valgono = righe.reduce((s, r) => s + centesimiDi(r.amount_eur ?? r.amount), 0n);
 
   return (
@@ -48,7 +53,7 @@ export default async function DaConfermarePage() {
         }
       />
 
-      <PannelloConferma righe={righe} recenti={recenti} />
+      <PannelloConferma righe={righe} recenti={recenti} categorie={categorie} />
     </div>
   );
 }

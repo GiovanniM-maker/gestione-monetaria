@@ -8,6 +8,7 @@ import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { COLORE_CLASSE } from '../grafici';
 import { Foglio } from '../foglio';
+import { SceltaCategoria } from '../scelta-categoria';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -45,9 +46,11 @@ function euro(valore: string | null): string {
 export function PannelloConferma({
   righe,
   recenti,
+  categorie,
 }: {
   righe: readonly RigaDaConfermare[];
   recenti: readonly RigaRecente[];
+  categorie: readonly { id: string; percorso: string }[];
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
@@ -155,6 +158,7 @@ export function PannelloConferma({
                 stava guardando finiva fuori schermo. */}
             <Correzione
               riga={r}
+              categorie={categorie}
               aperta={aperta === r.id}
               occupato={occupato}
               onAnnulla={() => setAperta(null)}
@@ -351,12 +355,14 @@ function Carta({ riga: r }: { riga: RigaDaConfermare }) {
 
 function Correzione({
   riga,
+  categorie,
   aperta,
   occupato,
   onAnnulla,
   onSalva,
 }: {
   riga: RigaDaConfermare;
+  categorie: readonly { id: string; percorso: string }[];
   aperta: boolean;
   occupato: boolean;
   onAnnulla: () => void;
@@ -373,12 +379,30 @@ function Correzione({
       nota="Vale solo per questa spesa, e la marca come corretta a mano."
       onChiudi={onAnnulla}
     >
+      {/* La categoria si sceglie **qui**, o il messaggio sulla carta manderebbe
+          su un foglio che non sa fare la cosa per cui ci ha mandati. Vale per
+          questa riga sola, come tutto il resto del foglio: la classificazione
+          di tutte le occorrenze dell'esercente sta sulla sua scheda, dove la
+          portata e' scritta sopra. */}
+      <div className="mb-2 space-y-1">
+        <span className="text-[12px] text-testo-2">categoria</span>
+        <SceltaCategoria
+          ambito={{ tipo: 'movimento', movimentoId: riga.id }}
+          categoriaId={riga.category_id}
+          categorie={categorie}
+        />
+      </div>
+
+      {/* Due righe e non un paragrafo. I due fatti che servono sono che si
+          applica subito — i due campi sotto invece dicono «non cambiare» e
+          aspettano Salva — e dove si va per cambiarla a tutte. Il resto e'
+          prosa in mezzo ai controlli. */}
       <p className="mb-3 text-[12px] text-testo-3">
-        La categoria resta quella dell&rsquo;esercente: si cambia da{' '}
+        Si applica appena la scegli. Per <strong>tutte</strong> le spese dell&rsquo;esercente:{' '}
         <Link className="text-accento" href="/revisione">
           revisione
         </Link>
-        , dove vale per tutte le sue occorrenze.
+        .
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block">
