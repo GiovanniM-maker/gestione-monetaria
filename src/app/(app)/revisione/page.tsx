@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { PannelloRevisione } from './pannello-revisione';
 import type { CategoryRow } from '@/lib/db/types';
+import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
+import { conta, TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Revisione tassonomia' };
@@ -69,15 +71,35 @@ export default async function RevisionePage() {
       supabase.from('categories').select('*').order('sort_order', { ascending: true }),
     ]);
 
+  // Quanto vale lasciare tutto com'e': la somma delle etichette scoperte che
+  // si stanno mostrando. Non e' il totale di tutte — se ce ne sono piu' di
+  // quante ne vediamo, e' quanto valgono **le piu' care**, che e' la cifra su
+  // cui si decide se vale la pena aprire questa schermata oggi.
+  const scoperto = comeArray<DaClassificare>(daFare).reduce(
+    (s, v) => s + centesimiDi(v.totale),
+    0n,
+  );
+  const quantiEsercenti = comeArray<MerchantTotale>(esercenti).length;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Revisione della tassonomia</h1>
-        <p className="mt-1 text-[13px] text-testo-2">
-          Ogni assegnazione crea un <strong>alias</strong>, non una correzione su una riga: vale per
-          le occorrenze passate e per quelle future. È il motivo per cui questo lavoro finisce.
-        </p>
-      </div>
+      <TestataPagina
+        titolo="Revisione"
+        cifra={conta(quanteInTutto ?? 0)}
+        etichetta="etichette senza un esercente"
+        tinta={(quanteInTutto ?? 0) === 0 ? 'var(--investimento)' : 'var(--utile)'}
+        figure={[
+          { valore: formattaEuro(scoperto), etichetta: 'quanto valgono' },
+          { valore: conta(quantiEsercenti), etichetta: 'esercenti in tutto' },
+        ]}
+        perche={
+          <p>
+            Ogni assegnazione crea un <strong>alias</strong>, non una correzione su una riga: vale
+            per le occorrenze passate e per quelle future. È il motivo per cui questo lavoro
+            finisce, invece di ricominciare a ogni sincronizzazione.
+          </p>
+        }
+      />
 
       <PannelloRevisione
         quanteInTutto={quanteInTutto ?? 0}

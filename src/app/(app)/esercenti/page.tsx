@@ -7,6 +7,7 @@ import { CAMPO_PIENO, BOTTONE, BOTTONE_MINORE } from '@/lib/ui/controlli';
 import { filtroValido, leggiEsercenti, PER_PAGINA, type Filtro } from '@/lib/tassonomia/esercenti';
 import { Interruttore } from './interruttore';
 import { SceltaCategoria } from '../scelta-categoria';
+import { conta, TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Esercenti' };
@@ -84,14 +85,23 @@ export default async function EsercentiPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Esercenti</h1>
-        <p className="mt-1 text-[13px] text-testo-2">
-          {totale} {totale === 1 ? 'esercente' : 'esercenti'}, dal più caro. Un esercente{' '}
-          <strong>fisso</strong> classifica tutte le sue spese allo stesso modo; uno{' '}
-          <strong>variabile</strong> le fa decidere una per una.
-        </p>
-      </div>
+      <TestataPagina
+        titolo="Esercenti"
+        cifra={conta(totale)}
+        etichetta={
+          filtro === 'tutti' && cerca === null
+            ? 'in tutto, dal più caro'
+            : 'con questi filtri, dal più caro'
+        }
+        perche={
+          <p>
+            Un esercente <strong>fisso</strong> classifica tutte le sue spese allo stesso modo; uno{' '}
+            <strong>variabile</strong> le fa decidere una per una. È il caso di un negozio dove
+            compri sia un computer per lavorare sia una sciocchezza: nessuna regola sul nome può
+            distinguerli, perché l’informazione non è nei dati bancari.
+          </p>
+        }
+      />
 
       {/* La ricerca e' un form GET: nessun JavaScript, e l'indirizzo resta
           condivisibile. */}

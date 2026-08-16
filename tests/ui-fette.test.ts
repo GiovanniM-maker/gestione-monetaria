@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { conta } from '@/app/(app)/testata';
 import { archi, conResto, fette, GIRO, larghezza } from '@/lib/ui/fette';
 
 /**
@@ -111,5 +112,19 @@ describe('larghezza', () => {
   it('traduce i millesimi in percentuale CSS', () => {
     expect(larghezza({ chiave: 'x', valore: -1n, inizio: 0, lunghezza: 333 })).toBe('33.3%');
     expect(larghezza({ chiave: 'x', valore: -1n, inizio: 0, lunghezza: 1000 })).toBe('100%');
+  });
+});
+
+describe('conta — il migliaio si scrive allo stesso modo di un importo', () => {
+  it('raggruppa anche i numeri di quattro cifre, che Intl in italiano salta', () => {
+    expect(conta(1297)).toBe('1.297');
+    expect(conta(999)).toBe('999');
+    expect(conta(1000000)).toBe('1.000.000');
+  });
+
+  it('zero, negativi e decimali per sbaglio', () => {
+    expect(conta(0)).toBe('0');
+    expect(conta(-1500)).toBe('-1.500');
+    expect(conta(33.7)).toBe('33');
   });
 });

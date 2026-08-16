@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { leggiDaConfermare } from '@/lib/conferma/leggi';
 import { PannelloConferma } from './pannello-conferma';
+import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
+import { conta, TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Da confermare' };
@@ -24,25 +26,27 @@ export const metadata: Metadata = { title: 'Da confermare' };
  */
 export default async function DaConfermarePage() {
   const righe = await leggiDaConfermare();
+  const valgono = righe.reduce((s, r) => s + centesimiDi(r.amount_eur ?? r.amount), 0n);
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Da confermare</h1>
-        {/* La differenza fra i due gesti va detta, ma non sopra le carte a ogni
-            apertura: chi apre questa schermata la apre per premere. */}
-        <details className="mt-1 text-[13px] text-testo-2">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
-            che differenza c&rsquo;&egrave; fra i due bottoni?
-          </summary>
-          <p className="pb-2">
-            <strong className="text-testo">Va bene</strong> lascia la riga agganciata al suo
-            esercente: se domani cambi la classificazione di quell&rsquo;esercente, questa la segue.{' '}
-            <strong className="text-testo">Correggi</strong> dice che questa spesa fa eccezione, e
-            da l&igrave; in poi nessun automatismo la tocca.
+      <TestataPagina
+        titolo="Da confermare"
+        cifra={conta(righe.length)}
+        etichetta={righe.length === 0 ? 'sei in pari' : 'movimenti nuovi'}
+        tinta={righe.length === 0 ? 'var(--investimento)' : null}
+        figure={
+          righe.length === 0 ? undefined : [{ valore: formattaEuro(valgono), etichetta: 'valgono' }]
+        }
+        perche={
+          <p>
+            <strong>Va bene</strong> lascia la riga agganciata al suo esercente: se domani cambi la
+            classificazione di quell’esercente, questa la segue — hai approvato una regola, non
+            inciso un valore. <strong>Correggi</strong> dice che questa spesa fa eccezione, e da lì
+            in poi nessun automatismo la tocca. È il computer comprato da Euronics.
           </p>
-        </details>
-      </div>
+        }
+      />
 
       <PannelloConferma righe={righe} />
     </div>

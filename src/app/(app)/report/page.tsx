@@ -3,32 +3,43 @@ import Link from 'next/link';
 import { leggiReport } from '@/lib/report/genera';
 import { etichettaMese, meseDaData } from '@/lib/cruscotto/mesi';
 import { GeneraReport } from './genera-report';
+import { conta, TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Report' };
 
 export default async function ReportPage() {
   const report = await leggiReport();
+  const ultimo = report[0]?.period_start ?? null;
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Report mensili</h1>
-        <p className="mt-1 text-[13px] text-testo-2">
-          Le cifre le calcola il database, il modello scrive solo le frasi intorno. Gli aggregati
-          esatti che ha ricevuto restano salvati: se una frase non torna, si può dire se ha
-          sbagliato il modello o il calcolo.
-        </p>
-      </div>
+      <TestataPagina
+        titolo="Report mensili"
+        cifra={conta(report.length)}
+        etichetta={
+          ultimo === null
+            ? 'nessuno ancora'
+            : `l’ultimo è ${etichettaMese(meseDaData(ultimo) ?? ultimo)}`
+        }
+        perche={
+          <p>
+            Le cifre le calcola il database, il modello scrive solo le frasi intorno — non riceve
+            righe da cui calcolare, riceve <strong>aggregati finiti</strong>. E quelli restano
+            salvati: se fra sei mesi una frase non torna, si può dire se ha sbagliato il modello o
+            il calcolo. Le due cose si correggono in posti diversi.
+          </p>
+        }
+      />
 
       <GeneraReport />
 
       {report.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
+        <p className="scheda p-6 text-center text-[14px] text-testo-2">
           Nessun report. Il primo si genera qui sopra, o arriva da solo il primo del mese.
         </p>
       ) : (
-        <ul className="divide-y divide-filo">
+        <ul className="scheda elenco px-4">
           {report.map((r) => (
             <li key={r.id}>
               <Link

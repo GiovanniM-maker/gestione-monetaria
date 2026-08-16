@@ -125,7 +125,14 @@ export function SceltaCategoria({
   }
 
   return (
-    <div className="w-full">
+    // `min-w-0 flex-1` e non `w-full`: dentro la riga di `/esercenti` questo
+    // controllo sta **accanto** all'interruttore fisso/variabile, e un
+    // `width: 100%` li' dentro somma la propria larghezza a quella del vicino
+    // e allarga la pagina. Il sintomo era subdolo: su un telefono la finestra
+    // di layout si allarga da sola per contenere il traboccamento, quindi
+    // `scrollWidth > innerWidth` restava falso e il controllo non se ne
+    // accorgeva. Si vede solo confrontando con la larghezza **del dispositivo**.
+    <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2">
         <button
           type="button"

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryRow } from '@/lib/db/types';
+import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { BOTTONE, CAMPO_PIENO, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
 import { Foglio } from '../foglio';
 
@@ -38,10 +39,16 @@ type MerchantTotale = {
   totale: string;
 };
 
-const euro = (valore: string): string =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
-    Number(valore || '0'),
-  );
+/**
+ * Gli importi passano per i centesimi come ovunque nell'applicazione.
+ *
+ * Qui c'era `Intl.NumberFormat` su un `Number(valore)`: e' esattamente il
+ * transito da un float che le regole di correttezza vietano, fatto
+ * nell'ultimo passaggio dopo che tutta la catena l'aveva evitato. E si vedeva
+ * anche a occhio — stampava `-485,00 €` col trattino, mentre il resto
+ * dell'applicazione scrive `−485,00 €` col segno meno vero.
+ */
+const euro = (valore: string): string => formattaEuro(centesimiDi(valore));
 
 // I controlli vengono da `@/lib/ui/controlli`: 44 pixel sul telefono, compatti
 // da `sm` in su. Le misure stanno in un posto solo perche' quattro copie della
@@ -80,7 +87,7 @@ export function PannelloRevisione({
 
   const visibili = soloRicorrenti ? daClassificare.filter((v) => v.movimenti >= 2) : daClassificare;
   const nascoste = daClassificare.filter((v) => v.movimenti < 2);
-  const importoNascosto = nascoste.reduce((somma, v) => somma + Number(v.totale || '0'), 0);
+  const importoNascosto = nascoste.reduce((somma, v) => somma + centesimiDi(v.totale), 0n);
   const ago = cerca.trim().toLowerCase();
   const cercati =
     ago === '' ? esercenti : esercenti.filter((m) => m.canonical_name.toLowerCase().includes(ago));
@@ -128,10 +135,7 @@ export function PannelloRevisione({
             </span>
           )}
         </h2>
-        <p className="mb-2 text-[13px] text-testo-3">
-          In ordine di quanto costa lasciarle così. Assegna a un esercente esistente, oppure creane
-          uno nuovo scrivendone il nome.
-        </p>
+        <p className="mb-2 text-[13px] text-testo-3">In ordine di quanto costa lasciarle così.</p>
         <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-xs text-testo-2">
           <input
             type="checkbox"
@@ -143,7 +147,7 @@ export function PannelloRevisione({
           {soloRicorrenti && nascoste.length > 0 && (
             <span>
               — ne restano fuori <strong>{nascoste.length}</strong> viste una volta sola, per{' '}
-              <strong>{euro(String(importoNascosto))}</strong>. Sono spesa vera, ma non ricorrente:
+              <strong>{formattaEuro(importoNascosto)}</strong>. Sono spesa vera, ma non ricorrente:
               non entrano nel costo mensile per discrezionalità, che è il numero per cui quest’app
               esiste.
             </span>

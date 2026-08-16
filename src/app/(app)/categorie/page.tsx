@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { leggiAlbero } from '@/lib/tassonomia/categorie';
 import { PannelloCategorie } from './pannello-categorie';
+import { conta, TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Categorie' };
@@ -20,16 +21,33 @@ export const metadata: Metadata = { title: 'Categorie' };
 export default async function CategoriePage() {
   const albero = await leggiAlbero();
   const senzaConteggi = albero.some((c) => c.esercenti === null);
+  const radici = albero.filter((c) => c.parent_id === null).length;
+  const esercenti = albero.reduce((s, c) => s + (c.esercenti ?? 0), 0);
+  const movimenti = albero.reduce((s, c) => s + (c.movimenti ?? 0), 0);
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Categorie</h1>
-        <p className="mt-1 text-[13px] text-testo-2">
-          {albero.length} voci. Il <strong>+</strong> di una riga crea una sottocategoria l&igrave;
-          dentro; toccando il nome si apre la sua scheda, dove si rinomina e si vede quanto pesa.
-        </p>
-      </div>
+      <TestataPagina
+        titolo="Categorie"
+        cifra={conta(albero.length)}
+        etichetta={`${conta(radici)} di primo livello`}
+        figure={
+          senzaConteggi
+            ? undefined
+            : [
+                { valore: conta(esercenti), etichetta: 'esercenti appesi' },
+                { valore: conta(movimenti), etichetta: 'movimenti' },
+              ]
+        }
+        perche={
+          <p>
+            Il <strong>+</strong> di una riga crea una sottocategoria lì dentro, col genitore già
+            scelto: è l’unico posto in cui si sa già dove va. Toccando il nome si apre la sua
+            scheda, dove si rinomina e si vede quanto pesa nel mese. Eliminare non perde mai niente:
+            esercenti, movimenti e figlie passano al genitore.
+          </p>
+        }
+      />
       {senzaConteggi && (
         <p className="nota nota-avviso text-[13px]">
           Non riesco a leggere <code>v_categorie_uso</code>, quindi accanto a ogni categoria trovi

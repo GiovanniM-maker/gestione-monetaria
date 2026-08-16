@@ -42,18 +42,18 @@ export default async function CopilotaPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[22px] font-bold tracking-[-0.03em]">Copilota</h1>
-        <div className="flex gap-3 text-sm">
+        <div className="flex gap-2">
           {messaggi.length > 0 && (
             <Link
-              className="inline-flex min-h-11 items-center text-testo-2 underline sm:min-h-0"
+              className="inline-flex min-h-11 items-center rounded-full bg-s2 px-3.5 text-[13px] text-testo-2 sm:min-h-9"
               href={`/copilota?c=${nuovaConversazione()}`}
             >
-              nuova conversazione
+              nuova
             </Link>
           )}
           {conversazioni.length > 1 && (
             <details className="relative">
-              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-testo-2 underline sm:min-h-0">
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-full bg-s2 px-3.5 text-[13px] text-testo-2 sm:min-h-9">
                 precedenti
               </summary>
               <ul className="absolute right-0 z-10 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg bg-s2 p-1 shadow-lg">
@@ -73,10 +73,17 @@ export default async function CopilotaPage({
         </div>
       </div>
 
-      <p className="text-sm text-testo-2">
-        Chiedi un numero e lo va a prendere dal database: non ne calcola nessuno. Le modifiche le{' '}
-        <strong>prepara</strong>, e le applichi tu con un tocco.
-      </p>
+      <details className="text-[13px] text-testo-2">
+        <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
+          di che cosa si pu&ograve; fidare?
+        </summary>
+        <p className="pb-2">
+          Chiedi un numero e lo va a <strong>prendere</strong> dal database: non ne calcola nessuno,
+          e le cifre che non risultano dai dati letti compaiono marcate sotto il messaggio. Le
+          modifiche le <strong>prepara</strong>, e le applichi tu con un tocco — così ogni scrittura
+          resta attribuibile a chi l&rsquo;ha voluta.
+        </p>
+      </details>
 
       {!aiConfigurata() && (
         <p className="nota nota-avviso text-[14px]">

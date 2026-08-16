@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { leggiAvvisi } from '@/lib/avvisi/leggi';
 import { PannelloAvvisi } from './pannello-avvisi';
+import { conta, TestataPagina } from '../testata';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Avvisi' };
@@ -18,16 +19,24 @@ export const metadata: Metadata = { title: 'Avvisi' };
  */
 export default async function AvvisiPage() {
   const avvisi = await leggiAvvisi();
+  const aperti = avvisi.filter((a) => a.status !== 'dismissed').length;
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Avvisi</h1>
-        <p className="mt-1 text-[13px] text-testo-2">
-          Solo due cose meritano un avviso: che il costo ricorrente sia cambiato, e che i numeri
-          abbiano smesso di essere affidabili. Un avviso ignorato non torna.
-        </p>
-      </div>
+      <TestataPagina
+        titolo="Avvisi"
+        cifra={conta(aperti)}
+        etichetta={aperti === 0 ? 'niente da leggere' : aperti === 1 ? 'da leggere' : 'da leggere'}
+        tinta={aperti === 0 ? 'var(--investimento)' : 'var(--utile)'}
+        perche={
+          <p>
+            Solo due cose meritano un avviso: che il <strong>costo ricorrente</strong> sia cambiato,
+            e che i numeri abbiano smesso di essere <strong>affidabili</strong>. Tutto il resto è
+            rumore, e il rumore in un canale di avvisi non è neutro: spegne il canale. Un avviso
+            ignorato non torna.
+          </p>
+        }
+      />
 
       <PannelloAvvisi avvisi={avvisi} />
     </div>
