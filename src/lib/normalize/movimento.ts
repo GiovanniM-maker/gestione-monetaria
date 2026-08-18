@@ -94,6 +94,21 @@ export function riconosciGiroconto(
   const codice = testo(
     (payload['bank_transaction_code'] as Record<string, unknown> | undefined)?.['code'],
   );
+
+  // Un cambio valuta e' uno spostamento fra due saldi dello stesso utente: non
+  // esiste una controparte, quindi non c'e' niente da interpretare e il codice
+  // basta da solo. E' la stessa natura del pocket — di cui registriamo un lato
+  // solo — scritta dalla banca in un altro modo: `EXCHANGE` con causale
+  // «Exchanged to EUR» invece di `TRANSFER` con «To EUR».
+  //
+  // Il controllo sta sul **codice** e non sulla causale di proposito: due
+  // «Exchanged to EUR» da 250,72 e 242,07 € risultavano entrate perche' la riga
+  // qui sotto usciva prima di guardarle, e una regola che dipende da come la
+  // banca scrive una frase si rompe alla prima variante — mentre il codice e'
+  // un dato strutturale, che e' il motivo per cui i riferimenti condivisi
+  // battono il confronto fra causali.
+  if (codice === 'EXCHANGE') return true;
+
   if (codice !== 'TRANSFER') return false;
 
   // La controparte dichiarata vale a prescindere dalla forma della causale:
@@ -149,6 +164,21 @@ function chiaveFallback(
       .digest('hex')
   );
 }
+
+/**
+ * I codici con cui la banca scrive un accredito su carta.
+ *
+ * Erano uno solo, ed era mezzo elenco: il 26 giugno 2026 un rimborso di
+ * `Booking.com` da **506,63 €** e' arrivato con `CARD_REFUND`, ha passato il
+ * controllo su `CARD_CREDIT` e ha finito nelle **entrate** — cioe' e' stato
+ * contato come reddito. Un rimborso non e' reddito: e' una spesa annullata, ed
+ * e' precisamente per questo che `is_refund` esiste.
+ *
+ * Un insieme e non un `||`: il prossimo codice che la banca inventa si aggiunge
+ * qui, in un posto solo, e non c'e' modo di scriverne uno e dimenticarne
+ * l'altro.
+ */
+const CODICI_RIMBORSO: ReadonlySet<string> = new Set(['CARD_CREDIT', 'CARD_REFUND']);
 
 export class PayloadNonNormalizzabile extends Error {}
 
@@ -226,7 +256,6 @@ export function normalizzaMovimento(
     status: stato,
     bank_code: codice,
     is_transfer: riconosciGiroconto(payload, contesto.nomiContiPropri),
-    // Un accredito su carta e' il rimborso di un pagamento con carta.
-    is_refund: indicatore === 'CRDT' && codice === 'CARD_CREDIT',
+    is_refund: indicatore === 'CRDT' && codice !== null && CODICI_RIMBORSO.has(codice),
   };
 }

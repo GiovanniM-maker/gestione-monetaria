@@ -284,9 +284,31 @@ qui, che è ciò che l'API fa davvero.
 - **Esistono transazioni con importo `0.00`** (preautorizzazioni di carta rilasciate, tipiche di
   trasporti e distributori). Non sono spese: vanno riconosciute, non sommate.
 - **`bank_transaction_code.code`** distingue `CARD_PAYMENT`, `TRANSFER`, `CARD_CREDIT`,
-  `REV_PAYMENT`. I giroconti fra conti propri sono `TRANSFER` con `remittance_information` del tipo
-  `"To EUR"` o `"From Conto deposito senza vincoli"`: è il segnale più affidabile per `is_transfer`,
-  molto più del confronto fra movimenti speculari.
+  `CARD_REFUND`, `EXCHANGE`, `REV_PAYMENT`. I giroconti fra conti propri sono `TRANSFER` con
+  `remittance_information` del tipo `"To EUR"` o `"From Conto deposito senza vincoli"`: è il segnale
+  più affidabile per `is_transfer`, molto più del confronto fra movimenti speculari.
+- **Quell'elenco era incompleto, e i due codici che mancavano finivano nelle entrate.** Trovato il
+  18 agosto 2026 guardando gli accrediti di giugno, cioè in uso e non in revisione:
+  1. **`CARD_REFUND` è un rimborso su carta come `CARD_CREDIT`**, e `is_refund` guardava solo il
+     secondo. I 506,63 € restituiti da `Booking.com` il 26 giugno risultavano **reddito**. Un
+     rimborso non è reddito: è una spesa annullata, ed è esattamente ciò per cui la colonna esiste.
+  2. **`EXCHANGE` è un cambio valuta**, cioè uno spostamento fra due saldi dello stesso utente:
+     nessuna controparte, quindi il codice basta da solo e non c'è nessuna causale da interpretare.
+     È la stessa natura del pocket — di cui registriamo un lato solo — scritta in un altro modo:
+     `"Exchanged to EUR"` invece di `"To EUR"`. Due righe di giugno, 250,72 e 242,07 €, risultavano
+     entrate perché `riconosciGiroconto` usciva sul `codice !== 'TRANSFER'` prima di guardarle.
+
+  Insieme, **999,42 € di reddito che non esiste** in un mese solo. Il verso in cui è fallito conta:
+  la spesa non si è mossa di un centesimo — un accredito non entra in `v_expenses`, che vuole
+  `amount < 0` — ma le entrate sono il **denominatore** della quota di spesa, e gonfiare un
+  denominatore fa sembrare la spesa più piccola di quel che è. Un errore che abbassa un numero di
+  allarme è peggio di uno che lo alza.
+
+  Ne discende una regola generale, sorella di quella sui rilevatori alla prima esecuzione: **un
+  elenco di codici della banca è un'osservazione, non una specifica**. Scritto come confronto
+  singolo (`codice === 'CARD_CREDIT'`) fallisce **aperto** al primo codice nuovo, e fallisce in
+  silenzio. Ora è un insieme in un posto solo, `CODICI_RIMBORSO`.
+
 - Il nome dell'esercente sta in `creditor.name` e ricompare in `remittance_information[0]`.
 - **`debtor_account_additional_identification` contiene le ultime 4 cifre della carta** (`scheme_name`
   `CPAN`). Rientra nella regola 8: non esce mai verso un LLM.

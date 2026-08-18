@@ -161,6 +161,58 @@ describe('normalizzaMovimento', () => {
     expect(m.is_refund).toBe(true);
   });
 
+  it('riconosce il rimborso anche quando la banca lo chiama CARD_REFUND', () => {
+    // Il caso vero: 506,63 € restituiti da Booking.com il 26 giugno 2026.
+    // Con il solo CARD_CREDIT passava il filtro e finiva nelle **entrate**,
+    // cioe' veniva contato come reddito.
+    const m = normalizzaMovimento(
+      movimento({
+        credit_debit_indicator: 'CRDT',
+        bank_transaction_code: { code: 'CARD_REFUND' },
+        transaction_amount: { currency: 'EUR', amount: '506.63' },
+      }),
+      CONTO,
+      CONTESTO,
+    );
+    expect(m.is_refund).toBe(true);
+    expect(m.amount).toBe('506.63');
+  });
+
+  it('NON chiama rimborso uno stipendio', () => {
+    // Un'entrata vera resta un'entrata: `is_refund` la toglierebbe dal
+    // denominatore, e la spesa sembrerebbe una quota piu' alta di quel che e'.
+    const m = normalizzaMovimento(
+      movimento({
+        credit_debit_indicator: 'CRDT',
+        bank_transaction_code: { code: 'TRANSFER' },
+        remittance_information: ['Compenso'],
+        debtor: { name: 'Un Cliente Srl' },
+      }),
+      CONTO,
+      CONTESTO,
+    );
+    expect(m.is_refund).toBe(false);
+  });
+
+  it('un cambio valuta e’ un giroconto, non un’entrata', () => {
+    // «Exchanged to EUR»: 250,72 e 242,07 € di giugno risultavano reddito.
+    const m = normalizzaMovimento(
+      movimento({
+        credit_debit_indicator: 'CRDT',
+        bank_transaction_code: { code: 'EXCHANGE' },
+        remittance_information: ['Exchanged to EUR'],
+        transaction_amount: { currency: 'EUR', amount: '250.72' },
+      }),
+      CONTO,
+      CONTESTO,
+    );
+    expect(m.is_transfer).toBe(true);
+    // E non un rimborso: il denaro non torna da un acquisto, si sposta fra due
+    // saldi. Due bandierine per lo stesso fatto direbbero due cose diverse a
+    // `fuori_dalla_spesa`.
+    expect(m.is_refund).toBe(false);
+  });
+
   it('rifiuta un payload senza importo invece di scrivere zero', () => {
     expect(() =>
       normalizzaMovimento(movimento({ transaction_amount: null }), CONTO, CONTESTO),
@@ -201,6 +253,28 @@ describe('riconosciGiroconto', () => {
 
   it('NON marca come giroconto un pagamento con carta', () => {
     expect(giroconto('To EUR', 'CARD_PAYMENT')).toBe(false);
+  });
+
+  it('riconosce il cambio valuta dal codice, qualunque cosa dica la causale', () => {
+    // Un `EXCHANGE` sposta denaro fra due saldi dello stesso utente: non ha una
+    // controparte, quindi non c'e' niente da interpretare. Legarlo alla frase
+    // «Exchanged to EUR» lo farebbe sfuggire alla prima variante che la banca
+    // decide di scrivere.
+    expect(giroconto('Exchanged to EUR', 'EXCHANGE')).toBe(true);
+    expect(giroconto('Exchanged from GBP', 'EXCHANGE')).toBe(true);
+    expect(giroconto('Cambio', 'EXCHANGE')).toBe(true);
+  });
+
+  it('riconosce il cambio valuta anche senza causale', () => {
+    expect(
+      riconosciGiroconto(
+        movimento({
+          bank_transaction_code: { code: 'EXCHANGE' },
+          remittance_information: null,
+        }),
+        CONTESTO.nomiContiPropri,
+      ),
+    ).toBe(true);
   });
 });
 
