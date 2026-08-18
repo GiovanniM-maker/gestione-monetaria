@@ -35,6 +35,11 @@ export default async function DaConfermarePage() {
     leggiStato(),
   ]);
   const valgono = righe.reduce((s, r) => s + centesimiDi(r.amount_eur ?? r.amount), 0n);
+  // Il giorno di oggi si calcola **qui**, sul server, in `Europe/Rome`. Nel
+  // browser userebbe il fuso del telefono: in viaggio, i gruppi «oggi» e
+  // «ieri» si sposterebbero rispetto alle date che la banca ha scritto — che
+  // sono giorni civili italiani e non istanti.
+  const oggi = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
 
   /**
    * Se i dati sono fermi, «nessun pagamento nelle ultime 24 ore» e' falso.
@@ -81,7 +86,13 @@ export default async function DaConfermarePage() {
         }
       />
 
-      <PannelloConferma righe={righe} recenti={recenti} categorie={categorie} fermi={fermi} />
+      <PannelloConferma
+        righe={righe}
+        recenti={recenti}
+        categorie={categorie}
+        fermi={fermi}
+        oggi={oggi}
+      />
     </div>
   );
 }
