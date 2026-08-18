@@ -194,6 +194,25 @@ describe('normalizzaMovimento', () => {
     expect(m.is_refund).toBe(false);
   });
 
+  it('la gamba in uscita di un cambio valuta non e’ spesa', () => {
+    // La gamba negativa e' l'errore piu' grave dei due: `amount < 0` piu'
+    // `is_transfer` falso sono esattamente le condizioni di `v_expenses`, quindi
+    // i 500 € usciti il 6 giugno 2026 per essere ricambiati il 7 e l'8 erano
+    // spesa reale nel numero per cui l'applicazione esiste.
+    const m = normalizzaMovimento(
+      movimento({
+        credit_debit_indicator: 'DBIT',
+        bank_transaction_code: { code: 'EXCHANGE' },
+        remittance_information: ['Exchanged to GBP'],
+        transaction_amount: { currency: 'EUR', amount: '500.00' },
+      }),
+      CONTO,
+      CONTESTO,
+    );
+    expect(m.amount).toBe('-500.00');
+    expect(m.is_transfer).toBe(true);
+  });
+
   it('un cambio valuta e’ un giroconto, non un’entrata', () => {
     // «Exchanged to EUR»: 250,72 e 242,07 € di giugno risultavano reddito.
     const m = normalizzaMovimento(

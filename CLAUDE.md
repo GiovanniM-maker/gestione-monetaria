@@ -287,22 +287,32 @@ qui, che è ciò che l'API fa davvero.
   `CARD_REFUND`, `EXCHANGE`, `REV_PAYMENT`. I giroconti fra conti propri sono `TRANSFER` con
   `remittance_information` del tipo `"To EUR"` o `"From Conto deposito senza vincoli"`: è il segnale
   più affidabile per `is_transfer`, molto più del confronto fra movimenti speculari.
-- **Quell'elenco era incompleto, e i due codici che mancavano finivano nelle entrate.** Trovato il
+- **Quell'elenco era incompleto, e i due codici che mancavano falsavano i totali.** Trovato il
   18 agosto 2026 guardando gli accrediti di giugno, cioè in uso e non in revisione:
   1. **`CARD_REFUND` è un rimborso su carta come `CARD_CREDIT`**, e `is_refund` guardava solo il
-     secondo. I 506,63 € restituiti da `Booking.com` il 26 giugno risultavano **reddito**. Un
-     rimborso non è reddito: è una spesa annullata, ed è esattamente ciò per cui la colonna esiste.
+     secondo. Cinque righe su tutto lo storico, **616,23 €**, di cui i 506,63 restituiti da
+     `Booking.com` il 26 giugno: risultavano tutte **reddito**. Un rimborso non è reddito: è una
+     spesa annullata, ed è esattamente ciò per cui la colonna esiste.
   2. **`EXCHANGE` è un cambio valuta**, cioè uno spostamento fra due saldi dello stesso utente:
      nessuna controparte, quindi il codice basta da solo e non c'è nessuna causale da interpretare.
      È la stessa natura del pocket — di cui registriamo un lato solo — scritta in un altro modo:
-     `"Exchanged to EUR"` invece di `"To EUR"`. Due righe di giugno, 250,72 e 242,07 €, risultavano
-     entrate perché `riconosciGiroconto` usciva sul `codice !== 'TRANSFER'` prima di guardarle.
+     `"Exchanged to EUR"` invece di `"To EUR"`. `riconosciGiroconto` usciva sul
+     `codice !== 'TRANSFER'` prima di guardare la causale.
 
-  Insieme, **999,42 € di reddito che non esiste** in un mese solo. Il verso in cui è fallito conta:
-  la spesa non si è mossa di un centesimo — un accredito non entra in `v_expenses`, che vuole
-  `amount < 0` — ma le entrate sono il **denominatore** della quota di spesa, e gonfiare un
-  denominatore fa sembrare la spesa più piccola di quel che è. Un errore che abbassa un numero di
-  allarme è peggio di uno che lo alza.
+  **Il cambio valuta ha due gambe, e sbagliarle è due errori opposti.** Giugno 2026 ne contiene un
+  giro completo: **−500,00 €** il 6, poi **+242,07** il 7 e **+250,72** l'8. Le due entrate
+  gonfiavano il reddito; la prima riga, che è negativa, era **spesa reale a tutti gli effetti** —
+  `amount < 0` e `is_transfer` falso sono esattamente le condizioni di `v_expenses`. Quindi 500 € di
+  spesa che non è spesa, in un mese solo, sul numero per cui l'applicazione esiste.
+
+  I due versi non si equivalgono. Gonfiare le **entrate** abbassa la quota di spesa, e un errore che
+  abbassa un numero d'allarme è peggio di uno che lo alza. Gonfiare la **spesa** almeno si vede: è
+  il verso in cui la normalizzazione sbaglia di proposito quando l'indicatore manca.
+
+  Restano fuori i **7,21 €** di scarto fra le due gambe, che sono il margine applicato da Revolut sul
+  cambio: un costo vero, che marcando entrambe le gambe come giroconto diventa invisibile. È la
+  stessa proprietà che i pocket hanno da sempre, e per sette euro su undici mesi non vale
+  un meccanismo — ma va saputo, non scoperto.
 
   Ne discende una regola generale, sorella di quella sui rilevatori alla prima esecuzione: **un
   elenco di codici della banca è un'osservazione, non una specifica**. Scritto come confronto
