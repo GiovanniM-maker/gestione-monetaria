@@ -35,6 +35,30 @@ export const CONTESTI = ['personale', 'business'] as const;
  */
 const SLUG = /^[a-z0-9][a-z0-9-]{0,60}$/;
 
+/**
+ * La pseudo-classe con cui le viste nominano la spesa senza classe.
+ *
+ * Nei dati e' un `null`, ma `cerca_movimenti` la confronta per nome
+ * (`coalesce(discretion, 'non classificato')`), quindi il nome deve poter
+ * attraversare l'indirizzo intero — dal cruscotto fino alla RPC. E ha uno
+ * spazio, che la forma degli slug giustamente rifiuta: senza questa eccezione
+ * il filtro veniva scartato in silenzio e «non classificato» apriva **tutte**
+ * le spese del mese, che e' precisamente la lista plausibile e sbagliata da
+ * cui questo modulo dichiara di difendersi.
+ */
+export const CLASSE_NON_CLASSIFICATA = 'non classificato';
+
+/**
+ * Il valore con cui l'indirizzo chiede «solo i movimenti senza categoria».
+ *
+ * Nei dati e' un `category_id` nullo, e `null` un indirizzo non lo sa dire:
+ * l'assenza del parametro significa gia' «tutte». Non e' un uuid sentinella di
+ * proposito — un uuid inventato per dire «nessuno» prima o poi collide o
+ * finisce in un confronto vero; una parola non puo'. `cercaMovimenti` la
+ * traduce nel flag `p_senza_categoria` della RPC.
+ */
+export const CATEGORIA_SENZA = 'senza-categoria';
+
 /** Quante righe per pagina. Oltre, su un telefono, non si scorre piu'. */
 export const PER_PAGINA = 50;
 
@@ -96,9 +120,9 @@ export function leggiFiltri(parametri: Record<string, string | string[] | undefi
     da: giorno('da'),
     a: giorno('a'),
     ricerca: testo(primo('q')) ?? '',
-    categoria: identificativo('categoria'),
+    categoria: categoriaDallIndirizzo(primo('categoria')),
     merchant: identificativo('esercente'),
-    discrezionalita: dellaFormaGiusta(primo('classe'), SLUG),
+    discrezionalita: classeDallIndirizzo(primo('classe')),
     contesto: unaDelle(primo('contesto'), CONTESTI),
     tipo: unaDelle(primo('tipo'), TIPI) ?? 'spesa',
     ordine: unaDelle(primo('ordine'), ORDINI) ?? 'data',
@@ -163,7 +187,8 @@ export function descriviFiltri(
   else if (filtri.da !== null) voci.push(`dal ${filtri.da}`);
   else if (filtri.a !== null) voci.push(`fino al ${filtri.a}`);
 
-  if (filtri.categoria !== null) voci.push(nomi.categoria ?? 'una categoria');
+  if (filtri.categoria === CATEGORIA_SENZA) voci.push('senza categoria');
+  else if (filtri.categoria !== null) voci.push(nomi.categoria ?? 'una categoria');
   if (filtri.merchant !== null) voci.push(nomi.esercente ?? 'un esercente');
   if (filtri.discrezionalita !== null) voci.push(nomi.classe ?? filtri.discrezionalita);
   if (filtri.contesto !== null) voci.push(filtri.contesto);
@@ -171,6 +196,19 @@ export function descriviFiltri(
   if (filtri.ordine === 'importo') voci.push('dal più grosso');
 
   return voci;
+}
+
+/** Un identificativo di categoria, oppure la parola che chiede «nessuna». */
+function categoriaDallIndirizzo(valore: unknown): string | null {
+  const v = testo(valore);
+  if (v === CATEGORIA_SENZA) return CATEGORIA_SENZA;
+  return v !== null && UUID.test(v) ? v : null;
+}
+
+/** Uno slug di classe, oppure la pseudo-classe — che uno slug non e'. */
+function classeDallIndirizzo(valore: unknown): string | null {
+  if (testo(valore) === CLASSE_NON_CLASSIFICATA) return CLASSE_NON_CLASSIFICATA;
+  return dellaFormaGiusta(valore, SLUG);
 }
 
 function dellaFormaGiusta(valore: unknown, forma: RegExp): string | null {

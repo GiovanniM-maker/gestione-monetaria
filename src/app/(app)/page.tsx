@@ -27,7 +27,7 @@ import {
   totalePerTipo,
 } from '@/lib/abbonamenti/formato';
 import { leggiClassi } from '@/lib/tassonomia/classi';
-import { estremiDelMese } from '@/lib/movimenti/filtri';
+import { CATEGORIA_SENZA, estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
 import { BarraClassi, Freccia, ordineDelleClassi, tinteDelleClassi } from './grafici';
 import { Ripartizione } from './livello';
@@ -178,7 +178,7 @@ export default async function CruscottoPage({
           Ha un `<Suspense>` suo e non quello sopra: cosi' il numerone e le
           classi compaiono senza aspettare questa query. */}
       <Suspense fallback={<ScheletroElenco righe={5} />}>
-        <InCosa mese={mese} />
+        <InCosa mese={mese} rigaMese={rigaMese} />
       </Suspense>
 
       <section className="space-y-3">
@@ -225,7 +225,7 @@ export default async function CruscottoPage({
  * si vede l'andamento e si scende agli esercenti. Per scendere restando qui
  * c'e' `/dove`, ed e' il collegamento in fondo al cruscotto.
  */
-async function InCosa({ mese }: { mese: string }) {
+async function InCosa({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMese | null }) {
   const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
   const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
 
@@ -241,7 +241,31 @@ async function InCosa({ mese }: { mese: string }) {
     }))
     .filter((v) => v.valore !== 0n);
 
-  return <Ripartizione titolo="In cosa" voci={radici} />;
+  // «Senza categoria» e' una riga, non un'assenza: senza, la somma delle voci
+  // e' minore del totale del mese e la differenza non ha un posto dove vedersi.
+  // E' la stessa regola della fisarmonica di /dove. La vista per categoria non
+  // puo' darla per costruzione (raggruppa su un id che qui e' nullo), ma il
+  // totale del mese la porta gia' con se'.
+  //
+  // Apre /movimenti e non una scheda di categoria, perche' una scheda di
+  // «nessuna categoria» non esiste: la lista filtrata E' la risposta.
+  const senza =
+    rigaMese === null || rigaMese.senza_categoria === 0
+      ? []
+      : [
+          {
+            chiave: 'senza-categoria',
+            etichetta: 'Senza categoria',
+            dettaglio: `${rigaMese.senza_categoria} ${rigaMese.senza_categoria === 1 ? 'movimento' : 'movimenti'} da assegnare`,
+            valore: centesimi(rigaMese.spesa_senza_categoria),
+            href: perMese(mese, { categoria: CATEGORIA_SENZA }),
+            variazione: undefined,
+          },
+        ];
+
+  // In coda e non riordinata in mezzo: le categorie restano nell'ordine della
+  // vista, e la riga che chiede un lavoro sta dove si legge per ultima.
+  return <Ripartizione titolo="In cosa" voci={[...radici, ...senza]} />;
 }
 
 /**
