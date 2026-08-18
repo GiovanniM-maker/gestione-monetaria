@@ -32,6 +32,14 @@ consigli, regola 8 estesa ai motori di ricerca (**solo esercenti garantiti da ca
 quattro sincronizzazioni al giorno più una a ogni apertura, query del copilota proposte e approvate.
 Va letto prima di aprire il prossimo cantiere.
 
+**L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
+2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
+icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere
+colorate, gli avatar degli esercenti, le illustrazioni delle testate. Contiene anche i punti in
+cui il mockup **sbaglia** e non va copiato — la legenda che somma classi e contesti come se
+fossero lo stesso taglio, e un testo che parla di budget che in questa applicazione non
+esistono. Va letto prima di toccare `globals.css`.
+
 **La 6-bis nasce da un inventario, non da un piano.** Fatto a fine Fase 6 e scritto in
 `docs/cruscotto.md`, ha trovato che **nessuna schermata mostra una transazione**: ogni discesa
 finisce su un aggregato. Ne discendono tre impossibilità — verificare un numero scomponendolo,
