@@ -70,7 +70,19 @@ export function SceltaCategoria({
   etichetta?: boolean;
 }) {
   const router = useRouter();
+  /** Quello che sta nel database. */
   const [valore, setValore] = useState(categoriaId ?? '');
+  /**
+   * Quello che si sta scegliendo, e che non e' ancora scritto.
+   *
+   * Prima non esisteva: toccare una riga dell'elenco **scriveva**. Su un
+   * telefono, dove si tocca per leggere meglio quanto per decidere, e' il modo
+   * piu' rapido di cambiare la categoria di una spesa senza volerlo — e su
+   * `movimento` quella scrittura marca anche `manually_categorized`, che
+   * blocca per sempre ogni automatismo su quella riga. Un gesto ambiguo non
+   * puo' avere una conseguenza definitiva.
+   */
+  const [scelto, setScelto] = useState(categoriaId ?? '');
   const [aperto, setAperto] = useState(false);
   const [cerca, setCerca] = useState('');
   const [inCorso, setInCorso] = useState(false);
@@ -123,7 +135,10 @@ export function SceltaCategoria({
       setCreando(false);
       setNuova('');
       setDentro('');
-      await cambia(id);
+      // Creata e **scelta**, non assegnata: la scrittura sulla riga la fa
+      // «Salva», come per ogni altra categoria dell'elenco. Creare una
+      // categoria e' un atto suo, e resta fatto anche se poi si annulla.
+      setScelto(id);
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e));
     } finally {
@@ -134,6 +149,7 @@ export function SceltaCategoria({
   async function cambia(nuovo: string) {
     const prima = valore;
     setValore(nuovo);
+    setScelto(nuovo);
     setAperto(false);
     setCerca('');
     setInCorso(true);
@@ -162,6 +178,7 @@ export function SceltaCategoria({
         // Si torna al valore di prima: a schermo non deve restare una scelta
         // che il database non ha.
         setValore(prima);
+        setScelto(prima);
         setErrore(String(esito['error'] ?? risposta.status));
         return;
       }
@@ -217,6 +234,10 @@ export function SceltaCategoria({
           setAperto(false);
           setCerca('');
           setCreando(false);
+          // Chiudere senza salvare **annulla**: se la scelta in sospeso
+          // restasse, riaprendo il foglio si troverebbe il segno di spunta su
+          // una categoria che il database non ha, e si crederebbe assegnata.
+          setScelto(valore);
         }}
       >
         {creando ? (
@@ -246,7 +267,8 @@ export function SceltaCategoria({
               </select>
             </label>
             <p className="text-[12px] text-testo-3">
-              Appena creata viene assegnata a questa voce. Se esiste gi&agrave; con lo stesso nome
+              Appena creata viene <strong>scelta</strong> qui: per assegnarla serve
+              &laquo;Salva&raquo;, come per ogni altra. Se esiste gi&agrave; con lo stesso nome
               nello stesso posto, si usa quella.
             </p>
             <div className="flex gap-2">
@@ -256,7 +278,7 @@ export function SceltaCategoria({
                 disabled={inCorso || nuova.trim() === ''}
                 className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
               >
-                {inCorso ? '…' : 'Crea e assegna'}
+                {inCorso ? '…' : 'Crea e scegli'}
               </button>
               <button
                 type="button"
@@ -299,16 +321,16 @@ export function SceltaCategoria({
             <ul className="elenco text-[15px]">
               <Riga
                 testo="senza categoria"
-                scelta={valore === ''}
+                scelta={scelto === ''}
                 spenta
-                onScegli={() => void cambia('')}
+                onScegli={() => setScelto('')}
               />
               {viste.map((c) => (
                 <Riga
                   key={c.id}
                   testo={c.percorso}
-                  scelta={c.id === valore}
-                  onScegli={() => void cambia(c.id)}
+                  scelta={c.id === scelto}
+                  onScegli={() => setScelto(c.id)}
                 />
               ))}
             </ul>
@@ -318,6 +340,42 @@ export function SceltaCategoria({
                 Nessuna categoria con questo nome.
               </p>
             )}
+
+            {/* «Salva» in fondo, e non un tocco che scrive.
+
+                Scegliere e confermare erano lo stesso gesto: si toccava una
+                riga dell'elenco e la scrittura partiva. Su un telefono si tocca
+                per leggere meglio quanto per decidere, e su un movimento quella
+                scrittura marca anche `manually_categorized`, che blocca per
+                sempre ogni automatismo su quella riga. Un gesto ambiguo non
+                puo' avere una conseguenza definitiva.
+
+                Resta appiccicato in fondo mentre l'elenco scorre: con
+                trentacinque categorie, un bottone in coda alla lista si
+                raggiunge scorrendo, e a quel punto non si sa piu' cosa si e'
+                scelto. */}
+            <div className="sticky bottom-0 -mx-4 mt-2 flex gap-2 bg-s2 px-4 pt-3 pb-1">
+              <button
+                type="button"
+                onClick={() => void cambia(scelto)}
+                disabled={inCorso || scelto === valore}
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
+              >
+                {inCorso ? '…' : scelto === valore ? 'Nessuna modifica' : 'Salva'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setScelto(valore);
+                  setAperto(false);
+                  setCerca('');
+                }}
+                disabled={inCorso}
+                className="inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 px-3.5 text-[13px] font-medium"
+              >
+                Annulla
+              </button>
+            </div>
           </>
         )}
 

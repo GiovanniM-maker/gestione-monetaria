@@ -8,6 +8,12 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { tinteDelleClassi } from '../grafici';
+import {
+  ORDINAMENTI,
+  raggruppaPerTempo,
+  type ChiaveGruppo,
+  type Ordinamento,
+} from '@/lib/conferma/gruppi';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
 
@@ -48,6 +54,7 @@ export function PannelloConferma({
   recenti,
   categorie,
   fermi,
+  oggi,
 }: {
   righe: readonly RigaDaConfermare[];
   recenti: readonly RigaRecente[];
@@ -55,12 +62,25 @@ export function PannelloConferma({
   categorie: readonly { id: string; percorso: string }[];
   /** Perche' quel che si vede e' vecchio, o `null` se non lo e'. */
   fermi: string | null;
+  /** Il giorno di oggi in `Europe/Rome`, calcolato dal server. */
+  oggi: string;
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [tutteChieste, setTutteChieste] = useState(false);
+  const [ordinamento, setOrdinamento] = useState<Ordinamento>('data');
+  /**
+   * I gruppi chiusi. «Piu' di 7 giorni fa» nasce chiuso.
+   *
+   * E' il gruppo che si allunga da solo se si salta qualche sera, ed e' anche
+   * quello meno urgente: aperto, spinge fuori schermo le due righe di oggi,
+   * che sono il motivo per cui questa schermata si apre. Chiuso dice comunque
+   * quante ne contiene, quindi non nasconde niente — sposta soltanto cio' che
+   * si vede per primo.
+   */
+  const [chiusi, setChiusi] = useState<ReadonlySet<ChiaveGruppo>>(new Set(['prima']));
 
   async function scrivi(corpo: Record<string, unknown>, chiave: string) {
     setInCorso(chiave);
@@ -138,56 +158,113 @@ export function PannelloConferma({
   }
 
   const occupato = inCorso !== null;
+  const gruppi = raggruppaPerTempo(righe, oggi, ordinamento, (r) => r.amount_eur ?? r.amount);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
       {/* Anche con la lista piena: quello che c'e' e' vecchio, e confermarlo
           non fa arrivare il resto. */}
       {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
 
-      <p className="text-[13px] text-testo-2">
-        {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
-      </p>
+      {/* La riga di controllo: quante sono, e con che ordine.
 
-      <ul className="space-y-3">
-        {righe.map((r) => (
-          <li key={r.id} className="scheda p-4">
-            <Carta riga={r} categorie={categorie} />
+          L'ordinamento sta accanto al conteggio e non dentro un pannello di
+          filtri: e' l'unica scelta che questa schermata offre sulla lista, e
+          nasconderla dietro un tocco vorrebbe dire che nessuno la trova. */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] text-testo-2">
+          {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
+        </p>
+        <div className="flex gap-1" role="group" aria-label="Come ordinare">
+          {ORDINAMENTI.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => setOrdinamento(o)}
+              aria-pressed={ordinamento === o}
+              className={`inline-flex min-h-11 items-center rounded-controllo px-3 text-[13px] sm:min-h-9 ${
+                ordinamento === o ? 'bg-accento text-accento-testo' : 'bg-s2 text-testo-2'
+              }`}
+            >
+              {o === 'data' ? 'per data' : 'per importo'}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                disabled={occupato}
-                onClick={() => void scrivi({ id: r.id }, r.id)}
-                className={`${BOTTONE} flex-1`}
+      {gruppi.map((g) => {
+        const chiuso = chiusi.has(g.chiave);
+        return (
+          <section key={g.chiave} className="space-y-3">
+            <button
+              type="button"
+              onClick={() =>
+                setChiusi((s) => {
+                  const n = new Set(s);
+                  if (chiuso) n.delete(g.chiave);
+                  else n.add(g.chiave);
+                  return n;
+                })
+              }
+              aria-expanded={!chiuso}
+              className="flex min-h-11 w-full items-center gap-2 text-left"
+            >
+              <span className="text-[15px] font-semibold tracking-[-0.02em]">{g.nome}</span>
+              <span className="cifra text-[13px] text-testo-3">{g.righe.length}</span>
+              <span className="flex-1" />
+              <span
+                aria-hidden="true"
+                className="shrink-0 text-testo-3 transition-transform duration-150"
+                style={{ transform: chiuso ? 'none' : 'rotate(90deg)' }}
               >
-                {inCorso === r.id ? '…' : 'Va bene'}
-              </button>
-              <button
-                type="button"
-                disabled={occupato}
-                onClick={() => setAperta(r.id)}
-                className={`${BOTTONE_MINORE} flex-1`}
-              >
-                Correggi
-              </button>
-            </div>
+                ›
+              </span>
+            </button>
 
-            {/* La correzione sale dal basso invece di aprirsi dentro la carta:
-                aperta in linea spingeva giu' tutte le altre e la riga che si
-                stava guardando finiva fuori schermo. */}
-            <Correzione
-              riga={r}
-              categorie={categorie}
-              aperta={aperta === r.id}
-              occupato={occupato}
-              onAnnulla={() => setAperta(null)}
-              onSalva={(corpo) => void scrivi({ id: r.id, ...corpo }, r.id)}
-            />
-          </li>
-        ))}
-      </ul>
+            {!chiuso && (
+              <ul className="space-y-3">
+                {g.righe.map((r) => (
+                  <li key={r.id} className="scheda p-4">
+                    <Carta riga={r} categorie={categorie} />
+
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={occupato}
+                        onClick={() => void scrivi({ id: r.id }, r.id)}
+                        className={`${BOTTONE} flex-1`}
+                      >
+                        {inCorso === r.id ? '…' : 'Va bene'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={occupato}
+                        onClick={() => setAperta(r.id)}
+                        className={`${BOTTONE_MINORE} flex-1`}
+                      >
+                        Correggi
+                      </button>
+                    </div>
+
+                    {/* La correzione sale dal basso invece di aprirsi dentro la
+                        carta: aperta in linea spingeva giu' tutte le altre e la
+                        riga che si stava guardando finiva fuori schermo. */}
+                    <Correzione
+                      riga={r}
+                      categorie={categorie}
+                      aperta={aperta === r.id}
+                      occupato={occupato}
+                      onAnnulla={() => setAperta(null)}
+                      onSalva={(corpo) => void scrivi({ id: r.id, ...corpo }, r.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
 
       {/* In fondo e non in cima: si preme dopo aver letto, non al posto di
           leggere. */}

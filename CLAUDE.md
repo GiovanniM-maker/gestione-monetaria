@@ -32,6 +32,14 @@ consigli, regola 8 estesa ai motori di ricerca (**solo esercenti garantiti da ca
 quattro sincronizzazioni al giorno più una a ogni apertura, query del copilota proposte e approvate.
 Va letto prima di aprire il prossimo cantiere.
 
+**L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
+2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
+icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere
+colorate, gli avatar degli esercenti, le illustrazioni delle testate. Contiene anche i punti in
+cui il mockup **sbaglia** e non va copiato — la legenda che somma classi e contesti come se
+fossero lo stesso taglio, e un testo che parla di budget che in questa applicazione non
+esistono. Va letto prima di toccare `globals.css`.
+
 **La 6-bis nasce da un inventario, non da un piano.** Fatto a fine Fase 6 e scritto in
 `docs/cruscotto.md`, ha trovato che **nessuna schermata mostra una transazione**: ogni discesa
 finisce su un aggregato. Ne discendono tre impossibilità — verificare un numero scomponendolo,
@@ -276,9 +284,41 @@ qui, che è ciò che l'API fa davvero.
 - **Esistono transazioni con importo `0.00`** (preautorizzazioni di carta rilasciate, tipiche di
   trasporti e distributori). Non sono spese: vanno riconosciute, non sommate.
 - **`bank_transaction_code.code`** distingue `CARD_PAYMENT`, `TRANSFER`, `CARD_CREDIT`,
-  `REV_PAYMENT`. I giroconti fra conti propri sono `TRANSFER` con `remittance_information` del tipo
-  `"To EUR"` o `"From Conto deposito senza vincoli"`: è il segnale più affidabile per `is_transfer`,
-  molto più del confronto fra movimenti speculari.
+  `CARD_REFUND`, `EXCHANGE`, `REV_PAYMENT`. I giroconti fra conti propri sono `TRANSFER` con
+  `remittance_information` del tipo `"To EUR"` o `"From Conto deposito senza vincoli"`: è il segnale
+  più affidabile per `is_transfer`, molto più del confronto fra movimenti speculari.
+- **Quell'elenco era incompleto, e i due codici che mancavano falsavano i totali.** Trovato il
+  18 agosto 2026 guardando gli accrediti di giugno, cioè in uso e non in revisione:
+  1. **`CARD_REFUND` è un rimborso su carta come `CARD_CREDIT`**, e `is_refund` guardava solo il
+     secondo. Cinque righe su tutto lo storico, **616,23 €**, di cui i 506,63 restituiti da
+     `Booking.com` il 26 giugno: risultavano tutte **reddito**. Un rimborso non è reddito: è una
+     spesa annullata, ed è esattamente ciò per cui la colonna esiste.
+  2. **`EXCHANGE` è un cambio valuta**, cioè uno spostamento fra due saldi dello stesso utente:
+     nessuna controparte, quindi il codice basta da solo e non c'è nessuna causale da interpretare.
+     È la stessa natura del pocket — di cui registriamo un lato solo — scritta in un altro modo:
+     `"Exchanged to EUR"` invece di `"To EUR"`. `riconosciGiroconto` usciva sul
+     `codice !== 'TRANSFER'` prima di guardare la causale.
+
+  **Il cambio valuta ha due gambe, e sbagliarle è due errori opposti.** Giugno 2026 ne contiene un
+  giro completo: **−500,00 €** il 6, poi **+242,07** il 7 e **+250,72** l'8. Le due entrate
+  gonfiavano il reddito; la prima riga, che è negativa, era **spesa reale a tutti gli effetti** —
+  `amount < 0` e `is_transfer` falso sono esattamente le condizioni di `v_expenses`. Quindi 500 € di
+  spesa che non è spesa, in un mese solo, sul numero per cui l'applicazione esiste.
+
+  I due versi non si equivalgono. Gonfiare le **entrate** abbassa la quota di spesa, e un errore che
+  abbassa un numero d'allarme è peggio di uno che lo alza. Gonfiare la **spesa** almeno si vede: è
+  il verso in cui la normalizzazione sbaglia di proposito quando l'indicatore manca.
+
+  Restano fuori i **7,21 €** di scarto fra le due gambe, che sono il margine applicato da Revolut sul
+  cambio: un costo vero, che marcando entrambe le gambe come giroconto diventa invisibile. È la
+  stessa proprietà che i pocket hanno da sempre, e per sette euro su undici mesi non vale
+  un meccanismo — ma va saputo, non scoperto.
+
+  Ne discende una regola generale, sorella di quella sui rilevatori alla prima esecuzione: **un
+  elenco di codici della banca è un'osservazione, non una specifica**. Scritto come confronto
+  singolo (`codice === 'CARD_CREDIT'`) fallisce **aperto** al primo codice nuovo, e fallisce in
+  silenzio. Ora è un insieme in un posto solo, `CODICI_RIMBORSO`.
+
 - Il nome dell'esercente sta in `creditor.name` e ricompare in `remittance_information[0]`.
 - **`debtor_account_additional_identification` contiene le ultime 4 cifre della carta** (`scheme_name`
   `CPAN`). Rientra nella regola 8: non esce mai verso un LLM.
