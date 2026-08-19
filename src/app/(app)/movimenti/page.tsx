@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
 import {
+  CATEGORIA_SENZA,
+  CLASSE_NON_CLASSIFICATA,
   CONTESTI,
   PER_PAGINA,
   TIPI,
@@ -161,6 +163,9 @@ export default async function MovimentiPage({
                 className={CAMPO_PIENO}
               >
                 <option value="">tutte</option>
+                {/* «Nessuna» non e' una voce dell'albero, ma e' spesa vera e
+                    deve essere chiedibile da qui come dal cruscotto. */}
+                <option value={CATEGORIA_SENZA}>senza categoria</option>
                 {alberoCategorie.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.percorso}
@@ -183,6 +188,10 @@ export default async function MovimentiPage({
                       {c.nome}
                     </option>
                   ))}
+                {/* La pseudo-classe: nei dati e' un null, ma e' spesa vera e
+                    deve avere una voce, o dal cruscotto si arriverebbe a un
+                    filtro che il selettore non sa mostrare. */}
+                <option value={CLASSE_NON_CLASSIFICATA}>non classificato</option>
               </select>
             </label>
             <label className="block">

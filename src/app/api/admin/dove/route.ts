@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
 import { leggiRipartizione } from '@/lib/dove/leggi';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
-import { estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
+import { CATEGORIA_SENZA, estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +63,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         a: periodo.a,
         ...(classe === null ? {} : { classe }),
         ...(contesto === null ? {} : { contesto }),
-        ...(categoria === null ? {} : { categoria }),
+        // Un'apertura di movimenti arriva sempre da una riga di categoria,
+        // quindi «senza parametro» qui non significa «tutte»: e' la riga
+        // «Senza categoria», il cui category_id e' nullo. Senza questa
+        // traduzione la RPC leggeva l'assenza come «qualunque» e la riga
+        // apriva tutti i movimenti del mese.
+        categoria: categoria ?? CATEGORIA_SENZA,
         ordine: 'importo',
       });
 

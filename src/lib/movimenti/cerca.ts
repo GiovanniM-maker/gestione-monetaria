@@ -1,7 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
-import { PER_PAGINA, type Filtri } from './filtri';
+import { CATEGORIA_SENZA, PER_PAGINA, type Filtri } from './filtri';
 
 /**
  * La lettura dei movimenti.
@@ -72,7 +72,10 @@ export async function cercaMovimenti(filtri: Filtri, soloQuesta = false): Promis
     p_da: filtri.da,
     p_a: filtri.a,
     p_ricerca: filtri.ricerca === '' ? null : filtri.ricerca,
-    p_categoria: filtri.categoria,
+    // «Senza categoria» non e' una categoria: la RPC la chiede con un flag,
+    // perche' `p_categoria = null` significa gia' «tutte».
+    p_categoria: filtri.categoria === CATEGORIA_SENZA ? null : filtri.categoria,
+    p_senza_categoria: filtri.categoria === CATEGORIA_SENZA,
     p_merchant: filtri.merchant,
     p_discrezionalita: filtri.discrezionalita,
     p_contesto: filtri.contesto,

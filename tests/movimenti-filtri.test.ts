@@ -45,6 +45,31 @@ describe('leggiFiltri — un filtro inventato non deve arrivare al database', ()
     expect(leggiFiltri({ classe: '-inizia-male' }).discrezionalita).toBeNull();
   });
 
+  it('accetta «senza-categoria», che un uuid non e’', () => {
+    // Nei dati e' un category_id nullo, e null un indirizzo non lo sa dire.
+    // `cercaMovimenti` lo traduce nel flag p_senza_categoria della RPC.
+    expect(leggiFiltri({ categoria: 'senza-categoria' }).categoria).toBe('senza-categoria');
+    // Ma ogni altro testo che non e' un uuid resta fuori come prima.
+    expect(leggiFiltri({ categoria: 'ristoranti' }).categoria).toBeNull();
+  });
+
+  it('descrive il filtro «senza categoria» senza chiamarlo «una categoria»', () => {
+    const f = leggiFiltri({ categoria: 'senza-categoria' });
+    expect(descriviFiltri(f)).toContain('senza categoria');
+  });
+
+  it('accetta la pseudo-classe «non classificato», che uno slug non e’', () => {
+    // Ha uno spazio, e la forma degli slug la rifiutava: dal cruscotto,
+    // toccare «non classificato» apriva TUTTE le spese del mese — il filtro
+    // veniva scartato in silenzio, che e' la lista plausibile e sbagliata da
+    // cui questo modulo dichiara di difendersi.
+    expect(leggiFiltri({ classe: 'non classificato' }).discrezionalita).toBe('non classificato');
+    // Ma resta un'eccezione puntuale, non un allargamento della forma: ogni
+    // altro testo con uno spazio e' ancora fuori.
+    expect(leggiFiltri({ classe: 'non  classificato' }).discrezionalita).toBeNull();
+    expect(leggiFiltri({ classe: 'qualcosa altro' }).discrezionalita).toBeNull();
+  });
+
   it('accetta solo date vere e solo identificativi veri', () => {
     expect(leggiFiltri({ da: '2026-07-01' }).da).toBe('2026-07-01');
     expect(leggiFiltri({ da: '1 luglio' }).da).toBeNull();
