@@ -32,6 +32,15 @@ consigli, regola 8 estesa ai motori di ricerca (**solo esercenti garantiti da ca
 quattro sincronizzazioni al giorno più una a ogni apertura, query del copilota proposte e approvate.
 Va letto prima di aprire il prossimo cantiere.
 
+**Il copilota ha una specifica, e le sue decisioni sono prese.** `docs/copilota.md` e' la
+direzione definitiva del prossimo cantiere, decisa in due passaggi il 19 agosto 2026. La regola che
+la regge: **tutto cio' che il copilota sa, deve poterlo sapere anche il resto dell'applicazione** —
+quindi un fatto che cambia un numero vive nello schema, uno che non cambia nessun numero vive in una
+tabella tipizzata, e niente vive in un posto che solo il copilota legge. Ne discendono `episodico`
+(il caso Booking.com, gia' noto dalla Fase 5), i widget come domande salvate con grammatica chiusa,
+un solo motore di avvisi, e una `/dove` che resta la fisarmonica. Va letto prima di aprire il
+cantiere; la critica lunga da cui esce sta in git al commit `117f8a5`.
+
 **L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
 2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
 icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere
