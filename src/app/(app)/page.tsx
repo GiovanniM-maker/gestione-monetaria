@@ -4,22 +4,21 @@ import Link from 'next/link';
 import type { RigaClasse, RigaTotaleMese } from '@/lib/cruscotto/leggi';
 import {
   leggiAvvisiNuovi,
-  leggiCategorie,
   leggiSpesaPerClasse,
   leggiConfronto,
   leggiDaConfermare,
   leggiEntrate,
   leggiFinestra,
-  leggiAspettoCategorie,
   leggiRicorrente,
   leggiStato,
   leggiVariazioni,
   scegliMese,
 } from '@/lib/cruscotto/letture';
+import { requireUser } from '@/lib/auth/session';
+import { VERSIONE } from '@/lib/versione';
 import { etichettaBreve, etichettaMese, meseValido, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import { comeSiConfronta } from '@/lib/cruscotto/andamento';
 import { daQuanto, freschezza } from '@/lib/cruscotto/freschezza';
-import type { Variazione } from '@/lib/cruscotto/andamento';
 import {
   formattaEuro,
   fuoriDalTotale,
@@ -30,12 +29,13 @@ import {
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { CATEGORIA_SENZA, estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
-import { Tessera, TesseraCategoria } from '@/lib/ui/tessera';
-import { comeIcona } from '@/lib/ui/icone';
-import { BarraClassi, Freccia, ordineDelleClassi, tinteDelleClassi } from './grafici';
-import { Ripartizione } from './livello';
+import { TesseraCategoria } from '@/lib/ui/tessera';
+import { BarraClassi, ordineDelleClassi, tinteDelleClassi } from './grafici';
+import { Fisarmonica } from './dove/fisarmonica';
+import { nodiPerClasse } from './dove/nodi-classe';
+import { Menu } from './menu';
 import { SceltaMese } from './mese';
-import { ScheletroCoppia, ScheletroElenco, ScheletroTestata } from './scheletri';
+import { ScheletroCoppia, ScheletroTestata } from './scheletri';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -115,21 +115,6 @@ function perLaBarra(classi: readonly RigaClasse[], ordine: readonly string[]) {
     : [...note, { chiave: 'non classificato', valore: sommaClassi(resto) }];
 }
 
-/**
- * La classe che pesa di piu' nel mese. Tinge appena la scheda del numerone.
- *
- * E' tutta la decorazione che c'e', e non e' decorazione: dopo qualche mese il
- * colore del riquadro dice com'e' andato il mese prima di leggere una cifra.
- */
-function classeDominante(voci: readonly { chiave: string; valore: bigint }[]): string | null {
-  const m = (v: bigint) => (v < 0n ? -v : v);
-  const vinta = voci.reduce<{ chiave: string; valore: bigint } | null>(
-    (max, v) => (max === null || m(v.valore) > m(max.valore) ? v : max),
-    null,
-  );
-  return vinta === null || vinta.valore === 0n ? null : vinta.chiave;
-}
-
 const perMese = (mese: string, extra: Record<string, string> = {}): string => {
   const periodo = estremiDelMese(mese);
   const p = new URLSearchParams(periodo === null ? {} : { da: periodo.da, a: periodo.a });
@@ -143,13 +128,19 @@ export default async function CruscottoPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const parametri = await searchParams;
+  // Gia' verificato dal layout e memorizzato per richiesta: qui serve solo
+  // l'email per il cassetto del menu, che sulla home sta nella riga del mese.
+  const user = await requireUser();
   // L'unica lettura che la pagina aspetta davvero: senza sapere quali mesi
   // esistono non si sa nemmeno quale mostrare.
   const { mese, rigaMese, mesiDisponibili, mesePrecedente, meseSuccessivo, inCorso } =
     await scegliMese(meseValido(parametri['mese']));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-9">
+      {/* La prima riga e' il mese, non il nome dell'applicazione: e' l'unica
+          cosa li' sopra che si tocca davvero, e il menu resta nel suo angolo.
+          L'intestazione del layout su questa pagina non c'e' (Intestazione). */}
       <SceltaMese
         mese={mese}
         mesi={mesiDisponibili}
@@ -157,6 +148,7 @@ export default async function CruscottoPage({
         successivo={meseSuccessivo}
         inCorso={inCorso}
         indirizzo="/?mese=%m"
+        menu={<Menu email={user.email ?? null} versione={VERSIONE} />}
       />
 
       {/* Prima dei numeri, e solo quando c'e' qualcosa che li rende falsi:
@@ -170,44 +162,30 @@ export default async function CruscottoPage({
         <QuantoHoSpeso mese={mese} rigaMese={rigaMese} />
       </Suspense>
 
-      {/* Le categorie di primo livello, subito sotto le classi.
-
-          Sono due tagli della stessa spesa e stanno vicini apposta: la classe
-          dice **che tipo** di spesa era, la categoria dice **in cosa**. Chi
-          apre l'app guarda quasi sempre la seconda — «quanto ho speso in
-          ristoranti» e' una domanda che ci si fa, «quanto ho speso in
-          voluttuario» e' una domanda che si impara a farsi.
-
-          Ha un `<Suspense>` suo e non quello sopra: cosi' il numerone e le
-          classi compaiono senza aspettare questa query. */}
-      <Suspense fallback={<ScheletroElenco righe={5} />}>
-        <InCosa mese={mese} rigaMese={rigaMese} />
-      </Suspense>
+      {/* «In cosa» non c'e' piu': era le categorie di primo livello, e ora le
+          stesse righe stanno **dentro** le classi — si tocca la classe e le
+          sue categorie si aprono li'. Due elenchi con le stesse voci erano
+          un'informazione doppia e mezza schermata in piu'. */}
 
       <section className="space-y-3">
-        <div className="flex items-baseline justify-between gap-3">
-          {/* «Di questo, quanto torna ogni mese» andava a capo e spingeva su
-              il collegamento accanto. Quattro parole dicono la stessa cosa. */}
-          <h2 className="eti px-1">Quanto torna ogni mese</h2>
-          <Link
-            className="inline-flex min-h-11 shrink-0 items-center text-[13px] text-accento sm:min-h-0"
-            href="/abbonamenti"
-          >
-            dettaglio ›
-          </Link>
-        </div>
+        {/* «Di questo, quanto torna ogni mese» andava a capo e spingeva su
+            il collegamento accanto. Quattro parole dicono la stessa cosa.
+            Il collegamento al dettaglio non serve piu' qui: le due tessere
+            sotto SONO il collegamento. */}
+        <h2 className="eti px-1">Quanto torna ogni mese</h2>
         <Suspense fallback={<ScheletroCoppia />}>
           <Ricorrente mese={mese} />
         </Suspense>
       </section>
 
-      {/* Cosa c'e' da fare oggi, e lo stato del sistema. In fondo e non in
-          cima: un avviso che compare prima del numero si legge come «c'e' un
-          problema» ogni volta che apri l'app, e dopo una settimana non lo
-          leggi piu'. E' il modo in cui muoiono i canali di notifica, gia'
-          scritto nelle decisioni della Fase 8. */}
+      {/* L'Inbox: tutto cio' che chiede un'occhiata o un gesto, in un posto
+          solo e in fondo. In fondo e non in cima: un avviso che compare prima
+          del numero si legge come «c'e' un problema» ogni volta che apri
+          l'app, e dopo una settimana non lo leggi piu'. E' il modo in cui
+          muoiono i canali di notifica, gia' scritto nelle decisioni della
+          Fase 8. */}
       <Suspense fallback={null}>
-        <DaFare mese={mese} rigaMese={rigaMese} />
+        <Inbox mese={mese} rigaMese={rigaMese} />
       </Suspense>
     </div>
   );
@@ -216,83 +194,6 @@ export default async function CruscottoPage({
 /* -------------------------------------------------------------------------- */
 /* I blocchi, ognuno con le sue letture                                        */
 /* -------------------------------------------------------------------------- */
-
-/**
- * In cosa: le categorie di primo livello del mese.
- *
- * **Solo le radici.** Con il roll-up la loro somma e' la spesa categorizzata
- * del mese, esattamente una volta; mettendoci anche le figlie ogni euro
- * comparirebbe due volte e il totale non vorrebbe piu' dire niente.
- *
- * Il tocco porta alla scheda della categoria col mese conservato, che e' dove
- * si vede l'andamento e si scende agli esercenti. Per scendere restando qui
- * c'e' `/dove`, ed e' il collegamento in fondo al cruscotto.
- */
-async function InCosa({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMese | null }) {
-  const [categorie, variazioni, aspetto, definizioni] = await Promise.all([
-    leggiCategorie(mese),
-    leggiVariazioni(mese),
-    leggiAspettoCategorie(),
-    leggiClassi(),
-  ]);
-  const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
-  const tinte = tinteDelleClassi(definizioni);
-
-  // La tessera prende la tinta della discrezionalita' predefinita della
-  // categoria (docs/aspetto.md §3.4): «In cosa» diventa leggibile in una
-  // seconda dimensione — tutte le tessere rosa sono spese voluttuarie — senza
-  // aggiungere un alfabeto nuovo. Dove la predefinita non c'e', la tessera e'
-  // neutra: e' vero e si vede.
-  const tesseraDi = (id: string) => {
-    const a = aspetto[id];
-    return (
-      <TesseraCategoria
-        icona={comeIcona(a?.icona ?? null)}
-        tinta={a?.classe != null ? (tinte[a.classe] ?? 'var(--neutro)') : 'var(--neutro)'}
-      />
-    );
-  };
-
-  const radici = categorie
-    .filter((c) => c.parent_id === null)
-    .map((c) => ({
-      chiave: c.category_id,
-      etichetta: c.categoria,
-      dettaglio: `${c.movimenti} ${c.movimenti === 1 ? 'movimento' : 'movimenti'}`,
-      valore: centesimi(c.spesa),
-      href: `/categoria/${c.category_id}?mese=${mese}`,
-      variazione: perCategoria.get(c.category_id),
-      tessera: tesseraDi(c.category_id),
-    }))
-    .filter((v) => v.valore !== 0n);
-
-  // «Senza categoria» e' una riga, non un'assenza: senza, la somma delle voci
-  // e' minore del totale del mese e la differenza non ha un posto dove vedersi.
-  // E' la stessa regola della fisarmonica di /dove. La vista per categoria non
-  // puo' darla per costruzione (raggruppa su un id che qui e' nullo), ma il
-  // totale del mese la porta gia' con se'.
-  //
-  // Apre /movimenti e non una scheda di categoria, perche' una scheda di
-  // «nessuna categoria» non esiste: la lista filtrata E' la risposta.
-  const senza =
-    rigaMese === null || rigaMese.senza_categoria === 0
-      ? []
-      : [
-          {
-            chiave: 'senza-categoria',
-            etichetta: 'Senza categoria',
-            tessera: <TesseraCategoria icona="punti" tinta="var(--neutro)" />,
-            dettaglio: `${rigaMese.senza_categoria} ${rigaMese.senza_categoria === 1 ? 'movimento' : 'movimenti'} da assegnare`,
-            valore: centesimi(rigaMese.spesa_senza_categoria),
-            href: perMese(mese, { categoria: CATEGORIA_SENZA }),
-            variazione: undefined,
-          },
-        ];
-
-  // In coda e non riordinata in mezzo: le categorie restano nell'ordine della
-  // vista, e la riga che chiede un lavoro sta dove si legge per ultima.
-  return <Ripartizione titolo="In cosa" voci={[...radici, ...senza]} />;
-}
 
 /**
  * Il riquadro che va letto prima dei numeri, quando c'e'.
@@ -313,88 +214,103 @@ async function PrimaDiCrederci() {
 }
 
 /**
- * Cosa c'e' da fare, e se ci si puo' fidare dei numeri.
+ * L'Inbox: tutto cio' che aspetta un gesto, in un posto solo.
  *
- * Le due cose stanno insieme perche' rispondono alla stessa domanda — «devo
- * toccare qualcosa?» — e perche' separate erano due blocchi che finivano
- * ognuno per conto suo in fondo alla schermata.
+ * Prima erano quattro blocchi indipendenti in fondo al cruscotto — la riga
+ * verso «Dove», le note diagnostiche, i movimenti da confermare, gli avvisi —
+ * e quattro riquadri slegati si leggono come rumore, non come una lista di
+ * cose da fare. Sotto un titolo solo diventano quello che sono: la posta.
  *
- * La riga «dove sono finiti» chiude il cruscotto mandando alla scheda che
- * risponde: qui si guarda **quanto**, li' si guarda **dove**.
+ * La riga «Dove sono finiti» non c'e' piu': «Dove» e' una scheda della barra,
+ * e un invito verso un posto gia' segnato in basso era un doppione.
+ *
+ * Lo **storico** e' `/avvisi`, dove un avviso ignorato o gestito resta
+ * consultabile: qui stanno solo quelli nuovi, ed e' il collegamento in alto a
+ * destra. Ogni voce ha la stessa anatomia — icona, titolo, riga di contesto,
+ * invito — cosi' l'occhio impara una forma sola.
  */
-async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMese | null }) {
+async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMese | null }) {
   const [stato, avvisi, daConfermare] = await Promise.all([
     leggiStato(),
     leggiAvvisiNuovi(),
     leggiDaConfermare(),
   ]);
 
-  return (
-    <div className="space-y-3">
-      <Link
-        href={`/dove?mese=${mese}`}
-        className="scheda flex min-h-14 items-center gap-3 px-4 text-[15px]"
-      >
-        <span className="flex-1">
-          <span className="block font-medium">Dove sono finiti</span>
-          <span className="block text-[12px] text-testo-3">
-            in cosa, da chi, e come si muove nel tempo
-            {rigaMese !== null && ` · ${rigaMese.movimenti} movimenti`}
-          </span>
-        </span>
-        <span aria-hidden="true" className="shrink-0 text-testo-3">
-          ›
-        </span>
-      </Link>
+  const note = rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0);
+  const vuota = daConfermare === 0 && avvisi.length === 0 && !note;
 
-      {/* Le due note che raccontano cosa manca al totale stanno qui e non
-          sotto il numerone: sono **cose da fare**, non parti della risposta, e
-          in mezzo alla risposta erano due riquadri fra l'utente e la metrica. */}
-      {rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0) && (
-        <p className="scheda p-4 text-[13px] text-testo-2">
-          {rigaMese.senza_cambio > 0 && (
-            <>
-              <strong className="text-testo">{rigaMese.senza_cambio}</strong> movimenti in valuta
-              senza tasso di cambio non sono nel totale.{' '}
-            </>
-          )}
-          {rigaMese.senza_categoria > 0 && (
-            <>
-              <strong className="text-testo">{rigaMese.senza_categoria}</strong> movimenti per{' '}
-              {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma senza
-              categoria.{' '}
-              {/* Alla lista filtrata, non a /revisione: quella lavora sugli
-                  **esercenti**, e un bonifico a un privato non ne ha uno —
-                  quindi per le righe che piu' spesso restano scoperte era un
-                  collegamento che non portava da nessuna parte. */}
-              <Link className="text-accento" href={perMese(mese, { categoria: CATEGORIA_SENZA })}>
-                Assegnali
-              </Link>
-              .
-            </>
-          )}
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-3 px-1">
+        <h2 className="eti">Inbox</h2>
+        <Link
+          className="inline-flex min-h-11 items-center text-[13px] text-accento sm:min-h-0"
+          href="/avvisi"
+        >
+          storico ›
+        </Link>
+      </div>
+
+      {/* «Sei in pari» non e' una schermata vuota: quando l'abitudine ha
+          preso, questa e' la riga che si vede piu' spesso. */}
+      {vuota && (
+        <p className="px-1 text-[13px] text-testo-3">
+          Niente che aspetti un tuo gesto. I movimenti nuovi e gli avvisi compariranno qui.
         </p>
       )}
 
       {/* Con il conteggio e non con un pallino: un numero e' un invito, un
           pallino rosso e' un'ansia. */}
       {daConfermare > 0 && (
-        <Link
-          href="/da-confermare"
-          className="scheda flex min-h-12 items-center gap-3 px-4 text-[15px]"
-        >
-          <span className="flex-1">
-            <strong>{daConfermare}</strong>{' '}
-            {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da confermare
+        <Link href="/da-confermare" className="scheda flex items-center gap-3 p-4 text-[15px]">
+          <TesseraCategoria icona="spunta" tinta="var(--accento)" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium">
+              {daConfermare} {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da
+              confermare
+            </span>
+            <span className="block text-[12px] text-testo-3">
+              pagamenti arrivati che aspettano una conferma o una correzione
+            </span>
           </span>
-          <span aria-hidden="true" className="shrink-0 text-testo-3">
-            ›
-          </span>
+          <span className="shrink-0 text-[13px] font-medium text-accento">Controlla ›</span>
         </Link>
       )}
 
+      {/* Le due note che raccontano cosa manca al totale: sono **cose da
+          fare**, non parti della risposta, e in mezzo alla risposta erano due
+          riquadri fra l'utente e la metrica. */}
+      {note && rigaMese !== null && (
+        <div className="scheda flex items-start gap-3 p-4">
+          <TesseraCategoria icona="info" tinta="var(--neutro)" />
+          <p className="min-w-0 flex-1 text-[13px] text-testo-2">
+            {rigaMese.senza_cambio > 0 && (
+              <>
+                <strong className="text-testo">{rigaMese.senza_cambio}</strong> movimenti in valuta
+                senza tasso di cambio non sono nel totale.{' '}
+              </>
+            )}
+            {rigaMese.senza_categoria > 0 && (
+              <>
+                <strong className="text-testo">{rigaMese.senza_categoria}</strong> movimenti per{' '}
+                {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma senza
+                categoria.{' '}
+                {/* Alla lista filtrata, non a /revisione: quella lavora sugli
+                    **esercenti**, e un bonifico a un privato non ne ha uno —
+                    quindi per le righe che piu' spesso restano scoperte era un
+                    collegamento che non portava da nessuna parte. */}
+                <Link className="text-accento" href={perMese(mese, { categoria: CATEGORIA_SENZA })}>
+                  Assegnali
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Al massimo tre: una lista lunga di avvisi non e' piu' una lista di
-          avvisi. */}
+          avvisi. Il resto sta nello storico. */}
       {avvisi.length > 0 && (
         <div className="space-y-2">
           {avvisi.slice(0, 3).map((a) => (
@@ -414,7 +330,7 @@ async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
       {stato.map((s) => (
         <StatoSistema key={s.connection_id} riga={s} dove="fondo" />
       ))}
-    </div>
+    </section>
   );
 }
 
@@ -471,7 +387,7 @@ async function QuantoHoSpeso({
   mese: string;
   rigaMese: RigaTotaleMese | null;
 }) {
-  const [classi, definizioni, variazioni, confronto, { giorniCoperti }, entrate] =
+  const [classi, definizioni, variazioni, confronto, { giorniCoperti }, entrate, radici] =
     await Promise.all([
       leggiSpesaPerClasse(mese),
       leggiClassi(),
@@ -479,6 +395,9 @@ async function QuantoHoSpeso({
       leggiConfronto(mese),
       leggiFinestra(mese),
       leggiEntrate(mese),
+      // Le stesse letture qui sopra, gia' deduplicate da `cache()`: i nodi
+      // sono una forma, non una query in piu'.
+      nodiPerClasse(mese),
     ]);
 
   // Il totale viene da `v_monthly_totals`, la vista che lo definisce. Le classi
@@ -486,9 +405,6 @@ async function QuantoHoSpeso({
   // una non porta niente.
   const speso = rigaMese === null ? sommaClassi(classi) : centesimi(rigaMese.spesa);
   const incassato = entrate === null ? null : centesimi(entrate.entrate);
-  const perClasse = new Map(
-    variazioni.classi.map((v) => [`${v.discrezionalita}|${v.contesto}`, v as Variazione]),
-  );
   const spiegaIlConfronto = comeSiConfronta(variazioni.classi[0]);
 
   // Le tinte e l'ordine vengono dalla tabella delle classi, non da una
@@ -496,39 +412,19 @@ async function QuantoHoSpeso({
   // sola cambierebbe forma alla prima rinomina.
   const tinte = tinteDelleClassi(definizioni);
   const perLaBarraOra = perLaBarra(classi, ordineDelleClassi(definizioni));
-  const dominante = classeDominante(perLaBarraOra);
-  const tinta = dominante === null ? null : (tinte[dominante] ?? null);
 
   return (
     <section className="space-y-4">
-      {/* La scheda del mese: l'eroe. Tinta appena dalla classe che pesa di
-          piu' — dopo qualche mese il colore dice com'e' andato prima di
-          leggere una cifra — sopra il fondo sfumato dell'eroe, che e' l'unico
-          bagliore concesso a una scheda. L'illustrazione sta nell'angolo, con
-          un'ombra colorata che la fa sedere nella scheda invece di
-          fluttuarci sopra; `alt` vuoto perche' non dice niente che il titolo
-          non dica. */}
-      <div
-        className="scheda eroe space-y-3 p-5"
-        style={
-          tinta === null
-            ? undefined
-            : {
-                backgroundImage: `radial-gradient(24rem 12rem at 8% 0%, color-mix(in oklab, ${tinta} 26%, transparent), transparent 70%), var(--eroe-fondo)`,
-              }
-        }
-      >
-        <img
-          src="/illustrazioni/oggi.webp"
-          alt=""
-          width={54}
-          height={54}
-          className="eroe-ill drop-shadow-[0_6px_16px_rgb(90_80_224/0.35)]"
-        />
+      {/* L'eroe, senza carta (alla Revolut): il numero del mese vive sul fondo
+          della pagina, e la gerarchia gliela danno la taglia e lo spazio — non
+          un riquadro. La scheda del mese era l'unico contenitore che non
+          raggruppava niente: dentro c'era una cosa sola. Le schede restano
+          dove raggruppano davvero, piu' sotto. */}
+      <div className="space-y-3 px-1 pt-2">
         {giorniCoperti !== null && confronto !== null && (
           <p className="eti">nei primi {giorniCoperti} giorni</p>
         )}
-        <p className="numerone text-[40px] sm:text-[46px]">{formattaEuro(speso)}</p>
+        <p className="numerone text-[44px] sm:text-[52px]">{formattaEuro(speso)}</p>
 
         {confronto !== null && confronto.riferimento !== null ? (
           <p className="cifra text-[13px] text-testo-2">
@@ -561,71 +457,56 @@ async function QuantoHoSpeso({
       {classi.length === 0 ? (
         <p className="text-sm text-testo-2">Nessun movimento in questo mese.</p>
       ) : (
-        <>
+        <div className="space-y-3 pt-2">
           {/* Un titolo su questo elenco, ora che sotto ce n'e' un secondo.
-              Due liste di importi una sotto l'altra, senza etichetta, non
-              dicono che rispondono a due domande diverse — e la prima delle
-              due e' anche quella che nessuno chiama «classi» finche' non
-              gliel'hai detto. */}
+              Subito sotto, il «perche'?»: la prosa metodologica e' vera e va
+              detta, ma alla decima apertura occupa lo spazio dei numeri — sta
+              chiusa, e il collegamento si veste da collegamento (accento, non
+              grigio: un elemento interattivo che sembra testo non si tocca). */}
           <h2 className="eti px-1">Per classe</h2>
-          <div className="scheda px-4">
-            <ul className="elenco text-[15px]">
-              {classi.map((c) => (
-                <li key={`${c.discrezionalita}-${c.contesto}`}>
-                  <Link
-                    href={perMese(mese, { classe: c.discrezionalita })}
-                    className="flex min-h-12 items-center gap-2.5"
-                  >
-                    {/* La tessera al posto del pallino: stessa informazione —
-                        la tinta della classe — con dentro la sua icona di
-                        vetro. Il pallino resta nella legenda della barra, dove
-                        una tessera sarebbe piu' grossa del dato. */}
-                    <Tessera
-                      slug={c.discrezionalita}
-                      tinta={tinte[c.discrezionalita] ?? 'var(--neutro)'}
-                    />
-                    {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
-                      Personale» accanto a un importo e a una freccia finiva
-                      troncato a «Voluttuario · Per…», e il nome della classe e'
-                      la cosa che si legge. */}
-                    <span className="min-w-0 flex-1">
-                      {/* Il nome mostrato, non lo slug: dopo un rinomina sono
-                        due parole diverse, e quella che l'utente ha scelto e'
-                        la prima. */}
-                      <span className="block truncate">{c.classe_nome}</span>
-                      {/* Su una riga non classificata classe e contesto sono la
-                        stessa parola, e ripeterla non aggiunge niente. */}
-                      {c.contesto !== c.discrezionalita && (
-                        <span className="block truncate text-[12px] text-testo-3">
-                          {c.contesto}
-                        </span>
-                      )}
-                    </span>
-                    <span className="cifra shrink-0 whitespace-nowrap">
-                      {formattaEuro(centesimi(c.spesa))}
-                      {/* Il non classificato non ha frecce: e' una categoria
-                          residuale che si riempie e si svuota mentre si
-                          classifica, e un ▲594% li' accanto a variazioni vere
-                          insegna che le frecce non vogliono dire niente
-                          (docs/aspetto.md §4.3). Il suo numero dice quanto
-                          non sappiamo, e si legge da solo. */}
-                      {c.discrezionalita !== c.contesto && (
-                        <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
-                      )}
-                    </span>
-                    <span aria-hidden="true" className="shrink-0 text-testo-3">
-                      ›
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
+          {(confronto !== null || spiegaIlConfronto !== null) && (
+            <details className="px-1 text-[13px] text-testo-2">
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center font-medium text-accento">
+                perch&eacute; questi confronti?
+              </summary>
+              <div className="space-y-2 pb-2">
+                {spiegaIlConfronto !== null && (
+                  <p>
+                    {spiegaIlConfronto} Il termine di paragone &egrave; la mediana{' '}
+                    <strong className="text-testo">scelta</strong> — un mese realmente osservato,
+                    non una media. Le frecce con un asterisco poggiano su meno della met&agrave; dei
+                    mesi guardati.
+                  </p>
+                )}
+                {confronto !== null && confronto.precedenti.length > 0 && (
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1 text-testo-3">
+                    {confronto.precedenti.map((pr) => (
+                      <li key={pr.mese} className="cifra">
+                        {etichettaBreve(pr.mese)} {formattaEuro(pr.spesa)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p>
+                  Finestre della stessa lunghezza, non una proiezione a fine mese: «a questo ritmo
+                  spenderai X» sarebbe un&rsquo;estrapolazione travestita da informazione.
+                </p>
+              </div>
+            </details>
+          )}
+
+          {/* La fisarmonica di «Dove», qui: toccare una classe apre le sue
+              categorie **in loco**, toccare una categoria apre la lista dei
+              movimenti gia' filtrata. Mai classe → transazioni in un colpo:
+              prima si vede di cosa e' fatta. E' la stessa componente e gli
+              stessi nodi di /dove, perche' due copie della stessa discesa
+              divergono alla prima modifica. */}
+          <Fisarmonica mese={mese} radici={radici} />
+        </div>
       )}
 
       {incassato !== null && incassato !== 0n && (
-        <p className="text-[13px] text-testo-2">
+        <p className="px-1 text-[13px] text-testo-2">
           Entrate <span className="cifra font-medium text-testo">{formattaEuro(incassato)}</span> —
           la spesa ne &egrave; il {quotaPercentuale(speso, incassato).toFixed(0)}%.
         </p>
@@ -635,43 +516,10 @@ async function QuantoHoSpeso({
           freccia che manca non si nota. Una riga, non un riquadro: le cifre
           sopra restano corrette, e non e' un allarme. */}
       {variazioni.mancanti !== null && (
-        <p className="text-[13px] text-attenzione">
+        <p className="px-1 text-[13px] text-attenzione">
           I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
           <strong>Le cifre qui sopra sono corrette.</strong>
         </p>
-      )}
-
-      {/* La prosa metodologica sta sotto un «perche'?»: vera e ben scritta, ma
-          alla decima volta occupa lo spazio dei numeri. */}
-      {(confronto !== null || spiegaIlConfronto !== null) && (
-        <details className="text-[13px] text-testo-2">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
-            perch&eacute; questi confronti?
-          </summary>
-          <div className="space-y-2 pb-2">
-            {spiegaIlConfronto !== null && (
-              <p>
-                {spiegaIlConfronto} Il termine di paragone &egrave; la mediana{' '}
-                <strong className="text-testo">scelta</strong> — un mese realmente osservato, non
-                una media. Le frecce con un asterisco poggiano su meno della met&agrave; dei mesi
-                guardati.
-              </p>
-            )}
-            {confronto !== null && confronto.precedenti.length > 0 && (
-              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-testo-3">
-                {confronto.precedenti.map((pr) => (
-                  <li key={pr.mese} className="cifra">
-                    {etichettaBreve(pr.mese)} {formattaEuro(pr.spesa)}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p>
-              Finestre della stessa lunghezza, non una proiezione a fine mese: «a questo ritmo
-              spenderai X» sarebbe un&rsquo;estrapolazione travestita da informazione.
-            </p>
-          </div>
-        </details>
       )}
     </section>
   );
@@ -685,11 +533,28 @@ async function Ricorrente({ mese }: { mese: string }) {
 
   return (
     <>
+      {/* Il «perche'?» sta sopra le tessere e si veste da collegamento: un
+          elemento interattivo che sembra testo secondario non si tocca. */}
+      <details className="px-1 text-[13px] text-testo-2">
+        <summary className="inline-flex min-h-11 cursor-pointer list-none items-center font-medium text-accento">
+          perch&eacute; due numeri e non uno?
+        </summary>
+        <p className="pb-2">
+          Sono tassi calcolati su tutto lo storico, non su {etichettaMese(mese)}: dicono quanto
+          costa ciò che si ripete, non quanto è uscito questo mese. Non si sommano fra loro perché
+          suggeriscono due azioni diverse — un abbonamento si disdice, un&rsquo;abitudine si cambia.
+        </p>
+      </details>
+
+      {/* Due collegamenti, non due riquadri: ognuno apre il suo blocco sulla
+          pagina del ricorrente, gia' al punto giusto. Una tessera con un
+          numero che non si puo' aprire e' una domanda a cui la schermata
+          rifiuta di rispondere. */}
       <div className="grid grid-cols-2 gap-3">
         {/* Le illustrazioni stanno nell'angolo basso e il testo gli lascia
             spazio con un margine, non con la speranza: a 141 pixel di colonna
             «il risparmio e' certo» arrivava esattamente li' sotto. */}
-        <div className="scheda relative overflow-hidden p-4">
+        <Link href="/abbonamenti#abbonamento" className="scheda relative overflow-hidden p-4">
           <img
             src="/illustrazioni/abbonamenti.webp"
             alt=""
@@ -707,8 +572,8 @@ async function Ricorrente({ mese }: { mese: string }) {
           <p className="mt-1.5 pr-9 text-[12px] text-testo-3">
             Si disdicono. Il risparmio è certo.
           </p>
-        </div>
-        <div className="scheda relative overflow-hidden p-4">
+        </Link>
+        <Link href="/abbonamenti#abitudine" className="scheda relative overflow-hidden p-4">
           <img
             src="/illustrazioni/abitudini.webp"
             alt=""
@@ -722,7 +587,7 @@ async function Ricorrente({ mese }: { mese: string }) {
           <p className="mt-1.5 pr-9 text-[12px] text-testo-3">
             Niente da disdire: si ripete perché lo si rifà.
           </p>
-        </div>
+        </Link>
       </div>
       {/* Sotto la linea: il ricorrente che l'utente ha dichiarato di non voler
           togliere. Non e' un numero nascosto e non e' un avviso — e' la parte
@@ -740,19 +605,6 @@ async function Ricorrente({ mese }: { mese: string }) {
           {fuori.classi.join(', ')} — ricorrente, ma non da togliere.
         </p>
       )}
-
-      {/* Perche' i due numeri non si sommano e perche' non parlano di questo
-          mese e' vero e va detto — ma non a ogni apertura, sopra i numeri. */}
-      <details className="text-[13px] text-testo-2">
-        <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
-          perch&eacute; due numeri e non uno?
-        </summary>
-        <p className="pb-2">
-          Sono tassi calcolati su tutto lo storico, non su {etichettaMese(mese)}: dicono quanto
-          costa ciò che si ripete, non quanto è uscito questo mese. Non si sommano fra loro perché
-          suggeriscono due azioni diverse — un abbonamento si disdice, un&rsquo;abitudine si cambia.
-        </p>
-      </details>
     </>
   );
 }

@@ -4,6 +4,7 @@ import {
   categorieComeNodi,
   movimentiComeNodi,
   rientro,
+  versoMovimenti,
   type RigaRipartizione,
 } from '@/lib/dove/nodi';
 
@@ -52,6 +53,51 @@ describe('aperturaDi — dove porta il tocco', () => {
     // spesa intera e i numeri smetterebbero di sommare al padre.
     const a = aperturaDi(riga({ figli: 2 }), 'voluttuario', 'personale');
     expect(a).toMatchObject({ classe: 'voluttuario', contesto: 'personale' });
+  });
+});
+
+describe('categorieComeNodi — una foglia naviga, non si apre', () => {
+  // La regola globale della discesa: classe → categorie → PAGINA dei
+  // movimenti. Una foglia srotolata in loco sotto la classe era il salto
+  // classe → transazioni che la revisione del 19 agosto vieta.
+  it('una categoria senza figlie porta alla lista movimenti filtrata', () => {
+    const nodi = categorieComeNodi([riga({ figli: 0 })], '2026-08', 'voluttuario', 'personale');
+    expect(nodi[0]?.apertura).toBeNull();
+    expect(nodi[0]?.href).toBe(
+      '/movimenti?da=2026-08-01&a=2026-08-31&categoria=c1&classe=voluttuario&contesto=personale',
+    );
+  });
+
+  it('una categoria con figlie apre il livello sotto, in loco', () => {
+    const nodi = categorieComeNodi([riga({ figli: 2 })], '2026-08', null, null);
+    expect(nodi[0]?.apertura?.tipo).toBe('categorie');
+    expect(nodi[0]?.href).toBeNull();
+  });
+
+  it('la riga «senza categoria» chiede la pseudo-categoria, non tutte', () => {
+    // `category_id` nullo nell'indirizzo sarebbe «nessun filtro», cioe'
+    // l'intero mese: la lista plausibile e sbagliata per eccellenza.
+    const nodi = categorieComeNodi(
+      [riga({ category_id: null, nome: 'Senza categoria' })],
+      '2026-08',
+      null,
+      null,
+    );
+    expect(nodi[0]?.href).toContain('categoria=senza-categoria');
+  });
+});
+
+describe('versoMovimenti — i filtri si portano tutti', () => {
+  it('periodo, classe, contesto e categoria insieme', () => {
+    expect(versoMovimenti('2026-07', 'utile', 'business', 'c9')).toBe(
+      '/movimenti?da=2026-07-01&a=2026-07-31&categoria=c9&classe=utile&contesto=business',
+    );
+  });
+
+  it('senza classe e contesto restano solo periodo e categoria', () => {
+    expect(versoMovimenti('2026-02', null, null, 'c9')).toBe(
+      '/movimenti?da=2026-02-01&a=2026-02-28&categoria=c9',
+    );
   });
 });
 

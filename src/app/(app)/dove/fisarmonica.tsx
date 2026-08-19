@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
+import { Freccia } from '../grafici';
 import {
   categorieComeNodi,
   movimentiComeNodi,
@@ -190,15 +191,22 @@ function Riga({
 }) {
   const valore = centesimiDi(nodo.importo);
   const quota = massimo === 0n ? 0 : Number((modulo(valore) * 100n) / massimo);
+  // Sbiadita per intero, non solo il nome: il non classificato non e' una
+  // classe, e' un lavoro da fare, e deve leggersi a mezza voce anche in coda
+  // all'occhio (docs/aspetto.md §4.3).
+  const velo = nodo.sbiadito === true ? ' opacity-60' : '';
 
   const corpo = (
     <>
-      {nodo.tinta !== null && (
-        <span
-          aria-hidden="true"
-          className="size-2.5 shrink-0 rounded-full"
-          style={{ background: nodo.tinta }}
-        />
+      {(nodo.tessera ?? nodo.tinta !== null) && (
+        <span aria-hidden="true" className="shrink-0">
+          {nodo.tessera ?? (
+            <span
+              className="block size-2.5 rounded-full"
+              style={{ background: nodo.tinta ?? undefined }}
+            />
+          )}
+        </span>
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px]">{nodo.etichetta}</span>
@@ -214,18 +222,23 @@ function Riga({
           )}
         </span>
       </span>
-      <span className="cifra shrink-0 whitespace-nowrap">{formattaEuro(valore)}</span>
+      {/* Su due piani: importo sopra, delta sotto — cosi' il nome si allinea
+          all'importo e la riga piccola alla percentuale. */}
+      <span className="shrink-0 text-right">
+        <span className="cifra block whitespace-nowrap">{formattaEuro(valore)}</span>
+        <Freccia riga={nodo.variazione} sotto />
+      </span>
     </>
   );
 
   if (nodo.apertura === null) {
     return nodo.href === null ? (
-      <div className="flex min-h-12 items-center gap-2.5 py-1.5">
+      <div className={`flex min-h-12 items-center gap-2.5 py-1.5${velo}`}>
         {corpo}
         <span aria-hidden="true" className="w-4 shrink-0" />
       </div>
     ) : (
-      <Link href={nodo.href} className="flex min-h-12 items-center gap-2.5 py-1.5">
+      <Link href={nodo.href} className={`flex min-h-12 items-center gap-2.5 py-1.5${velo}`}>
         {corpo}
         <span aria-hidden="true" className="shrink-0 text-testo-3">
           ›
@@ -239,7 +252,7 @@ function Riga({
       type="button"
       onClick={() => apri(nodo)}
       aria-expanded={aperto}
-      className="flex min-h-12 w-full items-center gap-2.5 py-1.5 text-left"
+      className={`flex min-h-12 w-full items-center gap-2.5 py-1.5 text-left${velo}`}
     >
       {corpo}
       {/* Il segno ruota invece di cambiare: chi guarda segue lo stesso oggetto

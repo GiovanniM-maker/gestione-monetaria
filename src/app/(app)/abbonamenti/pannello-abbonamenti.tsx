@@ -140,6 +140,7 @@ export function PannelloAbbonamenti({
           if (suoi.length === 0) return null;
           return (
             <Blocco
+              id={t.chiave}
               key={t.chiave}
               titolo={t.titolo}
               sottotitolo={t.sottotitolo}
@@ -372,12 +373,15 @@ function Dato({ voce, valore }: { voce: string; valore: string }) {
 }
 
 function Blocco({
+  id,
   titolo,
   sottotitolo,
   voci,
   totale,
   tinte,
 }: {
+  /** L'ancora: le tessere del cruscotto arrivano qui con `#abbonamento`. */
+  id?: string;
   titolo: string;
   sottotitolo: string;
   voci: readonly VoceMetrica[];
@@ -385,7 +389,7 @@ function Blocco({
   tinte: Tinte;
 }) {
   return (
-    <div className="space-y-3">
+    <div id={id} className="scroll-mt-4 space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>

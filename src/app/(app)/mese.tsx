@@ -37,6 +37,7 @@ export function SceltaMese({
   successivo,
   inCorso,
   indirizzo,
+  menu,
 }: {
   mese: string;
   /** Tutti i mesi con dei dati, dal piu' vecchio: il foglio li rovescia. */
@@ -52,6 +53,15 @@ export function SceltaMese({
    * runtime, sull'intera pagina.
    */
   indirizzo: string;
+  /**
+   * Il bottone del menu, quando questa riga fa da intestazione.
+   *
+   * Sulla home e su «Dove» la scritta «Gestione monetaria» non c'e' piu': il
+   * posto in alto a sinistra e' del mese — che e' l'unica cosa che li' sopra
+   * si tocca davvero — e il menu resta nell'angolo di sempre. Lo passa la
+   * pagina perche' solo lei sa l'email e la versione; qui e' un nodo e basta.
+   */
+  menu?: React.ReactNode;
 }) {
   const verso = (m: string) => indirizzo.replaceAll('%m', m);
   const [aperto, setAperto] = useState(false);
@@ -59,23 +69,28 @@ export function SceltaMese({
   const apribile = elenco.length > 1;
 
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center gap-2">
+      {/* La capsula, non un titolo: e' un bottone e si veste da bottone —
+          la stessa superficie sollevata del tondo del menu, a mezzi cerchi
+          come la barra di ricerca di Revolut. */}
       {apribile ? (
         <button
           type="button"
           onClick={() => setAperto(true)}
-          className="inline-flex min-h-11 items-center gap-1.5 text-[22px] font-bold tracking-[-0.03em] capitalize"
+          className="capsula text-[15px] font-semibold tracking-[-0.02em]"
         >
-          {etichettaMese(mese)}
-          <span aria-hidden="true" className="text-[15px] font-normal text-testo-3">
+          <span className="capitalize">{etichettaMese(mese)}</span>
+          <span aria-hidden="true" className="text-[13px] font-normal text-testo-3">
             ⌄
           </span>
         </button>
       ) : (
-        <p className="text-[22px] font-bold tracking-[-0.03em] capitalize">{etichettaMese(mese)}</p>
+        <p className="inline-flex min-h-11 items-center px-1 text-[15px] font-semibold tracking-[-0.02em]">
+          <span className="capitalize">{etichettaMese(mese)}</span>
+        </p>
       )}
 
-      <nav className="flex items-center gap-1">
+      <nav className="ml-auto flex items-center gap-1">
         {precedente !== null && (
           <Link
             className="inline-flex size-11 items-center justify-center rounded-full text-testo-2"
@@ -99,6 +114,8 @@ export function SceltaMese({
           )
         )}
       </nav>
+
+      {menu}
 
       {apribile && (
         <Foglio

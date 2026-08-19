@@ -365,6 +365,47 @@ body {
 }
 
 /**
+ * `.capsula` — il fratello largo del tondo: stessa superficie sollevata,
+ * stessa altezza, ma a capsula. E' il bottone del mese in testa alla home e a
+ * «Dove»: sta al posto dove Revolut mette la barra di ricerca, e ne prende la
+ * forma — i lati sono mezzi cerchi, come tutti i controlli dal 19 agosto.
+ */
+.capsula {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--s2-alto), var(--s2));
+  box-shadow: var(--rilievo);
+  color: var(--testo);
+}
+
+/**
+ * La barra in basso, galleggiante (alla Revolut).
+ * --------------------------------------------------------------------------
+ * `.galleggiante` — la capsula staccata dai bordi: raggio pieno e la stessa
+ * coppia ombra+rilievo delle schede, perche' un oggetto che galleggia deve
+ * proiettare come un oggetto, non come una striscia incollata al fondo.
+ *
+ * `.barra-voce[aria-current]` — la scheda accesa e' una pastiglia, non un
+ * cambio di colore del testo e basta: e' il sistema di Revolut, e rende
+ * «dove sono» leggibile in coda all'occhio. La velatura e' dell'accento —
+ * la voce dell'applicazione — mai di una tinta di classe.
+ */
+.galleggiante {
+  border-radius: 999px;
+  box-shadow: var(--ombra), var(--rilievo);
+}
+.barra-voce {
+  border-radius: 999px;
+}
+.barra-voce[aria-current] {
+  background: color-mix(in oklab, var(--accento) 14%, transparent);
+}
+
+/**
  * L'avatar di un esercente: l'iniziale sulla velatura della sua classe.
  * Il cerchio contro il quadrato della tessera: una categoria e' un posto,
  * un esercente e' qualcuno, e le due forme si distinguono in coda all'occhio.

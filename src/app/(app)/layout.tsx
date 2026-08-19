@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth/session';
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { ClassiNote } from './classi-note';
+import { Intestazione } from './intestazione';
 import { Menu } from './menu';
 import { Barra } from './barra';
 import { Aggiornamento } from './aggiornamento';
@@ -42,20 +43,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* L'intestazione e' ridotta a una riga sottile: il nome
           dell'applicazione e il bottone per uscire occupavano il posto piu'
           visibile della schermata per due cose che non si guardano mai. Il
-          titolo di ogni pagina sta sotto, dove va letto. */}
-      <header className="flex items-center gap-x-2 py-1">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 flex-1 items-center text-[13px] font-medium text-testo-3"
-        >
-          Gestione monetaria
-        </Link>
-        <Menu email={user.email ?? null} versione={VERSIONE} />
-      </header>
+          titolo di ogni pagina sta sotto, dove va letto.
 
-      {/* Lo spazio in fondo e' la barra piu' un respiro: senza, l'ultima riga
-          di ogni schermata finisce sotto le quattro schede. */}
-      <main className="flex-1 pt-2 pb-[calc(5.5rem+var(--barra-aggiornamento,0px)+env(safe-area-inset-bottom))]">
+          Sulla home e su «Dove» non c'e' affatto: li' la prima riga e' il
+          mese con accanto il menu (`SceltaMese` con `menu`), e una seconda
+          intestazione sopra quella direbbe solo il nome dell'app. */}
+      <Intestazione>
+        <header className="flex items-center gap-x-2 py-1">
+          <Link
+            href="/"
+            className="inline-flex min-h-11 flex-1 items-center text-[13px] font-medium text-testo-3"
+          >
+            Gestione monetaria
+          </Link>
+          <Menu email={user.email ?? null} versione={VERSIONE} />
+        </header>
+      </Intestazione>
+
+      {/* Lo spazio in fondo e' la barra galleggiante piu' il suo distacco dal
+          bordo, piu' un respiro: senza, l'ultima riga di ogni schermata
+          finisce sotto la capsula. */}
+      <main className="flex-1 pt-2 pb-[calc(6.5rem+var(--barra-aggiornamento,0px)+env(safe-area-inset-bottom))]">
         <ClassiNote classi={classi}>{children}</ClassiNote>
       </main>
 

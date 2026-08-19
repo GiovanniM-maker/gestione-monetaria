@@ -127,7 +127,7 @@ export function Aggiornamento({ versione }: { versione: string }) {
     // cima, dove ruberebbe il posto al numero.
     <div
       className="velato fixed inset-x-0 z-50 border-t border-filo
-                 bottom-[calc(4.25rem+env(safe-area-inset-bottom))]"
+                 bottom-[calc(5rem+env(safe-area-inset-bottom))]"
       role="status"
     >
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-2">
@@ -138,7 +138,7 @@ export function Aggiornamento({ versione }: { versione: string }) {
         <button
           type="button"
           onClick={() => void ricarica()}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-controllo
+          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full
                      bg-accento px-4 text-[14px] font-semibold text-accento-testo"
         >
           Aggiorna

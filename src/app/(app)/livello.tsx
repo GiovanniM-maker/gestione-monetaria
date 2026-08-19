@@ -155,9 +155,11 @@ export function Ripartizione({
                     <span className="block truncate text-[12px] text-testo-3">{v.dettaglio}</span>
                   )}
                 </span>
-                <span className="cifra shrink-0 whitespace-nowrap">
-                  {formattaEuro(v.valore)}
-                  <Freccia riga={v.variazione} />
+                {/* Su due piani, come la colonna sinistra: il nome si allinea
+                    all'importo e la riga piccola alla percentuale. */}
+                <span className="shrink-0 text-right">
+                  <span className="cifra block whitespace-nowrap">{formattaEuro(v.valore)}</span>
+                  <Freccia riga={v.variazione} sotto />
                 </span>
               </>
             );

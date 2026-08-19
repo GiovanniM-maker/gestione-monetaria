@@ -1,9 +1,12 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { leggiEsercenti, leggiSpesaPerClasse, scegliMese } from '@/lib/cruscotto/letture';
+import { requireUser } from '@/lib/auth/session';
+import { VERSIONE } from '@/lib/versione';
+import { leggiEsercenti, scegliMese } from '@/lib/cruscotto/letture';
 import { etichettaMese, meseValido } from '@/lib/cruscotto/mesi';
 import { leggiRipartizione } from '@/lib/dove/leggi';
+import { versoMovimenti } from '@/lib/dove/nodi';
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
@@ -13,8 +16,10 @@ import { tinteDelleClassi } from '../grafici';
 import { MesePerMese, Ripartizione } from '../livello';
 import { TestataPagina } from '../testata';
 import { ScheletroElenco } from '../scheletri';
+import { Menu } from '../menu';
 import { SceltaMese } from '../mese';
 import { Fisarmonica, type Nodo } from './fisarmonica';
+import { nodiPerClasse } from './nodi-classe';
 import { Segmentato } from '../segmentato';
 
 export const dynamic = 'force-dynamic';
@@ -83,6 +88,10 @@ export default async function DovePage({
 }) {
   const parametri = await searchParams;
   const modo = modoValido(parametri['modo']);
+  // Gia' verificato dal layout e memorizzato per richiesta: qui serve solo
+  // l'email da mettere nel cassetto del menu, che su questa schermata sta
+  // nella riga del mese e non in un'intestazione a parte.
+  const user = await requireUser();
   const { mese, totali, rigaMese, mesiDisponibili, mesePrecedente, meseSuccessivo, inCorso } =
     await scegliMese(meseValido(parametri['mese']));
 
@@ -100,6 +109,7 @@ export default async function DovePage({
         successivo={meseSuccessivo}
         inCorso={inCorso}
         indirizzo={`/dove?mese=%m&modo=${modo}`}
+        menu={<Menu email={user.email ?? null} versione={VERSIONE} />}
       />
 
       <TestataPagina
@@ -175,37 +185,13 @@ function Interruttore({ mese, modo }: { mese: string; modo: Modo }) {
  * al tocco.
  */
 async function PrimoLivello({ mese, modo }: { mese: string; modo: Modo }) {
-  const radici = modo === 'classe' ? await perClasse(mese) : await perCategoria(mese);
+  const radici = modo === 'classe' ? await nodiPerClasse(mese) : await perCategoria(mese);
 
   if (radici.length === 0) {
     return <p className="text-[14px] text-testo-2">Nessun movimento in questo mese.</p>;
   }
 
   return <Fisarmonica mese={mese} radici={radici} />;
-}
-
-async function perClasse(mese: string): Promise<readonly Nodo[]> {
-  const [classi, definizioni] = await Promise.all([leggiSpesaPerClasse(mese), leggiClassi()]);
-  const tinte = tinteDelleClassi(definizioni);
-
-  return classi.map((c) => ({
-    chiave: `${mese}|classe|${c.discrezionalita}|${c.contesto}`,
-    // Il nome mostrato piu' il contesto: `utile · business` e `utile ·
-    // personale` sono due righe diverse e devono leggersi come tali, o si
-    // cerca per dieci secondi perche' la stessa classe compare due volte.
-    etichetta:
-      c.contesto === c.discrezionalita ? c.classe_nome : `${c.classe_nome} · ${c.contesto}`,
-    dettaglio: `${c.movimenti} ${c.movimenti === 1 ? 'movimento' : 'movimenti'}`,
-    importo: c.spesa,
-    tinta: tinte[c.discrezionalita] ?? 'var(--neutro)',
-    apertura: {
-      tipo: 'categorie' as const,
-      classe: c.discrezionalita,
-      contesto: c.contesto,
-      categoria: null,
-    },
-    href: null,
-  }));
 }
 
 async function perCategoria(mese: string): Promise<readonly Nodo[]> {
@@ -216,6 +202,8 @@ async function perCategoria(mese: string): Promise<readonly Nodo[]> {
     categoria: null,
   });
 
+  // Le foglie navigano alla lista movimenti filtrata invece di srotolarsi in
+  // loco: e' la regola globale della discesa (vedi `versoMovimenti`).
   return righe.map((r) => ({
     chiave: `${mese}|cat|${r.category_id ?? 'nessuna'}`,
     etichetta: r.nome,
@@ -225,14 +213,8 @@ async function perCategoria(mese: string): Promise<readonly Nodo[]> {
     apertura:
       r.figli > 0
         ? { tipo: 'categorie' as const, classe: null, contesto: null, categoria: r.category_id }
-        : {
-            tipo: 'movimenti' as const,
-            classe: null,
-            contesto: null,
-            categoria: r.category_id,
-            soloQuesta: true,
-          },
-    href: null,
+        : null,
+    href: r.figli > 0 ? null : versoMovimenti(mese, null, null, r.category_id),
   }));
 }
 

@@ -1134,6 +1134,45 @@ loro a maggio», e il cruscotto la perdeva per strada — e sulla scheda di un m
 della banca sono finiti sotto un «apri»: sono diagnostica, si guardano quando una riga non si
 riconosce, e aperti erano due terzi della schermata.
 
+#### La revisione Revolut, 19 agosto 2026
+
+Da una specifica scritta dall'utente, con un principio solo: **mai da una classe alle transazioni
+in un colpo**. La gerarchia e' una regola globale — classe → categorie → *pagina* dei movimenti —
+e vive nei nodi (`lib/dove/nodi.ts`): una classe si apre in loco sulle sue categorie, una categoria
+con figlie si apre ancora, una **foglia naviga** a `/movimenti` portandosi **tutti** i filtri
+(periodo, classe, contesto, categoria — `versoMovimenti()`). Perdere un filtro nella discesa non
+da' errore: mostra una lista plausibile e sbagliata.
+
+Cosa ne discende, in ordine di visibilita':
+
+- **La home usa la fisarmonica di `/dove`** (`nodiPerClasse`, condiviso): «Per classe» si apre
+  dove sta, e **«In cosa» non esiste piu'** — erano le stesse categorie, un elenco doppio.
+- **L'eroe non ha piu' la carta**: il numerone vive sul fondo della pagina, gerarchia dalla
+  taglia e dallo spazio. Le schede restano dove raggruppano davvero. La sfera e la tinta
+  dominante se ne vanno con la carta.
+- **L'intestazione della home e di «Dove» e' il mese**, una capsula a mezzi cerchi col menu
+  accanto (`SceltaMese` con `menu`; `Intestazione` nasconde quella del layout solo li').
+- **La barra in basso galleggia**: capsula staccata dai bordi, scheda attiva in una pastiglia
+  d'accento — il sistema di Revolut, copiato di proposito.
+- **Il delta sta sotto l'importo**, mai accanto: nome ↔ importo, riga piccola ↔ percentuale.
+  Vale in fisarmonica e in `Ripartizione` (`Freccia` con `sotto`).
+- **Il non classificato e' ultimo e sbiadito** (`sbiadito` sul nodo): non e' una classe, e' un
+  lavoro da fare. Resta cliccabile e senza frecce (§4.3 di aspetto.md).
+- **Bottoni e campi a capsula piena** (`rounded-full` in `lib/ui/controlli.ts`): i lati sono
+  mezzi cerchi, come la barra di ricerca di Revolut.
+- **I «perche'?» si vestono da collegamento** (accento, non grigio): un elemento interattivo che
+  sembra testo secondario non si tocca.
+- **L'Inbox** raccoglie in fondo alla home tutto cio' che aspetta un gesto — da confermare, note
+  diagnostiche, avvisi, stato — con `/avvisi` come storico. La riga «Dove sono finiti» sparisce:
+  «Dove» e' gia' una scheda della barra.
+- **Le tessere Abbonamenti/Abitudini sono collegamenti** ai blocchi di `/abbonamenti`
+  (`#abbonamento`, `#abitudine`).
+
+Rimandato con cognizione: le pagine dedicate Abbonamenti/Abitudini con la stessa gerarchia
+filtrata sui soli movimenti ricorrenti (serve SQL nuovo — una `ripartizione_dove` ristretta alle
+ricorrenze — quindi una migration da provare); il ciclo di vita dell'Inbox (7 giorni in vista,
+90 di storico, poi eliminazione) che richiede una migration e un passo nel lavoro notturno.
+
 #### Misurato dopo, a 390 px, in tutti e due i temi
 
 Nessuna schermata sborda di lato; tre bersagli sotto i 44 px in tutta l'applicazione (erano 313 solo

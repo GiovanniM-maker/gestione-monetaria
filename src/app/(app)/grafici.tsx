@@ -105,7 +105,18 @@ const TAVOLOZZA = [
  * ambra come un voluttuario che cresce, e va benissimo cosi': il giudizio e' di
  * chi guarda.
  */
-export function Freccia({ riga }: { riga: Variazione | undefined }) {
+export function Freccia({
+  riga,
+  sotto = false,
+}: {
+  riga: Variazione | undefined;
+  /**
+   * Sotto l'importo invece che accanto. Negli elenchi la colonna destra e' su
+   * due piani — importo sopra, delta sotto — cosi' il nome si allinea
+   * all'importo e la riga piccola (contesto, movimenti) alla percentuale.
+   */
+  sotto?: boolean;
+}) {
   if (riga === undefined) return null;
   const s = segnoDi(riga);
   if (s === null) return null;
@@ -114,7 +125,10 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
     s.tono === 'su' ? 'text-attenzione' : s.tono === 'giu' ? 'text-conferma' : 'text-testo-3';
 
   return (
-    <span className={`cifra ml-2 text-xs whitespace-nowrap ${colore}`} title={s.descrizione}>
+    <span
+      className={`cifra whitespace-nowrap ${sotto ? 'block text-[12px]' : 'ml-2 text-xs'} ${colore}`}
+      title={s.descrizione}
+    >
       <span aria-hidden="true">{s.simbolo}</span> {s.testo}
       {/* Il puntino dice «questo confronto poggia su pochi mesi». Non toglie il
           numero, che e' vero: toglie l'enfasi, che sarebbe eccessiva. */}
