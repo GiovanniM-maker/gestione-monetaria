@@ -8,6 +8,7 @@ import { leggiClassi } from '@/lib/tassonomia/classi';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
+import { Avatar } from '@/lib/ui/tessera';
 import { tinteDelleClassi } from '../grafici';
 import { MesePerMese, Ripartizione } from '../livello';
 import { TestataPagina } from '../testata';
@@ -256,8 +257,9 @@ async function perCategoria(mese: string): Promise<readonly Nodo[]> {
  * fare la prima.
  */
 async function DaChi({ mese }: { mese: string }) {
-  const esercenti = await leggiEsercenti(mese);
+  const [esercenti, definizioni] = await Promise.all([leggiEsercenti(mese), leggiClassi()]);
   if (esercenti.length === 0) return null;
+  const tinte = tinteDelleClassi(definizioni);
 
   return (
     <Ripartizione
@@ -268,6 +270,18 @@ async function DaChi({ mese }: { mese: string }) {
         dettaglio: `${e.movimenti} ${e.movimenti === 1 ? 'movimento' : 'movimenti'}`,
         valore: centesimiDi(e.spesa),
         href: e.merchant_id === null ? null : `/esercente/${e.merchant_id}`,
+        // L'iniziale sulla velatura della sua classe: deterministico e locale,
+        // nessun logo chiesto a un terzo (docs/aspetto.md §3.5).
+        tessera: (
+          <Avatar
+            nome={e.esercente}
+            tinta={
+              e.discrezionalita !== null
+                ? (tinte[e.discrezionalita] ?? 'var(--neutro)')
+                : 'var(--neutro)'
+            }
+          />
+        ),
       }))}
     />
   );

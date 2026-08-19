@@ -8,6 +8,7 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { tinteDelleClassi } from '../grafici';
+import { Avatar } from '@/lib/ui/tessera';
 import {
   ORDINAMENTI,
   raggruppaPerTempo,
@@ -353,6 +354,7 @@ export function PannelloConferma({
  * piu' rapido di far smettere di credere a una schermata.
  */
 function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: string | null }) {
+  const tinte = tinteDelleClassi(useClassi());
   const totale = righe.reduce((s, r) => {
     const { totale: v, nonLetti } = sommaCosti([r.amount_eur ?? r.amount]);
     return nonLetti > 0 ? s : s + v;
@@ -381,6 +383,15 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
           {righe.map((r) => (
             <li key={r.id}>
               <Link href={`/movimenti/${r.id}`} className="flex min-h-12 items-center gap-3">
+                <Avatar
+                  nome={r.esercente ?? r.raw_description}
+                  misura={30}
+                  tinta={
+                    r.discrezionalita !== null
+                      ? (tinte[r.discrezionalita] ?? 'var(--neutro)')
+                      : 'var(--neutro)'
+                  }
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">
                     {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
@@ -423,7 +434,8 @@ function Carta({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <Avatar nome={r.esercente ?? r.raw_description} tinta={tinta ?? 'var(--neutro)'} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[17px] font-semibold">
             {r.esercente ?? r.raw_description ?? '(senza descrizione)'}

@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { CAMPO_PIENO, BOTTONE, BOTTONE_MINORE } from '@/lib/ui/controlli';
 import { categorieSceglibili } from '@/lib/tassonomia/categorie';
+import { leggiClassi } from '@/lib/tassonomia/classi';
+import { Avatar } from '@/lib/ui/tessera';
+import { tinteDelleClassi } from '../grafici';
 import { filtroValido, leggiEsercenti, PER_PAGINA, type Filtro } from '@/lib/tassonomia/esercenti';
 import { Interruttore } from './interruttore';
 import { SceltaCategoria } from '../scelta-categoria';
@@ -56,10 +59,12 @@ export default async function EsercentiPage({
   const cerca = primo(p['cerca']);
   const pagina = Math.max(0, Number(primo(p['pagina']) ?? 0) || 0);
 
-  const [{ righe, totale }, categorie] = await Promise.all([
+  const [{ righe, totale }, categorie, classi] = await Promise.all([
     leggiEsercenti(filtro, cerca, pagina),
     categorieSceglibili(),
+    leggiClassi(),
   ]);
+  const tinte = tinteDelleClassi(classi);
 
   // Un solo posto costruisce gli indirizzi: filtro, ricerca e pagina viaggiano
   // insieme, e cambiarne uno non deve far perdere gli altri. Stringa vuota =
@@ -154,6 +159,14 @@ export default async function EsercentiPage({
           {righe.map((e) => (
             <li key={e.id} className="space-y-1.5 py-2">
               <div className="flex items-start gap-3">
+                <Avatar
+                  nome={e.canonical_name}
+                  tinta={
+                    e.discretion !== null
+                      ? (tinte[e.discretion] ?? 'var(--neutro)')
+                      : 'var(--neutro)'
+                  }
+                />
                 <Link href={`/esercente/${e.id}`} className="min-w-0 flex-1 py-1">
                   <span className="block truncate text-[15px]">{e.canonical_name}</span>
                   <span className="mt-0.5 block truncate text-[12px] text-testo-3">

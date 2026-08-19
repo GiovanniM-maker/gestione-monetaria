@@ -146,6 +146,35 @@ export const leggiCategorie = cache(
   }),
 );
 
+/** L'aspetto di una categoria: la chiave dell'icona e la classe che la tinge. */
+export type AspettoCategoria = { icona: string | null; classe: string | null };
+
+/**
+ * Icona e discrezionalita' predefinita di ogni categoria, per le tessere.
+ *
+ * Da `v_categorie_albero`, con `select('*')` e non con l'elenco dei campi, di
+ * proposito: la colonna `icon` arriva con la 0049, e finche' quella migration
+ * non e' applicata chiederla per nome sarebbe un errore su tutta la lettura.
+ * Cosi' invece manca solo il glifo, e le tessere restano velature colorate —
+ * il degrado che la Fetta 2 prevede, non un cruscotto rotto.
+ */
+export const leggiAspettoCategorie = cache(
+  inCache('aspetto-categorie', async (sb): Promise<ReadonlyMap<string, AspettoCategoria>> => {
+    const { data } = await sb.from('v_categorie_albero').select('*');
+    type Riga = {
+      id: string;
+      icon?: string | null;
+      discrezionalita_predefinita: string | null;
+    };
+    return new Map(
+      comeArray<Riga>(data).map((c) => [
+        c.id,
+        { icona: c.icon ?? null, classe: c.discrezionalita_predefinita },
+      ]),
+    );
+  }),
+);
+
 export const leggiEsercenti = cache(
   inCache('esercenti-del-mese', async (sb, mese: string): Promise<readonly RigaEsercente[]> => {
     const { data } = await sb

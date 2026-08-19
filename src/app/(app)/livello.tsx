@@ -112,6 +112,13 @@ export type VoceLivello = {
   /** Dove porta il tocco. `null` per una voce che non si puo' aprire. */
   href: string | null;
   variazione?: Variazione | undefined;
+  /**
+   * Cosa precede la riga: una `TesseraCategoria`, un `Avatar`. E' un nodo e
+   * non una chiave, cosi' questo componente non deve sapere che forme
+   * esistono — chi compone la lista sa gia' se sta elencando categorie o
+   * esercenti.
+   */
+  tessera?: React.ReactNode;
 };
 
 /**
@@ -141,6 +148,7 @@ export function Ripartizione({
           {voci.map((v) => {
             const dentro = (
               <>
+                {v.tessera}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{v.etichetta}</span>
                   {v.dettaglio !== null && v.dettaglio !== undefined && (

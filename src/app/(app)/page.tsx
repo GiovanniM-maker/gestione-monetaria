@@ -10,6 +10,7 @@ import {
   leggiDaConfermare,
   leggiEntrate,
   leggiFinestra,
+  leggiAspettoCategorie,
   leggiRicorrente,
   leggiStato,
   leggiVariazioni,
@@ -29,7 +30,8 @@ import {
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { CATEGORIA_SENZA, estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
-import { Tessera } from '@/lib/ui/tessera';
+import { Tessera, TesseraCategoria } from '@/lib/ui/tessera';
+import { comeIcona } from '@/lib/ui/icone';
 import { BarraClassi, Freccia, ordineDelleClassi, tinteDelleClassi } from './grafici';
 import { Ripartizione } from './livello';
 import { SceltaMese } from './mese';
@@ -227,8 +229,29 @@ export default async function CruscottoPage({
  * c'e' `/dove`, ed e' il collegamento in fondo al cruscotto.
  */
 async function InCosa({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMese | null }) {
-  const [categorie, variazioni] = await Promise.all([leggiCategorie(mese), leggiVariazioni(mese)]);
+  const [categorie, variazioni, aspetto, definizioni] = await Promise.all([
+    leggiCategorie(mese),
+    leggiVariazioni(mese),
+    leggiAspettoCategorie(),
+    leggiClassi(),
+  ]);
   const perCategoria = new Map(variazioni.categorie.map((v) => [v.category_id, v as Variazione]));
+  const tinte = tinteDelleClassi(definizioni);
+
+  // La tessera prende la tinta della discrezionalita' predefinita della
+  // categoria (docs/aspetto.md §3.4): «In cosa» diventa leggibile in una
+  // seconda dimensione — tutte le tessere rosa sono spese voluttuarie — senza
+  // aggiungere un alfabeto nuovo. Dove la predefinita non c'e', la tessera e'
+  // neutra: e' vero e si vede.
+  const tesseraDi = (id: string) => {
+    const a = aspetto.get(id);
+    return (
+      <TesseraCategoria
+        icona={comeIcona(a?.icona ?? null)}
+        tinta={a?.classe != null ? (tinte[a.classe] ?? 'var(--neutro)') : 'var(--neutro)'}
+      />
+    );
+  };
 
   const radici = categorie
     .filter((c) => c.parent_id === null)
@@ -239,6 +262,7 @@ async function InCosa({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
       valore: centesimi(c.spesa),
       href: `/categoria/${c.category_id}?mese=${mese}`,
       variazione: perCategoria.get(c.category_id),
+      tessera: tesseraDi(c.category_id),
     }))
     .filter((v) => v.valore !== 0n);
 
@@ -257,6 +281,7 @@ async function InCosa({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
           {
             chiave: 'senza-categoria',
             etichetta: 'Senza categoria',
+            tessera: <TesseraCategoria icona="punti" tinta="var(--neutro)" />,
             dettaglio: `${rigaMese.senza_categoria} ${rigaMese.senza_categoria === 1 ? 'movimento' : 'movimenti'} da assegnare`,
             valore: centesimi(rigaMese.spesa_senza_categoria),
             href: perMese(mese, { categoria: CATEGORIA_SENZA }),
