@@ -1189,6 +1189,40 @@ I due pezzi inizialmente rimandati sono arrivati lo stesso giorno, con la **0050
   un guasto travestito da risposta. Le tre letture di `lib/dove/leggi.ts` ora lanciano, e la
   fisarmonica mostra la sua nota d'errore.
 
+#### La seconda iterazione, 19 agosto 2026, sera
+
+Cinque aree dalla specifica successiva dell'utente, in ordine di priorita':
+
+- **La discesa e' istantanea.** La lentezza non era la query, era il viaggio pagato al tocco: il
+  primo livello sotto ogni classe ora arriva **con la pagina** (`precaricati` sul nodo, prefetch
+  in parallelo deduplicato da `cache()`), e aprire una classe e' un accordion locale — figli a
+  schermo sotto i 120 ms misurati. I livelli piu' in giu' arrivano al tocco ma il ramo si apre
+  SUBITO con due righe d'attesa; un prefetch fallito lascia il ramo apribile col viaggio. Le
+  pagine senza `loading.tsx` l'hanno ricevuto: senza, Next tiene a schermo la pagina vecchia per
+  tutto il viaggio e il tocco sembra non registrato.
+- **Il copilota e' un elenco di conversazioni** (`/copilota`), con la chat su `?c=<uuid>` e una
+  testata sua: indietro, titolo, **stella**, menu con rinomina/elimina. Una conversazione non
+  salvata vive **30 giorni dall'ultimo messaggio** (pulizia nella sequenza quotidiana,
+  `pulisci_conversazioni` della **0051**); la stella la salva per sempre. La scadenza si dice nel
+  foglio di gestione, e in vista solo sotto i quattro giorni col gesto accanto. Senza la 0051
+  l'elenco **ripiega** sulla vista vecchia invece di mostrarsi vuoto.
+- **Il numerone della home e' il centro**: 54–64 px, centrato, aria sopra e sotto.
+- **Le categorie hanno il marchietto**: l'icona nel cerchietto, glifo monocromo, velatura leggera
+  della classe predefinita. Le classi tengono la codifica forte; niente arcobaleno.
+- **«Dove» cambia mestiere**: non un altro elenco ma l'analisi — il mese **giorno per giorno**
+  (`spesa_giornaliera`, 0052), la composizione ad anello per classe (il tocco punta il grafico,
+  non le transazioni), **«Nel tempo»** — UN grafico con selettore (totale / classi / ricorrente /
+  categorie) e finestra 3/6/12 nell'indirizzo — i **costi ricorrenti su scala annuale** (12 × il
+  tasso mensile, «un ritmo, non una previsione», piu' `spesa_mensile_ricorrente` della 0052 per
+  l'andamento), **2–4 insight** composti dalle stesse `variazione_pct` delle frecce (si sceglie
+  cosa dire, non si calcola), e «Da chi». La geometria e' quella della Fase 10: zero sempre nel
+  dominio, importi mai da un float. La discesa per classe resta alla home; la fisarmonica di
+  /dove se ne va con il suo doppione.
+
+Le migration **0049–0052** vanno applicate nel SQL editor di Supabase, in ordine. Fino ad allora
+ogni pezzo degrada dichiarandosi: marchietti coi puntini, ramo del ricorrente con la nota
+d'errore, grafico giornaliero con la nota, elenco del copilota senza stelle.
+
 #### Misurato dopo, a 390 px, in tutti e due i temi
 
 Nessuna schermata sborda di lato; tre bersagli sotto i 44 px in tutta l'applicazione (erano 313 solo
