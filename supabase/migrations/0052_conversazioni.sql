@@ -33,29 +33,55 @@
 -- `salvata = true` mette `scade_at` a null: non c'e' una data lontanissima da
 -- confrontare, c'e' l'assenza di una scadenza.
 
+-- ---------------------------------------------------------------------------
+-- La tabella, e le colonne una per una
+-- ---------------------------------------------------------------------------
+-- `create table if not exists` da solo NON basta, e la ragione e' costata un
+-- errore in produzione: se la tabella esiste gia' — anche con una forma
+-- diversa — l'intero blocco viene saltato, colonne comprese, e la migration
+-- prosegue su una tabella che non ha quello che le serve.
+--
+-- E' un difetto che una replica costruita applicando le migration in ordine non
+-- puo' trovare: li' la tabella non c'era. Quindi ogni colonna si aggiunge da
+-- sola, con `if not exists`, e il risultato e' lo stesso sia partendo da niente
+-- sia partendo da una tabella gia' esistente.
 create table if not exists public.chat_conversations (
-  id uuid primary key,
-
-  -- Lo scrive il modello dopo il secondo scambio, poi si congela — un titolo
-  -- che si riscrive a ogni messaggio rende l'elenco illeggibile, perche' quello
-  -- che si cercava ieri oggi si chiama in un altro modo. Null finche' non c'e':
-  -- il ripiego e' la prima domanda troncata, che `v_conversazioni` gia' sa dare.
-  titolo text check (titolo is null or length(titolo) <= 120),
-  -- Vero se l'ha scritto una persona: da quel momento nessun automatismo lo
-  -- tocca. E' la stessa idea di `manually_categorized`, applicata a un'etichetta.
-  titolo_manuale boolean not null default false,
-
-  salvata boolean not null default false,
-
-  created_at timestamptz not null default now(),
-  ultima_at  timestamptz not null default now(),
-  scade_at   timestamptz,
-
-  -- L'invariante in una riga: salvata e con scadenza sono incompatibili.
-  constraint chat_conversations_scadenza check (
-    (salvata and scade_at is null) or (not salvata and scade_at is not null)
-  )
+  id uuid primary key
 );
+
+-- Lo scrive il modello dopo il secondo scambio, poi si congela — un titolo che
+-- si riscrive a ogni messaggio rende l'elenco illeggibile, perche' quello che
+-- si cercava ieri oggi si chiama in un altro modo. Null finche' non c'e': il
+-- ripiego e' la prima domanda troncata, che `v_conversazioni` gia' sa dare.
+alter table public.chat_conversations add column if not exists titolo text;
+-- Vero se l'ha scritto una persona: da quel momento nessun automatismo lo
+-- tocca. E' la stessa idea di `manually_categorized`, applicata a un'etichetta.
+alter table public.chat_conversations
+  add column if not exists titolo_manuale boolean not null default false;
+alter table public.chat_conversations
+  add column if not exists salvata boolean not null default false;
+alter table public.chat_conversations
+  add column if not exists created_at timestamptz not null default now();
+alter table public.chat_conversations
+  add column if not exists ultima_at timestamptz not null default now();
+alter table public.chat_conversations add column if not exists scade_at timestamptz;
+
+alter table public.chat_conversations drop constraint if exists chat_conversations_titolo_len;
+alter table public.chat_conversations add constraint chat_conversations_titolo_len
+  check (titolo is null or length(titolo) <= 120);
+
+-- Le righe che c'erano prima potrebbero non rispettare l'invariante: si
+-- sistemano PRIMA di dichiararlo, o il vincolo verrebbe rifiutato dai dati
+-- esistenti — e con lui tutta la migration.
+update public.chat_conversations
+   set scade_at = coalesce(scade_at, ultima_at + interval '30 days')
+ where not salvata and scade_at is null;
+update public.chat_conversations set scade_at = null where salvata and scade_at is not null;
+
+-- L'invariante in una riga: salvata e con scadenza sono incompatibili.
+alter table public.chat_conversations drop constraint if exists chat_conversations_scadenza;
+alter table public.chat_conversations add constraint chat_conversations_scadenza
+  check ((salvata and scade_at is null) or (not salvata and scade_at is not null));
 
 comment on table public.chat_conversations is
   'Le conversazioni. Non contengono niente di duraturo: cancellarne una non puo'' togliere correzioni, obiettivi, widget o regole.';
