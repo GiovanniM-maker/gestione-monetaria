@@ -29,6 +29,7 @@ import {
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { CATEGORIA_SENZA, estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
+import { Tessera } from '@/lib/ui/tessera';
 import { BarraClassi, Freccia, ordineDelleClassi, tinteDelleClassi } from './grafici';
 import { Ripartizione } from './livello';
 import { SceltaMese } from './mese';
@@ -471,18 +472,30 @@ async function QuantoHoSpeso({
 
   return (
     <section className="space-y-4">
-      {/* La scheda del mese. Tinta appena dalla classe che pesa di piu': dopo
-          qualche mese il colore dice com'e' andato prima di leggere una cifra. */}
+      {/* La scheda del mese: l'eroe. Tinta appena dalla classe che pesa di
+          piu' — dopo qualche mese il colore dice com'e' andato prima di
+          leggere una cifra — sopra il fondo sfumato dell'eroe, che e' l'unico
+          bagliore concesso a una scheda. L'illustrazione sta nell'angolo, con
+          un'ombra colorata che la fa sedere nella scheda invece di
+          fluttuarci sopra; `alt` vuoto perche' non dice niente che il titolo
+          non dica. */}
       <div
-        className="scheda space-y-3 p-5"
+        className="scheda eroe space-y-3 p-5"
         style={
           tinta === null
             ? undefined
             : {
-                backgroundImage: `radial-gradient(24rem 12rem at 8% 0%, color-mix(in oklab, ${tinta} 26%, transparent), transparent 70%)`,
+                backgroundImage: `radial-gradient(24rem 12rem at 8% 0%, color-mix(in oklab, ${tinta} 26%, transparent), transparent 70%), var(--eroe-fondo)`,
               }
         }
       >
+        <img
+          src="/illustrazioni/oggi.webp"
+          alt=""
+          width={54}
+          height={54}
+          className="eroe-ill drop-shadow-[0_6px_16px_rgb(90_80_224/0.35)]"
+        />
         {giorniCoperti !== null && confronto !== null && (
           <p className="text-[13px] text-testo-2">nei primi {giorniCoperti} giorni</p>
         )}
@@ -526,9 +539,13 @@ async function QuantoHoSpeso({
                     href={perMese(mese, { classe: c.discrezionalita })}
                     className="flex min-h-12 items-center gap-2.5"
                   >
-                    <span
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={{ background: tinte[c.discrezionalita] ?? 'var(--neutro)' }}
+                    {/* La tessera al posto del pallino: stessa informazione —
+                        la tinta della classe — con dentro la sua icona di
+                        vetro. Il pallino resta nella legenda della barra, dove
+                        una tessera sarebbe piu' grossa del dato. */}
+                    <Tessera
+                      slug={c.discrezionalita}
+                      tinta={tinte[c.discrezionalita] ?? 'var(--neutro)'}
                     />
                     {/* Classe e contesto su due righe: su una sola, «Voluttuario ·
                       Personale» accanto a un importo e a una freccia finiva
@@ -549,7 +566,15 @@ async function QuantoHoSpeso({
                     </span>
                     <span className="cifra shrink-0 whitespace-nowrap">
                       {formattaEuro(centesimi(c.spesa))}
-                      <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
+                      {/* Il non classificato non ha frecce: e' una categoria
+                          residuale che si riempie e si svuota mentre si
+                          classifica, e un ▲594% li' accanto a variazioni vere
+                          insegna che le frecce non vogliono dire niente
+                          (docs/aspetto.md §4.3). Il suo numero dice quanto
+                          non sappiamo, e si legge da solo. */}
+                      {c.discrezionalita !== c.contesto && (
+                        <Freccia riga={perClasse.get(`${c.discrezionalita}|${c.contesto}`)} />
+                      )}
                     </span>
                     <span aria-hidden="true" className="shrink-0 text-testo-3">
                       ›
@@ -624,19 +649,40 @@ async function Ricorrente({ mese }: { mese: string }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <div className="scheda p-4">
+        {/* Le illustrazioni stanno nell'angolo basso e il testo gli lascia
+            spazio con un margine, non con la speranza: a 141 pixel di colonna
+            «il risparmio e' certo» arrivava esattamente li' sotto. */}
+        <div className="scheda relative overflow-hidden p-4">
+          <img
+            src="/illustrazioni/abbonamenti.webp"
+            alt=""
+            width={46}
+            height={46}
+            loading="lazy"
+            className="absolute right-1 bottom-1"
+          />
           <p className="text-[13px] text-testo-2">Abbonamenti</p>
           {/* Diciannove e non ventisei: mezza colonna larga 141 pixel non
               tiene «−1.610,17 €» a ventisei, e l'euro andava a capo da solo. */}
           <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
             {formattaEuro(abbonamenti)}
           </p>
-          <p className="mt-1.5 text-[12px] text-testo-3">Si disdicono. Il risparmio è certo.</p>
+          <p className="mt-1.5 pr-9 text-[12px] text-testo-3">
+            Si disdicono. Il risparmio è certo.
+          </p>
         </div>
-        <div className="scheda p-4">
+        <div className="scheda relative overflow-hidden p-4">
+          <img
+            src="/illustrazioni/abitudini.webp"
+            alt=""
+            width={46}
+            height={46}
+            loading="lazy"
+            className="absolute right-1 bottom-1"
+          />
           <p className="text-[13px] text-testo-2">Abitudini</p>
           <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">{formattaEuro(abitudini)}</p>
-          <p className="mt-1.5 text-[12px] text-testo-3">
+          <p className="mt-1.5 pr-9 text-[12px] text-testo-3">
             Niente da disdire: si ripete perché lo si rifà.
           </p>
         </div>

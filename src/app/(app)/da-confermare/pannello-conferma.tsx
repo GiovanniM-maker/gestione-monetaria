@@ -123,20 +123,27 @@ export function PannelloConferma({
         {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
 
         <div className="scheda space-y-3 p-6 text-center">
-          <p
-            className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
-            style={{
-              // `--conferma` e non `--investimento`: le tinte non si chiamano
-              // piu' come le classi, perche' le classi si rinominano.
-              background: inPari
-                ? 'color-mix(in oklab, var(--conferma) 18%, transparent)'
-                : 'var(--s3)',
-              color: inPari ? 'var(--conferma)' : 'var(--testo-3)',
-            }}
-            aria-hidden="true"
-          >
-            ✓
-          </p>
+          {/* La spunta verde di vetro quando e' una lode vera; il cerchio
+              spento quando la lista e' vuota perche' non e' arrivato niente.
+              Dare l'illustrazione anche al secondo caso vestirebbe a festa
+              una risposta che e' «non lo so». */}
+          {inPari ? (
+            <img
+              src="/illustrazioni/sei-in-pari.webp"
+              alt=""
+              width={84}
+              height={84}
+              className="mx-auto drop-shadow-[0_8px_20px_rgb(48_209_88/0.25)]"
+            />
+          ) : (
+            <p
+              className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
+              style={{ background: 'var(--s3)', color: 'var(--testo-3)' }}
+              aria-hidden="true"
+            >
+              ✓
+            </p>
+          )}
           <p className="text-[17px] font-semibold">
             {inPari ? 'Sei in pari.' : 'Niente da confermare.'}
           </p>

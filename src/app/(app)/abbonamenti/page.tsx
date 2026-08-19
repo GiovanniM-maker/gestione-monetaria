@@ -46,6 +46,7 @@ export default async function AbbonamentiPage() {
   return (
     <div className="space-y-6">
       <TestataPagina
+        illustrazione="/illustrazioni/abbonamenti.webp"
         titolo="Costo ricorrente"
         cifra={formattaEuro(abbonamentiMese + abitudiniMese)}
         etichetta="al mese, fra abbonamenti e abitudini"

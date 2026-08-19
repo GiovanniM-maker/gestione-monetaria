@@ -69,6 +69,7 @@ export default async function DaConfermarePage() {
   return (
     <div className="space-y-5">
       <TestataPagina
+        illustrazione="/illustrazioni/conferma.webp"
         titolo="Da confermare"
         cifra={conta(righe.length)}
         etichetta={righe.length === 0 ? 'sei in pari' : 'movimenti nuovi'}

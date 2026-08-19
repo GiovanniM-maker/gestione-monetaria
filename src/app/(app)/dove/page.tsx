@@ -101,6 +101,7 @@ export default async function DovePage({
       />
 
       <TestataPagina
+        illustrazione="/illustrazioni/dove.webp"
         titolo="Dove"
         cifra={formattaEuro(centesimiDi(rigaMese?.spesa))}
         etichetta={`speso in ${etichettaMese(mese)}${

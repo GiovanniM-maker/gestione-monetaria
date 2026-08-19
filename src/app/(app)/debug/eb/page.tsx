@@ -334,7 +334,10 @@ export default async function DebugEbPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Debug Enable Banking</h1>
+        <h1 className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.03em]">
+          <img src="/illustrazioni/consenso.webp" alt="" width={30} height={30} />
+          Debug Enable Banking
+        </h1>
         <p className="mt-1 text-[13px] text-testo-2">
           Verifica della Fase 1. Nessun dato viene salvato: quello che vedi arriva direttamente
           dall&rsquo;API a ogni caricamento della pagina. Gli IBAN sono mascherati anche nei dump

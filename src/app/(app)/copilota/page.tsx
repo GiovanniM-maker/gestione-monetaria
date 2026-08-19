@@ -41,7 +41,16 @@ export default async function CopilotaPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Copilota</h1>
+        <h1 className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.03em]">
+          <img
+            src="/illustrazioni/chiedi.webp"
+            alt=""
+            width={30}
+            height={30}
+            className="drop-shadow-[0_4px_10px_rgb(90_80_224/0.35)]"
+          />
+          Copilota
+        </h1>
         <div className="flex gap-2">
           {messaggi.length > 0 && (
             <Link

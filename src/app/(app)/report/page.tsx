@@ -15,6 +15,7 @@ export default async function ReportPage() {
   return (
     <div className="space-y-5">
       <TestataPagina
+        illustrazione="/illustrazioni/report.webp"
         titolo="Report mensili"
         cifra={conta(report.length)}
         etichetta={
