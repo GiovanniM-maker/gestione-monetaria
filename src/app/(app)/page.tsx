@@ -244,7 +244,7 @@ async function InCosa({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
   // aggiungere un alfabeto nuovo. Dove la predefinita non c'e', la tessera e'
   // neutra: e' vero e si vede.
   const tesseraDi = (id: string) => {
-    const a = aspetto.get(id);
+    const a = aspetto[id];
     return (
       <TesseraCategoria
         icona={comeIcona(a?.icona ?? null)}

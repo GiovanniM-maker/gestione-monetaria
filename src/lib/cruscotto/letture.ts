@@ -159,14 +159,20 @@ export type AspettoCategoria = { icona: string | null; classe: string | null };
  * il degrado che la Fetta 2 prevede, non un cruscotto rotto.
  */
 export const leggiAspettoCategorie = cache(
-  inCache('aspetto-categorie', async (sb): Promise<ReadonlyMap<string, AspettoCategoria>> => {
+  // Un oggetto semplice e NON una `Map`: cio' che esce da `inCache` passa da
+  // `unstable_cache`, che serializza in JSON. Una Map serializzata diventa
+  // `{}`, e al primo colpo di cache `aspetto.get` non e' piu' una funzione —
+  // la home intera muore con un digest. In anteprima non si vede, perche'
+  // senza sessione la cache e' scavalcata: e' il guasto che compare solo in
+  // produzione, trovato il 19 agosto 2026.
+  inCache('aspetto-categorie', async (sb): Promise<Readonly<Record<string, AspettoCategoria>>> => {
     const { data } = await sb.from('v_categorie_albero').select('*');
     type Riga = {
       id: string;
       icon?: string | null;
       discrezionalita_predefinita: string | null;
     };
-    return new Map(
+    return Object.fromEntries(
       comeArray<Riga>(data).map((c) => [
         c.id,
         { icona: c.icon ?? null, classe: c.discrezionalita_predefinita },
