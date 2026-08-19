@@ -145,18 +145,18 @@ export default async function CruscottoPage({
   const parametri = await searchParams;
   // L'unica lettura che la pagina aspetta davvero: senza sapere quali mesi
   // esistono non si sa nemmeno quale mostrare.
-  const { mese, rigaMese, mesePrecedente, meseSuccessivo, inCorso } = await scegliMese(
-    meseValido(parametri['mese']),
-  );
+  const { mese, rigaMese, mesiDisponibili, mesePrecedente, meseSuccessivo, inCorso } =
+    await scegliMese(meseValido(parametri['mese']));
 
   return (
     <div className="space-y-8">
       <SceltaMese
         mese={mese}
+        mesi={mesiDisponibili}
         precedente={mesePrecedente}
         successivo={meseSuccessivo}
         inCorso={inCorso}
-        indirizzo={(m) => `/?mese=${m}`}
+        indirizzo="/?mese=%m"
       />
 
       {/* Prima dei numeri, e solo quando c'e' qualcosa che li rende falsi:
@@ -188,7 +188,7 @@ export default async function CruscottoPage({
         <div className="flex items-baseline justify-between gap-3">
           {/* «Di questo, quanto torna ogni mese» andava a capo e spingeva su
               il collegamento accanto. Quattro parole dicono la stessa cosa. */}
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Quanto torna ogni mese</h2>
+          <h2 className="eti px-1">Quanto torna ogni mese</h2>
           <Link
             className="inline-flex min-h-11 shrink-0 items-center text-[13px] text-accento sm:min-h-0"
             href="/abbonamenti"
@@ -526,7 +526,7 @@ async function QuantoHoSpeso({
           className="eroe-ill drop-shadow-[0_6px_16px_rgb(90_80_224/0.35)]"
         />
         {giorniCoperti !== null && confronto !== null && (
-          <p className="text-[13px] text-testo-2">nei primi {giorniCoperti} giorni</p>
+          <p className="eti">nei primi {giorniCoperti} giorni</p>
         )}
         <p className="numerone text-[40px] sm:text-[46px]">{formattaEuro(speso)}</p>
 
@@ -547,7 +547,15 @@ async function QuantoHoSpeso({
           )
         )}
 
-        {classi.length > 0 && <BarraClassi voci={perLaBarraOra} tinte={tinte} />}
+        {classi.length > 0 && (
+          <BarraClassi
+            voci={perLaBarraOra}
+            tinte={tinte}
+            // Il nome mostrato, non lo slug: dopo un rinomina la legenda
+            // direbbe una parola che non esiste piu' da nessun'altra parte.
+            nomi={Object.fromEntries(definizioni.map((d) => [d.slug, d.nome]))}
+          />
+        )}
       </div>
 
       {classi.length === 0 ? (
@@ -559,7 +567,7 @@ async function QuantoHoSpeso({
               dicono che rispondono a due domande diverse — e la prima delle
               due e' anche quella che nessuno chiama «classi» finche' non
               gliel'hai detto. */}
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">Per classe</h2>
+          <h2 className="eti px-1">Per classe</h2>
           <div className="scheda px-4">
             <ul className="elenco text-[15px]">
               {classi.map((c) => (

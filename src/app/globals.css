@@ -283,6 +283,88 @@ body {
  * del suo colore invece di un buco.
  */
 /**
+ * Le primitive delle testate (Fetta 3 di docs/aspetto.md).
+ * --------------------------------------------------------------------------
+ * `.eti` — la micro-etichetta maiuscola sopra un numero grande. Dice cosa
+ * misura il numero senza rubargli peso: e' piccola, spaziata e spenta, e
+ * proprio per questo il numero sotto sembra piu' grande senza crescere.
+ *
+ * `.pastiglia` — lo stato in una riga: «in corso», «da confermare». Un fatto
+ * breve dentro una capsula, mai un bersaglio: se si puo' toccare, e' un
+ * bottone e si veste da bottone.
+ *
+ * `.segm` / `.segm-voce` — il controllo segmentato: due o tre scelte, quella
+ * attiva e' una pastiglia SOLLEVATA sul solco, non un riempimento d'accento.
+ * L'accento resta la voce dell'applicazione (collegamenti, bottone
+ * principale): un controllo che dice «sei qui» non grida.
+ *
+ * `.tondo` — il bottone circolare di testata (il menu, e chi verra').
+ */
+.eti {
+  font-size: 10.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--testo-3);
+}
+
+.pastiglia {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accento) 12%, var(--s2));
+  color: var(--accento);
+}
+
+.segm {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--s2);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.segm-voce {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44, come ogni bersaglio: la regola di lib/ui/controlli.ts non ha
+     eccezioni estetiche, e un controllo compatto che si sbaglia col pollice
+     non e' compatto — e' rotto. */
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--testo-2);
+}
+.segm-voce[aria-current],
+.segm-voce[aria-pressed='true'] {
+  background: linear-gradient(180deg, var(--s2-alto), var(--s3));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 2px 6px rgb(0 0 0 / 0.18);
+  color: var(--testo);
+  font-weight: 600;
+}
+
+.tondo {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--s2-alto), var(--s2));
+  box-shadow: var(--rilievo);
+  color: var(--testo);
+}
+
+/**
  * L'avatar di un esercente: l'iniziale sulla velatura della sua classe.
  * Il cerchio contro il quadrato della tessera: una categoria e' un posto,
  * un esercente e' qualcuno, e le due forme si distinguono in coda all'occhio.

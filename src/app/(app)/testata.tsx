@@ -33,12 +33,15 @@ export function TestataPagina({
   titolo,
   cifra,
   etichetta,
+  pastiglia,
   tinta,
   figure,
   perche,
   azioni,
   illustrazione,
 }: {
+  /** Lo stato in una parola, sotto la cifra: «da confermare». */
+  pastiglia?: string;
   titolo: string;
   /** Il numero grande. Una stringa gia' formattata, o niente. */
   cifra?: string | null;
@@ -91,19 +94,25 @@ export function TestataPagina({
           {titolo}
         </h1>
 
+        {/* La micro-etichetta sta SOPRA il numero (Fetta 3): dice cosa misura
+            prima che lo si legga, e spenta com'e' lo fa sembrare piu' grande
+            senza ingrandirlo. */}
+        {etichetta !== null && etichetta !== undefined && <p className="eti pt-1.5">{etichetta}</p>}
         {cifra !== null && cifra !== undefined && (
-          <p className="numerone pt-1 text-[34px]">{cifra}</p>
+          <p className="numerone pt-0.5 text-[34px]">{cifra}</p>
         )}
-        {etichetta !== null && etichetta !== undefined && (
-          <p className="text-[13px] text-testo-3">{etichetta}</p>
+        {pastiglia !== undefined && (
+          <p className="pt-1.5">
+            <span className="pastiglia">{pastiglia}</span>
+          </p>
         )}
 
         {figure !== undefined && figure.length > 0 && (
           <dl className="flex flex-wrap gap-x-6 gap-y-2 pt-3">
             {figure.map((f) => (
               <div key={f.etichetta}>
-                <dd className="cifra text-[17px] font-semibold">{f.valore}</dd>
-                <dt className="text-[12px] text-testo-3">{f.etichetta}</dt>
+                <dt className="eti">{f.etichetta}</dt>
+                <dd className="cifra pt-0.5 text-[17px] font-semibold">{f.valore}</dd>
               </div>
             ))}
           </dl>

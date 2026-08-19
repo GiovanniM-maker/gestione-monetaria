@@ -141,7 +141,7 @@ export function Ripartizione({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
+      <h2 className="eti px-1">{titolo}</h2>
       {nota !== undefined && <p className="text-[13px] text-testo-3">{nota}</p>}
       <div className="scheda px-4">
         <ul className="elenco text-[15px]">
@@ -214,7 +214,7 @@ export function MesePerMese({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
+      <h2 className="eti px-1">{titolo}</h2>
       <div className="scheda px-4">
         <ul className="elenco">
           {righe.map((r) => {

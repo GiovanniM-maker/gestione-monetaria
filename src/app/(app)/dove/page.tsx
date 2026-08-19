@@ -15,6 +15,7 @@ import { TestataPagina } from '../testata';
 import { ScheletroElenco } from '../scheletri';
 import { SceltaMese } from '../mese';
 import { Fisarmonica, type Nodo } from './fisarmonica';
+import { Segmentato } from '../segmentato';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Dove' };
@@ -82,9 +83,8 @@ export default async function DovePage({
 }) {
   const parametri = await searchParams;
   const modo = modoValido(parametri['modo']);
-  const { mese, totali, rigaMese, mesePrecedente, meseSuccessivo, inCorso } = await scegliMese(
-    meseValido(parametri['mese']),
-  );
+  const { mese, totali, rigaMese, mesiDisponibili, mesePrecedente, meseSuccessivo, inCorso } =
+    await scegliMese(meseValido(parametri['mese']));
 
   const andamento = totali.slice(-MESI_ANDAMENTO);
   const periodo = estremiDelMese(mese);
@@ -95,10 +95,11 @@ export default async function DovePage({
     <div className="space-y-6">
       <SceltaMese
         mese={mese}
+        mesi={mesiDisponibili}
         precedente={mesePrecedente}
         successivo={meseSuccessivo}
         inCorso={inCorso}
-        indirizzo={(m) => `/dove?mese=${m}&modo=${modo}`}
+        indirizzo={`/dove?mese=%m&modo=${modo}`}
       />
 
       <TestataPagina
@@ -153,29 +154,16 @@ export default async function DovePage({
  * browser non fa nessuna di queste tre cose.
  */
 function Interruttore({ mese, modo }: { mese: string; modo: Modo }) {
-  const voci: readonly { chiave: Modo; testo: string }[] = [
-    { chiave: 'classe', testo: 'per classe' },
-    { chiave: 'categoria', testo: 'per categoria' },
-  ];
-
   return (
-    <div className="flex gap-2" role="group" aria-label="Come dividere il mese">
-      {voci.map((v) => {
-        const attivo = v.chiave === modo;
-        return (
-          <Link
-            key={v.chiave}
-            href={`/dove?mese=${mese}&modo=${v.chiave}`}
-            aria-current={attivo ? 'true' : undefined}
-            className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo px-4 text-[14px] font-medium ${
-              attivo ? 'bg-accento text-accento-testo' : 'bg-s2 text-testo-2'
-            }`}
-          >
-            {v.testo}
-          </Link>
-        );
-      })}
-    </div>
+    <Segmentato
+      etichetta="Come dividere il mese"
+      voci={MODI.map((m) => ({
+        chiave: m,
+        testo: m === 'classe' ? 'per classe' : 'per categoria',
+        attiva: m === modo,
+        href: `/dove?mese=${mese}&modo=${m}`,
+      }))}
+    />
   );
 }
 

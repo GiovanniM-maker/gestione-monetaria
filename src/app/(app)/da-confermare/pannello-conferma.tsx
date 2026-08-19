@@ -15,6 +15,7 @@ import {
   type ChiaveGruppo,
   type Ordinamento,
 } from '@/lib/conferma/gruppi';
+import { Segmentato } from '../segmentato';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
 
@@ -184,20 +185,16 @@ export function PannelloConferma({
         <p className="text-[13px] text-testo-2">
           {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
         </p>
-        <div className="flex gap-1" role="group" aria-label="Come ordinare">
-          {ORDINAMENTI.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => setOrdinamento(o)}
-              aria-pressed={ordinamento === o}
-              className={`inline-flex min-h-11 items-center rounded-controllo px-3 text-[13px] sm:min-h-9 ${
-                ordinamento === o ? 'bg-accento text-accento-testo' : 'bg-s2 text-testo-2'
-              }`}
-            >
-              {o === 'data' ? 'per data' : 'per importo'}
-            </button>
-          ))}
+        <div className="w-[210px]">
+          <Segmentato
+            etichetta="Come ordinare"
+            voci={ORDINAMENTI.map((o) => ({
+              chiave: o,
+              testo: o === 'data' ? 'per data' : 'per importo',
+              attiva: ordinamento === o,
+              onScegli: () => setOrdinamento(o),
+            }))}
+          />
         </div>
       </div>
 

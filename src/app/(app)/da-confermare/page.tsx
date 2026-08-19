@@ -72,7 +72,8 @@ export default async function DaConfermarePage() {
         illustrazione="/illustrazioni/conferma.webp"
         titolo="Da confermare"
         cifra={conta(righe.length)}
-        etichetta={righe.length === 0 ? 'sei in pari' : 'movimenti nuovi'}
+        etichetta="movimenti nuovi"
+        pastiglia={righe.length === 0 ? undefined : 'da confermare'}
         tinta={righe.length === 0 ? 'var(--conferma)' : null}
         figure={
           righe.length === 0 ? undefined : [{ valore: formattaEuro(valgono), etichetta: 'valgono' }]
