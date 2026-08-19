@@ -1168,10 +1168,26 @@ Cosa ne discende, in ordine di visibilita':
 - **Le tessere Abbonamenti/Abitudini sono collegamenti** ai blocchi di `/abbonamenti`
   (`#abbonamento`, `#abitudine`).
 
-Rimandato con cognizione: le pagine dedicate Abbonamenti/Abitudini con la stessa gerarchia
-filtrata sui soli movimenti ricorrenti (serve SQL nuovo — una `ripartizione_dove` ristretta alle
-ricorrenze — quindi una migration da provare); il ciclo di vita dell'Inbox (7 giorni in vista,
-90 di storico, poi eliminazione) che richiede una migration e un passo nel lavoro notturno.
+I due pezzi inizialmente rimandati sono arrivati lo stesso giorno, con la **0050**:
+
+- **`/ricorrente/abbonamento` e `/ricorrente/abitudine`** — le tessere del cruscotto aprono una
+  pagina con la stessa gerarchia, ristretta a quel tipo. Quello che si scende e' un **tasso**
+  (`costo_mensile`, la colonna della metrica, solo voci `nella_metrica`): la somma dei rami deve
+  tornare col numero della tessera, ed e' per questo che non e' la spesa di un mese. Il fondo
+  della discesa sono le **voci** (una ricorrenza E' un esercente), e la voce naviga a
+  `/movimenti?esercente=…`, che sono i suoi addebiti. SQL: `ripartizione_ricorrente` e
+  `voci_ricorrenti`, stessa forma di `ripartizione_dove` — la fisarmonica non sa quale sta
+  disegnando. La gestione (giudizi, disdette) resta su `/abbonamenti`: quella e' manutenzione.
+- **Il ciclo di vita dell'Inbox**: 7 giorni in vista sulla home (filtro in lettura,
+  `GIORNI_IN_INBOX`), 90 di storico su `/avvisi`, poi la pulizia nella sequenza quotidiana
+  (`pulisciAvvisi`) li elimina — qualunque stato: se la condizione e' ancora vera, la
+  `dedupe_key` fa rinascere l'avviso nuovo davvero.
+- Nella stessa migration, `ripartizione_dove` ordinava sul **testo** dell'importo ('2' < '4',
+  quindi −21,96 prima di −469,90): ora ordina sul numero.
+- E una regola pagata provando la 0050 prima di applicarla: **un errore di RPC si lancia, non si
+  ingoia**. `const { data }` da solo trasformava una funzione assente in «niente qui dentro» —
+  un guasto travestito da risposta. Le tre letture di `lib/dove/leggi.ts` ora lanciano, e la
+  fisarmonica mostra la sua nota d'errore.
 
 #### Misurato dopo, a 390 px, in tutti e due i temi
 

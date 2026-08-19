@@ -6,7 +6,7 @@ import { meseDaData } from './mesi';
 import { leggiStatoSistema } from '@/lib/movimenti/cerca';
 import { confronta, leggiPeriodi, type RigaPeriodo } from './confronto';
 import { quanteDaConfermare } from '@/lib/conferma/leggi';
-import { GIA_SUL_CRUSCOTTO, leggiAvvisi } from '@/lib/avvisi/leggi';
+import { GIA_SUL_CRUSCOTTO, GIORNI_IN_INBOX, leggiAvvisi } from '@/lib/avvisi/leggi';
 import {
   finestraDiConfronto,
   leggiVariazioniCategorie,
@@ -231,7 +231,13 @@ export const leggiDaConfermare = cache(quanteDaConfermare);
 
 export const leggiAvvisiNuovi = cache(async () => {
   const avvisi = await leggiAvvisi(true);
-  return avvisi.filter((a) => !GIA_SUL_CRUSCOTTO.includes(a.type));
+  // Nell'Inbox solo gli avvisi recenti: dopo sette giorni un invito non letto
+  // non e' piu' un invito, e' arredamento. Restano nello storico (/avvisi) per
+  // novanta giorni — e' la pulizia notturna a farli sparire da li'.
+  const limite = Date.now() - GIORNI_IN_INBOX * 86_400_000;
+  return avvisi.filter(
+    (a) => !GIA_SUL_CRUSCOTTO.includes(a.type) && Date.parse(a.created_at) >= limite,
+  );
 });
 
 /**

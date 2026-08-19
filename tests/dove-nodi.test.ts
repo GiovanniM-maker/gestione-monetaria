@@ -3,6 +3,7 @@ import {
   aperturaDi,
   categorieComeNodi,
   movimentiComeNodi,
+  ricorrenzeComeNodi,
   rientro,
   versoMovimenti,
   type RigaRipartizione,
@@ -84,6 +85,70 @@ describe('categorieComeNodi — una foglia naviga, non si apre', () => {
       null,
     );
     expect(nodi[0]?.href).toContain('categoria=senza-categoria');
+  });
+});
+
+describe('categorieComeNodi — la discesa del ricorrente', () => {
+  // Nel ricorrente il fondo non sono i movimenti di un mese ma le VOCI: una
+  // foglia si apre ancora invece di navigare, e il tipo viaggia con ogni
+  // apertura — perderlo mostrerebbe la spesa intera sotto un titolo che
+  // promette il ricorrente.
+  it('una foglia apre le voci, non naviga ai movimenti', () => {
+    const nodi = categorieComeNodi(
+      [riga({ figli: 0 })],
+      '2026-08',
+      'voluttuario',
+      'personale',
+      'abitudine',
+    );
+    expect(nodi[0]?.href).toBeNull();
+    expect(nodi[0]?.apertura).toMatchObject({
+      tipo: 'ricorrenze',
+      ricorrenza: 'abitudine',
+      classe: 'voluttuario',
+      contesto: 'personale',
+      categoria: 'c1',
+      soloQuesta: false,
+    });
+  });
+
+  it('un ramo con figlie porta con sé il tipo di ricorrenza', () => {
+    const a = categorieComeNodi([riga({ figli: 2 })], '2026-08', null, null, 'abbonamento')[0]
+      ?.apertura;
+    expect(a).toMatchObject({ tipo: 'categorie', ricorrenza: 'abbonamento' });
+  });
+
+  it('la riga «direttamente qui» apre le sole voci del nodo', () => {
+    const nodi = categorieComeNodi(
+      [riga({ figli: 1, spesa_diretta: '-10.00', movimenti_diretti: 1 })],
+      '2026-08',
+      null,
+      null,
+      'abitudine',
+    );
+    expect(nodi[1]?.apertura).toMatchObject({ tipo: 'ricorrenze', soloQuesta: true });
+  });
+});
+
+describe('ricorrenzeComeNodi — il fondo della discesa del ricorrente', () => {
+  it('una voce naviga ai movimenti del suo esercente', () => {
+    const nodi = ricorrenzeComeNodi(
+      [
+        {
+          merchant_id: 'm1',
+          esercente: 'Netflix',
+          costo_mensile: '-6.99',
+          occorrenze: 11,
+          cadenza: 'monthly',
+          stato: 'active',
+        },
+      ],
+      null,
+    );
+    expect(nodi[0]?.href).toBe('/movimenti?esercente=m1');
+    expect(nodi[0]?.apertura).toBeNull();
+    // La stringa arrivata da Postgres, mai un numero.
+    expect(nodi[0]?.importo).toBe('-6.99');
   });
 });
 

@@ -12,7 +12,7 @@ import {
   type EsitoArricchimento,
 } from '@/lib/tassonomia/ricerca';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
-import { generaAvvisi } from '@/lib/avvisi/leggi';
+import { GIORNI_DI_STORICO, generaAvvisi, pulisciAvvisi } from '@/lib/avvisi/leggi';
 import type { AccountRow, BankConnectionRow, SyncTrigger } from '@/lib/db/types';
 
 /**
@@ -416,6 +416,17 @@ export async function eseguiSincronizzazioneQuotidiana(
     // scritto — un aumento di prezzo si vede solo dopo che il rilevamento ha
     // aggiornato `expected_amount`.
     esito.avvisiCreati = await generaAvvisi();
+
+    // E la pulizia dello storico dopo la generazione: oltre i novanta giorni
+    // un avviso si elimina. Se ne parla nel resoconto solo quando ha tolto
+    // qualcosa — una riga «0 eliminati» a ogni giro insegna a non leggerlo.
+    const eliminati = await pulisciAvvisi();
+    if (eliminati > 0) {
+      esito.avvisi = [
+        ...esito.avvisi,
+        `${eliminati} ${eliminati === 1 ? 'avviso più vecchio' : 'avvisi più vecchi'} di ${GIORNI_DI_STORICO} giorni eliminati dallo storico.`,
+      ];
+    }
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     esito.errore = esito.errore === null ? messaggio : `${esito.errore} · ${messaggio}`;

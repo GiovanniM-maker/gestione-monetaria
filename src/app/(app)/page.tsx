@@ -546,15 +546,15 @@ async function Ricorrente({ mese }: { mese: string }) {
         </p>
       </details>
 
-      {/* Due collegamenti, non due riquadri: ognuno apre il suo blocco sulla
-          pagina del ricorrente, gia' al punto giusto. Una tessera con un
-          numero che non si puo' aprire e' una domanda a cui la schermata
-          rifiuta di rispondere. */}
+      {/* Due collegamenti, non due riquadri: ognuno apre la SUA pagina, con
+          la stessa gerarchia della home ristretta a quel tipo. Una tessera
+          con un numero che non si puo' aprire e' una domanda a cui la
+          schermata rifiuta di rispondere. */}
       <div className="grid grid-cols-2 gap-3">
         {/* Le illustrazioni stanno nell'angolo basso e il testo gli lascia
             spazio con un margine, non con la speranza: a 141 pixel di colonna
             «il risparmio e' certo» arrivava esattamente li' sotto. */}
-        <Link href="/abbonamenti#abbonamento" className="scheda relative overflow-hidden p-4">
+        <Link href="/ricorrente/abbonamento" className="scheda relative overflow-hidden p-4">
           <img
             src="/illustrazioni/abbonamenti.webp"
             alt=""
@@ -573,7 +573,7 @@ async function Ricorrente({ mese }: { mese: string }) {
             Si disdicono. Il risparmio è certo.
           </p>
         </Link>
-        <Link href="/abbonamenti#abitudine" className="scheda relative overflow-hidden p-4">
+        <Link href="/ricorrente/abitudine" className="scheda relative overflow-hidden p-4">
           <img
             src="/illustrazioni/abitudini.webp"
             alt=""

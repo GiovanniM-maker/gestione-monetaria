@@ -35,6 +35,13 @@ export type Apertura =
       classe: string | null;
       contesto: string | null;
       categoria: string | null;
+      /**
+       * `abbonamento` o `abitudine`: la stessa discesa, ristretta al costo
+       * ricorrente di quel tipo. Assente = la spesa del mese, come sempre.
+       * Viaggia con OGNI apertura del ramo: perderla a un livello mostrerebbe
+       * la spesa intera sotto un titolo che promette il ricorrente.
+       */
+      ricorrenza?: string | null;
     }
   | {
       tipo: 'movimenti';
@@ -42,6 +49,19 @@ export type Apertura =
       contesto: string | null;
       categoria: string | null;
       /** Solo i movimenti di QUESTO nodo, senza le categorie discendenti. */
+      soloQuesta: boolean;
+    }
+  | {
+      /**
+       * Le voci ricorrenti (gli esercenti) sotto una categoria: il fondo della
+       * discesa del ricorrente. Una ricorrenza E' un esercente, e le sue
+       * transazioni si aprono dalla sua lista movimenti.
+       */
+      tipo: 'ricorrenze';
+      ricorrenza: string;
+      classe: string | null;
+      contesto: string | null;
+      categoria: string | null;
       soloQuesta: boolean;
     };
 
@@ -151,22 +171,40 @@ export function categorieComeNodi(
   prefisso: string,
   classe: string | null,
   contesto: string | null,
+  /** Il tipo di ricorrenza quando la discesa e' quella del ricorrente. */
+  ricorrenza: string | null = null,
 ): readonly Nodo[] {
   return righe.flatMap((r): Nodo[] => {
-    const chiave = `${prefisso}|${classe ?? '*'}|${contesto ?? '*'}|${r.category_id ?? 'nessuna'}`;
+    const chiave = `${prefisso}|${ricorrenza ?? '*'}|${classe ?? '*'}|${contesto ?? '*'}|${r.category_id ?? 'nessuna'}`;
+    const voci = ricorrenza !== null;
 
     // Una foglia e' un collegamento, non un ramo: la regola globale della
     // discesa e' classe → categorie → pagina dei movimenti, mai i movimenti
-    // srotolati sotto la classe.
+    // srotolati sotto la classe. Nel ricorrente invece la foglia si apre
+    // ancora, sulle VOCI: e' l'esercente il fondo di quella discesa, e la
+    // pagina delle transazioni e' la sua.
     const foglia = r.figli === 0;
     const nodo: Nodo = {
       chiave,
       etichetta: r.nome,
-      dettaglio: conta(r.movimenti, 'movimento', 'movimenti'),
+      dettaglio: voci
+        ? conta(r.movimenti, 'voce', 'voci')
+        : conta(r.movimenti, 'movimento', 'movimenti'),
       importo: r.spesa,
       tinta: null,
-      apertura: foglia ? null : aperturaDi(r, classe, contesto),
-      href: foglia ? versoMovimenti(prefisso, classe, contesto, r.category_id) : null,
+      apertura: foglia
+        ? voci
+          ? {
+              tipo: 'ricorrenze',
+              ricorrenza,
+              classe,
+              contesto,
+              categoria: r.category_id,
+              soloQuesta: false,
+            }
+          : null
+        : { tipo: 'categorie', classe, contesto, categoria: r.category_id, ricorrenza },
+      href: foglia && !voci ? versoMovimenti(prefisso, classe, contesto, r.category_id) : null,
     };
 
     // Senza figlie la riga «direttamente qui» sarebbe un doppione del nodo che
@@ -178,20 +216,63 @@ export function categorieComeNodi(
       {
         chiave: `${chiave}|diretta`,
         etichetta: `${r.nome}, direttamente qui`,
-        dettaglio: `${conta(r.movimenti_diretti, 'movimento', 'movimenti')} · non in una sottocategoria`,
+        dettaglio: voci
+          ? `${conta(r.movimenti_diretti, 'voce', 'voci')} · non in una sottocategoria`
+          : `${conta(r.movimenti_diretti, 'movimento', 'movimenti')} · non in una sottocategoria`,
         importo: r.spesa_diretta,
         tinta: null,
-        apertura: {
-          tipo: 'movimenti',
-          classe,
-          contesto,
-          categoria: r.category_id,
-          soloQuesta: true,
-        },
+        apertura: voci
+          ? {
+              tipo: 'ricorrenze',
+              ricorrenza,
+              classe,
+              contesto,
+              categoria: r.category_id,
+              soloQuesta: true,
+            }
+          : {
+              tipo: 'movimenti',
+              classe,
+              contesto,
+              categoria: r.category_id,
+              soloQuesta: true,
+            },
         href: null,
       },
     ];
   });
+}
+
+export type RigaVoceRicorrente = {
+  merchant_id: string;
+  esercente: string;
+  costo_mensile: string | null;
+  occorrenze: number;
+  cadenza: string;
+  stato: string;
+};
+
+/**
+ * Le voci ricorrenti come nodi: il fondo della discesa del ricorrente.
+ *
+ * Una voce non si apre: naviga alla lista movimenti del suo esercente, che
+ * sono esattamente gli addebiti della ricorrenza. L'importo mostrato e' il
+ * costo **al mese** — la stessa unita' dei rami sopra, o la somma delle righe
+ * non tornerebbe col totale del ramo.
+ */
+export function ricorrenzeComeNodi(
+  righe: readonly RigaVoceRicorrente[],
+  categoria: string | null,
+): readonly Nodo[] {
+  return righe.map((r) => ({
+    chiave: `voce|${r.merchant_id}|${categoria ?? '*'}`,
+    etichetta: r.esercente,
+    dettaglio: `${conta(r.occorrenze, 'addebito', 'addebiti')} · al mese`,
+    importo: r.costo_mensile ?? '0',
+    tinta: null,
+    apertura: null,
+    href: `/movimenti?esercente=${r.merchant_id}`,
+  }));
 }
 
 export function movimentiComeNodi(

@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import { leggiRipartizione } from '@/lib/dove/leggi';
+import {
+  leggiRipartizione,
+  leggiRipartizioneRicorrente,
+  leggiVociRicorrenti,
+} from '@/lib/dove/leggi';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
 import { CATEGORIA_SENZA, estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
 
@@ -47,7 +51,29 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const contesto = vuotoENullo(q.get('contesto'));
   const categoria = vuotoENullo(q.get('categoria'));
 
+  // La discesa del ricorrente: stessa gerarchia, ristretta a un tipo. Il
+  // valore si valida qui perche' finisce in un argomento di RPC, e un tipo
+  // inventato deve fermarsi al bordo, non arrivare al database.
+  const ricorrenza = vuotoENullo(q.get('ricorrenza'));
+  if (ricorrenza !== null && ricorrenza !== 'abbonamento' && ricorrenza !== 'abitudine') {
+    return NextResponse.json({ error: 'ricorrenza non valida' }, { status: 400 });
+  }
+
   try {
+    if (q.get('tipo') === 'ricorrenze') {
+      if (ricorrenza === null) {
+        return NextResponse.json({ error: 'ricorrenza mancante' }, { status: 400 });
+      }
+      const righe = await leggiVociRicorrenti({
+        tipo: ricorrenza,
+        classe,
+        contesto,
+        categoria,
+        soloQuesta: q.get('solo_questa') === '1',
+      });
+      return NextResponse.json({ tipo: 'ricorrenze', righe });
+    }
+
     if (q.get('tipo') === 'movimenti') {
       const periodo = estremiDelMese(mese);
       if (periodo === null) {
@@ -91,7 +117,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    const righe = await leggiRipartizione({ mese: `${mese}-01`, classe, contesto, categoria });
+    const righe =
+      ricorrenza === null
+        ? await leggiRipartizione({ mese: `${mese}-01`, classe, contesto, categoria })
+        : await leggiRipartizioneRicorrente({ tipo: ricorrenza, classe, contesto, categoria });
     return NextResponse.json({ tipo: 'categorie', righe });
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);

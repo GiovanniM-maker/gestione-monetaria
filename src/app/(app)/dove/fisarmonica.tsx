@@ -7,11 +7,13 @@ import { Freccia } from '../grafici';
 import {
   categorieComeNodi,
   movimentiComeNodi,
+  ricorrenzeComeNodi,
   rientro,
   type Apertura,
   type Nodo,
   type RigaMovimentoDove,
   type RigaRipartizione,
+  type RigaVoceRicorrente,
 } from '@/lib/dove/nodi';
 
 export type { Nodo } from '@/lib/dove/nodi';
@@ -143,7 +145,7 @@ function Rami({
                 className="pb-2 text-[13px] text-testo-3"
                 style={{ marginLeft: `${rientro(livello + 1)}px` }}
               >
-                Niente qui dentro in questo mese.
+                Niente qui dentro.
               </p>
             )}
 
@@ -277,18 +279,34 @@ async function chiediFigli(mese: string, a: Apertura): Promise<readonly Nodo[]> 
   if (a.classe !== null) q.set('classe', a.classe);
   if (a.contesto !== null) q.set('contesto', a.contesto);
   if (a.categoria !== null) q.set('categoria', a.categoria);
-  if (a.tipo === 'movimenti' && a.soloQuesta) q.set('solo_questa', '1');
+  if ((a.tipo === 'movimenti' || a.tipo === 'ricorrenze') && a.soloQuesta) {
+    q.set('solo_questa', '1');
+  }
+  // Il tipo di ricorrenza viaggia con OGNI richiesta del ramo: perderlo a un
+  // livello mostrerebbe la spesa intera sotto un titolo che promette il
+  // ricorrente — la lista plausibile e sbagliata.
+  const ricorrenza =
+    a.tipo === 'ricorrenze' ? a.ricorrenza : a.tipo === 'categorie' ? (a.ricorrenza ?? null) : null;
+  if (ricorrenza !== null) q.set('ricorrenza', ricorrenza);
 
   const risposta = await fetch(`/api/admin/dove?${q.toString()}`);
   const dati = (await risposta.json()) as Record<string, unknown>;
   if (!risposta.ok) throw new Error(String(dati['error'] ?? risposta.status));
 
-  return dati['tipo'] === 'movimenti'
-    ? movimentiComeNodi((dati['righe'] as RigaMovimentoDove[] | undefined) ?? [], a.categoria)
-    : categorieComeNodi(
-        (dati['righe'] as RigaRipartizione[] | undefined) ?? [],
-        mese,
-        a.classe,
-        a.contesto,
-      );
+  if (dati['tipo'] === 'movimenti') {
+    return movimentiComeNodi((dati['righe'] as RigaMovimentoDove[] | undefined) ?? [], a.categoria);
+  }
+  if (dati['tipo'] === 'ricorrenze') {
+    return ricorrenzeComeNodi(
+      (dati['righe'] as RigaVoceRicorrente[] | undefined) ?? [],
+      a.categoria,
+    );
+  }
+  return categorieComeNodi(
+    (dati['righe'] as RigaRipartizione[] | undefined) ?? [],
+    mese,
+    a.classe,
+    a.contesto,
+    ricorrenza,
+  );
 }
