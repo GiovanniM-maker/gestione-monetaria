@@ -19,6 +19,7 @@ import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { SceltaCategoria } from '../scelta-categoria';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimenti' };
@@ -246,9 +247,7 @@ export default async function MovimentiPage({
                 className="flex min-h-14 items-center justify-between gap-3 py-1"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[15px]">
-                    {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
-                  </span>
+                  <span className="block truncate text-[15px]">{etichettaMovimento(r)}</span>
                   <span className="mt-0.5 block text-[12px] text-testo-3">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}

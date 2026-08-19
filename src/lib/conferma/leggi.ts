@@ -45,6 +45,17 @@ export type RigaDaConfermare = {
    * la manda, e la schermata deve continuare a funzionare.
    */
   motivo?: string | null;
+  /**
+   * Il nome della controparte, per le righe che un esercente non ce l'hanno.
+   *
+   * Senza, l'etichetta ripiega sulla causale — che su un invio P2P e' la stessa
+   * frase per ogni riga, quindi non distingue niente.
+   *
+   * Opzionale perche' arriva dalla 0049, come `motivo` dalla 0042: finche' non
+   * e' applicata la vista non la manda, e la schermata deve continuare a
+   * funzionare.
+   */
+  counterparty_raw?: string | null;
 };
 
 export async function leggiDaConfermare(): Promise<readonly RigaDaConfermare[]> {

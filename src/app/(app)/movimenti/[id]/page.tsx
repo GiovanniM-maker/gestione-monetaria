@@ -12,6 +12,7 @@ import { SpostaMovimento } from './sposta';
 import { CorreggiMovimento } from '../../correggi';
 import { esercenteVariabile } from '@/lib/movimenti/classifica';
 import { Interruttore } from '../../esercenti/interruttore';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimento' };
@@ -63,7 +64,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
     <div className="space-y-6">
       <TestataLivello
         ritorno={{ href: '/movimenti', testo: 'tutti i movimenti' }}
-        titolo={m.esercente ?? m.raw_description ?? '(senza descrizione)'}
+        titolo={etichettaMovimento(m)}
         sottotitolo={`${m.booking_date}${m.conto === null ? '' : ` · ${m.conto}`}`}
         importo={centesimiDi(m.amount_eur ?? m.amount)}
         tinta={m.discrezionalita === null ? null : (tinte[m.discrezionalita] ?? null)}

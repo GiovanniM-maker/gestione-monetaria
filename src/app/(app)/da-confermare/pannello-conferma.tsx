@@ -16,6 +16,7 @@ import {
 } from '@/lib/conferma/gruppi';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -375,9 +376,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
             <li key={r.id}>
               <Link href={`/movimenti/${r.id}`} className="flex min-h-12 items-center gap-3">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate">
-                    {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
-                  </span>
+                  <span className="block truncate">{etichettaMovimento(r)}</span>
                   <span className="block truncate text-[12px] text-testo-3">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}
@@ -418,9 +417,7 @@ function Carta({
     <>
       <div className="flex items-start justify-between gap-3">
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[17px] font-semibold">
-            {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
-          </span>
+          <span className="block truncate text-[17px] font-semibold">{etichettaMovimento(r)}</span>
           <span className="cifra text-[13px] text-testo-3">{r.booking_date}</span>
         </span>
         <span className="numerone shrink-0 text-[22px]">{euro(r.amount_eur ?? r.amount)}</span>

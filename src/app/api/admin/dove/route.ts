@@ -3,6 +3,7 @@ import { getAuthorizedUser } from '@/lib/auth/session';
 import { leggiRipartizione } from '@/lib/dove/leggi';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
 import { CATEGORIA_SENZA, estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,11 +79,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         righe: esito.righe.map((r) => ({
           id: r.id,
           data: r.booking_date,
-          // Il nome dell'esercente, o la descrizione della banca quando non ce
-          // n'e' uno. Non e' una fuga: questa risposta va al browser
-          // dell'utente, non a un modello. La regola 8 vale sul confine con
-          // l'LLM, e questo non lo e'.
-          etichetta: r.esercente ?? r.raw_description ?? '(senza descrizione)',
+          // Non e' una fuga: questa risposta va al browser dell'utente, non a
+          // un modello. La regola 8 vale sul confine con l'LLM, e questo non lo e'.
+          etichetta: etichettaMovimento(r),
           importo: r.amount_eur ?? r.amount,
           categoria: r.categoria,
         })),
