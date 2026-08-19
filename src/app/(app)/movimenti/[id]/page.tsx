@@ -149,6 +149,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
           contesto={m.contesto}
           note={m.note}
           variabile={variabile}
+          merchantId={m.merchant_id}
           categorie={categorie}
         />
         <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />

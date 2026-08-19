@@ -164,6 +164,7 @@ export function CorreggiMovimento({
   contesto,
   note,
   variabile,
+  merchantId,
   categorie,
 }: {
   id: string;
@@ -173,6 +174,8 @@ export function CorreggiMovimento({
   note: string | null;
   /** Se l'esercente e' dichiarato variabile, qui si cambia anche la categoria. */
   variabile: boolean;
+  /** `null` = nessun esercente, quindi questa riga e' l'unica portata che esista. */
+  merchantId: string | null;
   categorie: readonly { id: string; percorso: string }[];
 }) {
   const classiSceglibili = useClassiSceglibili();
@@ -184,8 +187,16 @@ export function CorreggiMovimento({
   const [c, setC] = useState(contesto ?? '');
   const [n, setN] = useState(note ?? '');
 
+  // La categoria si cambia qui quando questa riga non ha una **sede piu'
+  // larga** dove cambiarla: o perche' l'esercente e' dichiarato variabile, o
+  // perche' un esercente non c'e' affatto. Il secondo caso mancava, e la sua
+  // conseguenza era un vicolo cieco: su un bonifico a un privato la scheda
+  // diceva «marcalo variabile dalla sua scheda» indicando una scheda che non
+  // esiste, e la riga restava scoperta per sempre.
+  const categoriaQui = variabile || merchantId === null;
+
   const cambiato =
-    (variabile && cat !== (categoriaId ?? '')) ||
+    (categoriaQui && cat !== (categoriaId ?? '')) ||
     d !== (discrezionalita ?? '') ||
     c !== (contesto ?? '') ||
     n.trim() !== (note ?? '').trim();
@@ -209,7 +220,7 @@ export function CorreggiMovimento({
           esercente fisso cambiarla qui sarebbe una scelta che vale una volta e
           si dimentica: la sua sede giusta e' la scheda dell'esercente, dove
           vale per tutte le sue spese. */}
-      {variabile ? (
+      {categoriaQui ? (
         <Scelta
           valore={cat}
           cambia={setCat}
