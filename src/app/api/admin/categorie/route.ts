@@ -6,6 +6,7 @@ import {
   CategoriaNonValida,
   creaCategoria,
   eliminaCategoria,
+  impostaIconaCategoria,
   type AggiornamentoCategoria,
 } from '@/lib/tassonomia/categorie';
 
@@ -61,7 +62,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
-  return protetta(request, (c) => aggiornaCategoria(c as unknown as AggiornamentoCategoria));
+  return protetta(request, (c) => {
+    // La presenza della chiave decide l'operazione: `icona: null` significa
+    // «toglila», che e' una richiesta — non l'assenza di una richiesta.
+    if ('icona' in c) {
+      return impostaIconaCategoria(
+        String(c['id'] ?? ''),
+        c['icona'] === null ? null : String(c['icona']),
+      );
+    }
+    return aggiornaCategoria(c as unknown as AggiornamentoCategoria);
+  });
 }
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {

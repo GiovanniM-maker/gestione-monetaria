@@ -1,6 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { comeIcona } from '@/lib/ui/icone';
 
 /**
  * Correggere una categoria: nome, discrezionalita' predefinita, genitore.
@@ -60,6 +61,37 @@ export async function aggiornaCategoria(a: AggiornamentoCategoria): Promise<void
   // essere letto. Riscriverlo qui vorrebbe dire tenerne due versioni.
   if (error !== null) throw new CategoriaNonValida(error.message);
   if (data !== true) throw new CategoriaNonValida('Questa categoria non esiste più.');
+}
+
+/**
+ * L'icona di una categoria: si imposta e si toglie.
+ *
+ * Una scrittura nominata e piccola, non un parametro in piu' di
+ * `aggiorna_categoria`: quella RPC valida cicli e classi, e l'icona non
+ * c'entra con nessuna delle due — e' aspetto, non struttura. La chiave si
+ * valida QUI contro l'insieme chiuso dei glifi (`comeIcona` fallisce chiusa):
+ * `categories.icon` e' testo libero, e una chiave inventata diventerebbe per
+ * sempre un cerchietto vuoto senza che nessuno sappia perche'.
+ */
+export async function impostaIconaCategoria(id: string, icona: string | null): Promise<void> {
+  if (typeof id !== 'string' || id.trim() === '') {
+    throw new CategoriaNonValida('Categoria non indicata.');
+  }
+  if (icona !== null && comeIcona(icona) === null) {
+    throw new CategoriaNonValida(`Icona sconosciuta: ${icona}`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('categories')
+    .update({ icon: icona })
+    .eq('id', id)
+    .select('id');
+
+  if (error !== null) throw new Error(`Aggiornamento dell'icona fallito: ${error.message}`);
+  if (comeArray<{ id: string }>(data).length === 0) {
+    throw new CategoriaNonValida('Questa categoria non esiste più.');
+  }
 }
 
 /**
@@ -142,6 +174,13 @@ export type NodoAlbero = {
   profondita: number;
   discrezionalita_predefinita: string | null;
   archiviata: boolean;
+  /**
+   * La chiave dell'icona. Facoltativa perche' arriva solo con la vista della
+   * 0049: prima di quella migration la `select('*')` non la porta, e il
+   * pannello mostra il cerchietto coi puntini — il degrado dichiarato dei
+   * marchietti, non un errore.
+   */
+  icon?: string | null;
   /**
    * `null` quando `v_categorie_uso` non risponde.
    *

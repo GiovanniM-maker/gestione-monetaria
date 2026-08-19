@@ -85,6 +85,41 @@ const TRACCIATI = {
 } as const;
 
 /**
+ * Le icone proponibili per una CATEGORIA, nell'ordine del foglio di scelta.
+ *
+ * Un sottoinsieme curato, non `Object.keys(TRACCIATI)`: li' dentro ci sono
+ * anche i glifi dell'interfaccia — la chiusura, la ricerca, il filtro — e
+ * proporre «✕» come icona di una categoria di spese sarebbe un menu' che
+ * elenca quello che ha invece di quello che serve.
+ */
+export const ICONE_CATEGORIA: readonly NomeIcona[] = [
+  'ristorante',
+  'tazza',
+  'carrello',
+  'borsa',
+  'casa',
+  'aereo',
+  'treno',
+  'biglietto',
+  'manubrio',
+  'lampadina',
+  'croce',
+  'persona',
+  'carta',
+  'banconota',
+  'nuvola',
+  'chip',
+  'megafono',
+  'documento',
+  'calendario',
+  'ripeti',
+  'cuore',
+  'valigetta',
+  'stella',
+  'crescita',
+];
+
+/**
  * Da una chiave nel database a un nome d'icona, fallendo chiusa.
  *
  * `categories.icon` e' testo libero: una chiave scritta male, o piu' nuova di
