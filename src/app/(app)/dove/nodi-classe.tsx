@@ -1,7 +1,8 @@
 import { leggiSpesaPerClasse, leggiVariazioni } from '@/lib/cruscotto/letture';
 import { leggiClassi } from '@/lib/tassonomia/classi';
+import { leggiRipartizione } from '@/lib/dove/leggi';
 import type { Variazione } from '@/lib/cruscotto/andamento';
-import type { Nodo } from '@/lib/dove/nodi';
+import { categorieComeNodi, type Nodo } from '@/lib/dove/nodi';
 import { Tessera } from '@/lib/ui/tessera';
 import { tinteDelleClassi } from '../grafici';
 
@@ -42,8 +43,40 @@ export async function nodiPerClasse(mese: string): Promise<readonly Nodo[]> {
     (a, b) => Number(a.discrezionalita === a.contesto) - Number(b.discrezionalita === b.contesto),
   );
 
+  // Il primo livello sotto ogni classe si PREFETCHA qui, col server: sono
+  // poche letture in parallelo — deduplicate da `cache()` e riusate da
+  // `inCache` — e comprano il tocco piu' frequente della schermata: aprire
+  // una classe diventa un accordion locale, zero viaggi. I livelli sotto
+  // continuano ad arrivare al tocco: prefetchare l'albero intero sarebbe
+  // spedire mille righe per guardarne cinque.
+  //
+  // `catch` → niente figli precaricati, NON niente riga: se la lettura
+  // fallisce il ramo resta apribile e l'errore compare li' dentro, al tocco,
+  // dove la fisarmonica sa gia' mostrarlo.
+  const figliDi = new Map<string, readonly Nodo[]>();
+  await Promise.all(
+    ordinate.map(async (c) => {
+      try {
+        const righe = await leggiRipartizione({
+          mese: `${mese}-01`,
+          classe: c.discrezionalita,
+          contesto: c.contesto,
+          categoria: null,
+        });
+        figliDi.set(
+          `${c.discrezionalita}|${c.contesto}`,
+          categorieComeNodi(righe, mese, c.discrezionalita, c.contesto),
+        );
+      } catch {
+        // Il ramo si aprira' col viaggio, e se fallira' ancora si vedra' la
+        // nota d'errore: un prefetch non deve poter rompere la pagina.
+      }
+    }),
+  );
+
   return ordinate.map((c) => {
     const residuale = c.contesto === c.discrezionalita;
+    const precaricati = figliDi.get(`${c.discrezionalita}|${c.contesto}`);
     return {
       chiave: `${mese}|classe|${c.discrezionalita}|${c.contesto}`,
       // Il nome mostrato piu' il contesto: `utile · business` e `utile ·
@@ -65,6 +98,7 @@ export async function nodiPerClasse(mese: string): Promise<readonly Nodo[]> {
         categoria: null,
       },
       href: null,
+      ...(precaricati === undefined ? {} : { precaricati }),
     };
   });
 }

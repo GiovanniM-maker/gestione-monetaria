@@ -91,6 +91,24 @@ export type Nodo = {
    * lavoro da fare. Sta per ultima e a mezza voce (docs/aspetto.md §4.3).
    */
   sbiadito?: boolean;
+  /**
+   * L'identificativo della categoria, quando il nodo e' una categoria.
+   * `null` = «senza categoria». Serve alla fisarmonica per disegnare il
+   * marchietto — l'icona della categoria nel suo cerchietto — senza che
+   * questo modulo debba sapere che aspetto abbia.
+   */
+  categoria?: string | null;
+  /**
+   * I figli gia' noti, quando chi costruisce l'albero li ha prefetti.
+   *
+   * E' la risposta alla lentezza percepita della discesa: il primo livello
+   * sotto ogni classe arriva **con la pagina**, e il tocco che lo apre non
+   * paga nessun viaggio — la fisarmonica diventa un accordion locale, non una
+   * navigazione remota travestita. I livelli piu' in giu' continuano ad
+   * arrivare al tocco: prefetchare tutto sarebbe spedire l'albero intero per
+   * aprirne un ramo.
+   */
+  precaricati?: readonly Nodo[];
 };
 
 export type RigaRipartizione = {
@@ -192,6 +210,7 @@ export function categorieComeNodi(
         : conta(r.movimenti, 'movimento', 'movimenti'),
       importo: r.spesa,
       tinta: null,
+      categoria: r.category_id,
       apertura: foglia
         ? voci
           ? {
@@ -221,6 +240,7 @@ export function categorieComeNodi(
           : `${conta(r.movimenti_diretti, 'movimento', 'movimenti')} · non in una sottocategoria`,
         importo: r.spesa_diretta,
         tinta: null,
+        categoria: r.category_id,
         apertura: voci
           ? {
               tipo: 'ricorrenze',

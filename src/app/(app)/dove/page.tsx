@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth/session';
 import { VERSIONE } from '@/lib/versione';
-import { leggiEsercenti, scegliMese } from '@/lib/cruscotto/letture';
+import { leggiAspettoCategorie, leggiEsercenti, scegliMese } from '@/lib/cruscotto/letture';
 import { etichettaMese, meseValido } from '@/lib/cruscotto/mesi';
 import { leggiRipartizione } from '@/lib/dove/leggi';
 import { versoMovimenti } from '@/lib/dove/nodi';
@@ -185,13 +185,24 @@ function Interruttore({ mese, modo }: { mese: string; modo: Modo }) {
  * al tocco.
  */
 async function PrimoLivello({ mese, modo }: { mese: string; modo: Modo }) {
-  const radici = modo === 'classe' ? await nodiPerClasse(mese) : await perCategoria(mese);
+  const [radici, aspetto, definizioni] = await Promise.all([
+    modo === 'classe' ? nodiPerClasse(mese) : perCategoria(mese),
+    leggiAspettoCategorie(),
+    leggiClassi(),
+  ]);
 
   if (radici.length === 0) {
     return <p className="text-[14px] text-testo-2">Nessun movimento in questo mese.</p>;
   }
 
-  return <Fisarmonica mese={mese} radici={radici} />;
+  return (
+    <Fisarmonica
+      mese={mese}
+      radici={radici}
+      aspetto={aspetto}
+      tinte={tinteDelleClassi(definizioni)}
+    />
+  );
 }
 
 async function perCategoria(mese: string): Promise<readonly Nodo[]> {

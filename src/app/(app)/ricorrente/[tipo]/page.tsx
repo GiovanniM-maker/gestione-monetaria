@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { leggiRicorrente, scegliMese } from '@/lib/cruscotto/letture';
+import { leggiAspettoCategorie, leggiRicorrente, scegliMese } from '@/lib/cruscotto/letture';
 import { leggiClassi } from '@/lib/tassonomia/classi';
+import { leggiRipartizioneRicorrente } from '@/lib/dove/leggi';
+import { categorieComeNodi } from '@/lib/dove/nodi';
 import {
   formattaEuro,
   ordinaPerPeso,
@@ -93,12 +95,13 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
   const def = DEFINIZIONI[tipo];
   if (def === undefined) notFound();
 
-  const [metrica, definizioni, { mese }] = await Promise.all([
+  const [metrica, definizioni, { mese }, aspetto] = await Promise.all([
     leggiRicorrente(),
     leggiClassi(),
     // Il mese serve solo alla fisarmonica come chiave e parametro di rotta: i
     // numeri di questa pagina sono tassi su tutto lo storico, non un mese.
     scegliMese(null),
+    leggiAspettoCategorie(),
   ]);
 
   const righe = metrica.filter((r) => r.tipo === tipo);
@@ -107,6 +110,30 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
   const totale = totalePerTipo(ordinaPerPeso(metrica), tipo);
   const tinte = tinteDelleClassi(definizioni);
   const barra = perLaBarra(dentro, ordineDelleClassi(definizioni));
+
+  // Il primo livello sotto ogni classe, prefetto col server come sulla home:
+  // il tocco che apre una classe non paga nessun viaggio. `catch` → il ramo
+  // resta apribile col viaggio, e un eventuale errore (la 0050 non ancora
+  // applicata) compare li' dentro, dove la fisarmonica sa mostrarlo.
+  const figliDi = new Map<string, readonly Nodo[]>();
+  await Promise.all(
+    dentro.map(async (r) => {
+      try {
+        const sotto = await leggiRipartizioneRicorrente({
+          tipo,
+          classe: r.discrezionalita,
+          contesto: r.contesto,
+          categoria: null,
+        });
+        figliDi.set(
+          `${r.discrezionalita}|${r.contesto}`,
+          categorieComeNodi(sotto, mese, r.discrezionalita, r.contesto, tipo),
+        );
+      } catch {
+        // Vedi sopra: un prefetch non deve poter rompere la pagina.
+      }
+    }),
+  );
 
   // Le radici della discesa: una riga per classe e contesto, la piu' pesante
   // prima, il non classificato ultimo e sbiadito — le stesse regole della home.
@@ -121,6 +148,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
     )
     .map((r) => {
       const residuale = r.discrezionalita === r.contesto;
+      const precaricati = figliDi.get(`${r.discrezionalita}|${r.contesto}`);
       return {
         chiave: `ric|${tipo}|${r.discrezionalita}|${r.contesto}`,
         etichetta: residuale ? r.classe_nome : `${r.classe_nome} · ${r.contesto}`,
@@ -139,6 +167,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
           categoria: null,
         },
         href: null,
+        ...(precaricati === undefined ? {} : { precaricati }),
       };
     });
 
@@ -179,7 +208,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
             Costi al mese, misurati su tutto lo storico. Una classe si apre sulle sue categorie, una
             categoria sulle sue voci, una voce sui suoi addebiti.
           </p>
-          <Fisarmonica mese={mese} radici={radici} />
+          <Fisarmonica mese={mese} radici={radici} aspetto={aspetto} tinte={tinte} />
         </div>
       )}
 

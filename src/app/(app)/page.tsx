@@ -9,6 +9,7 @@ import {
   leggiDaConfermare,
   leggiEntrate,
   leggiFinestra,
+  leggiAspettoCategorie,
   leggiRicorrente,
   leggiStato,
   leggiVariazioni,
@@ -387,7 +388,7 @@ async function QuantoHoSpeso({
   mese: string;
   rigaMese: RigaTotaleMese | null;
 }) {
-  const [classi, definizioni, variazioni, confronto, { giorniCoperti }, entrate, radici] =
+  const [classi, definizioni, variazioni, confronto, { giorniCoperti }, entrate, radici, aspetto] =
     await Promise.all([
       leggiSpesaPerClasse(mese),
       leggiClassi(),
@@ -398,6 +399,8 @@ async function QuantoHoSpeso({
       // Le stesse letture qui sopra, gia' deduplicate da `cache()`: i nodi
       // sono una forma, non una query in piu'.
       nodiPerClasse(mese),
+      // Per i marchietti delle categorie dentro la fisarmonica.
+      leggiAspettoCategorie(),
     ]);
 
   // Il totale viene da `v_monthly_totals`, la vista che lo definisce. Le classi
@@ -417,31 +420,35 @@ async function QuantoHoSpeso({
     <section className="space-y-4">
       {/* L'eroe, senza carta (alla Revolut): il numero del mese vive sul fondo
           della pagina, e la gerarchia gliela danno la taglia e lo spazio — non
-          un riquadro. La scheda del mese era l'unico contenitore che non
-          raggruppava niente: dentro c'era una cosa sola. Le schede restano
-          dove raggruppano davvero, piu' sotto. */}
-      <div className="space-y-3 px-1 pt-2">
-        {giorniCoperti !== null && confronto !== null && (
-          <p className="eti">nei primi {giorniCoperti} giorni</p>
-        )}
-        <p className="numerone text-[44px] sm:text-[52px]">{formattaEuro(speso)}</p>
-
-        {confronto !== null && confronto.riferimento !== null ? (
-          <p className="cifra text-[13px] text-testo-2">
-            di solito {formattaEuro(confronto.riferimento)}
-            {confronto.scostamento !== null && (
-              <span className={confronto.scostamento > 0 ? 'text-attenzione' : 'text-conferma'}>
-                {' '}
-                · {confronto.scostamento > 0 ? '▲' : '▼'}{' '}
-                {Math.abs(confronto.scostamento).toFixed(0)}%
-              </span>
-            )}
+          un riquadro. Centrato e grande: e' IL dato della schermata, e deve
+          respirare — l'etichetta sopra e il confronto sotto restano piccoli
+          apposta, perche' il peso stia tutto sull'importo. */}
+      <div className="px-1">
+        <div className="space-y-3 py-6 text-center">
+          {giorniCoperti !== null && confronto !== null && (
+            <p className="eti">nei primi {giorniCoperti} giorni</p>
+          )}
+          <p className="numerone text-[54px] whitespace-nowrap sm:text-[64px]">
+            {formattaEuro(speso)}
           </p>
-        ) : (
-          spiegaIlConfronto !== null && (
-            <p className="text-[13px] text-testo-2">{spiegaIlConfronto}</p>
-          )
-        )}
+
+          {confronto !== null && confronto.riferimento !== null ? (
+            <p className="cifra text-[13px] text-testo-2">
+              di solito {formattaEuro(confronto.riferimento)}
+              {confronto.scostamento !== null && (
+                <span className={confronto.scostamento > 0 ? 'text-attenzione' : 'text-conferma'}>
+                  {' '}
+                  · {confronto.scostamento > 0 ? '▲' : '▼'}{' '}
+                  {Math.abs(confronto.scostamento).toFixed(0)}%
+                </span>
+              )}
+            </p>
+          ) : (
+            spiegaIlConfronto !== null && (
+              <p className="text-[13px] text-testo-2">{spiegaIlConfronto}</p>
+            )
+          )}
+        </div>
 
         {classi.length > 0 && (
           <BarraClassi
@@ -496,12 +503,13 @@ async function QuantoHoSpeso({
           )}
 
           {/* La fisarmonica di «Dove», qui: toccare una classe apre le sue
-              categorie **in loco**, toccare una categoria apre la lista dei
+              categorie **in loco** — gia' precaricate col server, quindi
+              senza nessun viaggio — e toccare una categoria apre la lista dei
               movimenti gia' filtrata. Mai classe → transazioni in un colpo:
               prima si vede di cosa e' fatta. E' la stessa componente e gli
               stessi nodi di /dove, perche' due copie della stessa discesa
               divergono alla prima modifica. */}
-          <Fisarmonica mese={mese} radici={radici} />
+          <Fisarmonica mese={mese} radici={radici} aspetto={aspetto} tinte={tinte} />
         </div>
       )}
 
