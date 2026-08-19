@@ -14,6 +14,7 @@ import {
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
 import { generaAvvisi } from '@/lib/avvisi/leggi';
 import type { AccountRow, BankConnectionRow, SyncTrigger } from '@/lib/db/types';
+import { pulisciConversazioniScadute } from '@/lib/copilota/conversazioni';
 
 /**
  * La sequenza quotidiana, senza nessuno che la guardi.
@@ -170,6 +171,8 @@ export type EsitoQuotidiano = {
   } | null;
   ricorrenze: EsitoRilevamento | null;
   avvisiCreati: number | null;
+  /** Conversazioni scadute cancellate. `null` = il passo non e' arrivato. */
+  conversazioniPulite: number | null;
   errore: string | null;
   durataMs: number;
 };
@@ -190,6 +193,7 @@ function vuoto(): EsitoQuotidiano {
     proposte: null,
     ricorrenze: null,
     avvisiCreati: null,
+    conversazioniPulite: null,
     errore: null,
     durataMs: 0,
   };
@@ -416,6 +420,16 @@ export async function eseguiSincronizzazioneQuotidiana(
     // scritto — un aumento di prezzo si vede solo dopo che il rilevamento ha
     // aggiornato `expected_amount`.
     esito.avvisiCreati = await generaAvvisi();
+
+    // Le conversazioni scadute. Qui e non in un lavoro suo: e' gia' il posto
+    // dove sta il lavoro periodico, e un secondo scheduler sarebbe una seconda
+    // cosa che puo' non girare in silenzio — che e' precisamente il guasto
+    // costato tre giorni di dati fermi in Fase 7.
+    //
+    // Dopo gli avvisi, e dentro lo stesso `try`: una pulizia fallita non deve
+    // impedire il resto, ed e' l'ultima cosa del giro proprio perche' e' la
+    // meno urgente di tutte.
+    esito.conversazioniPulite = await pulisciConversazioniScadute();
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     esito.errore = esito.errore === null ? messaggio : `${esito.errore} · ${messaggio}`;

@@ -21,6 +21,7 @@
 | 8     | Motore alert (SQL)                        | **completata** |
 | 9     | Report periodico AI                       | **completata** |
 | 10    | Chat copilot                              | **completata** |
+| 11    | Copilota: memoria tipizzata (MVP 1–6)     | **in corso**   |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
 
@@ -1800,6 +1801,14 @@ inventare un identificativo di categoria.
   5 minuti.
 - Migrations numerate progressivamente. Una migration già applicata non si modifica mai: se ne scrive
   una nuova.
+- **`create or replace view` puo' bastare, e va provato prima di rassegnarsi al `drop`.**
+  Verificato con la 0050: `v_expenses` e' `select t.*`, `alter table add column` mette le colonne
+  nuove **in coda**, e `create or replace view` ammette esattamente quella modifica — colonne
+  aggiunte in fondo, le precedenti identiche per nome, tipo e ordine. Quindi la riespansione di
+  `t.*` passa, e **nessuna delle tredici viste dipendenti si tocca**. La manovra col `drop` resta
+  necessaria quando cambia una colonna esistente; per aggiungerne una, provare prima il `replace`
+  costa trenta secondi su Postgres locale e risparmia la manovra che e' gia' fallita due volte.
+  L'elenco delle dipendenti non si deduce a memoria: lo dice `pg_depend` su una replica.
 - **Una vista definita con `t.*` congela le colonne alla creazione.** Aggiungere una colonna alla
   tabella non la fa comparire nella vista, e la query che la usa fallisce con
   `column "x" does not exist` — che sembra un errore di battitura e non lo è. Ogni colonna nuova su
@@ -1898,6 +1907,9 @@ transactions
   is_refund boolean
   manually_categorized boolean default false
   excluded_from_analysis boolean default false
+  episodico boolean default false     -- una tantum: resta nella spesa, esce dalle ricorrenze
+  rimborso_stato text                 -- atteso | ricevuto | negato. Solo marcatore (0050)
+  rimborso_importo numeric(14,2)      -- quanto torna, in EUR e positivo
   notes text
   created_at, updated_at
   UNIQUE (account_id, COALESCE(external_id, dedupe_key))
