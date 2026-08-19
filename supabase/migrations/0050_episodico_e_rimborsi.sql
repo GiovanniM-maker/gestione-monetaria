@@ -742,7 +742,7 @@ begin
 
   return creati;
 end;
-$function$;;
+$function$;
 
 -- ---------------------------------------------------------------------------
 -- cerca_movimenti — le tre colonne nuove, in coda
@@ -857,7 +857,7 @@ order by case when p_ordine = 'importo' then abs(m.amount_eur) end desc nulls la
          m.id
 limit greatest(1, least(coalesce(p_limite, 50), 200))
 offset greatest(0, coalesce(p_scarto, 0));
-$function$;;
+$function$;
 
 comment on function public.cerca_movimenti is
   'Movimenti filtrati, con conteggio e somma dell''intero insieme filtrato. `p_solo_questa` esclude le discendenti; `p_senza_categoria` chiede i soli movimenti senza categoria.';
