@@ -273,21 +273,23 @@ export default async function MovimentiPage({
               </Link>
               {/* Il selettore cambia **l'esercente** quando e' fisso e **la riga**
                   quando e' variabile, ed e' scritto sotto: e' la stessa scelta
-                  che si farebbe entrando, senza entrare. Le righe senza
-                  esercente non lo hanno — non c'e' niente a cui appenderla che
-                  valga oltre la riga, e per quelle si passa dalla scheda. */}
-              {r.merchant_id !== null && (
-                <SceltaCategoria
-                  ambito={
-                    eVariabile.has(r.merchant_id)
-                      ? { tipo: 'movimento', movimentoId: r.id }
-                      : { tipo: 'esercente', merchantId: r.merchant_id }
-                  }
-                  categoriaId={r.category_id}
-                  categorie={alberoCategorie}
-                  etichetta
-                />
-              )}
+                  che si farebbe entrando, senza entrare.
+
+                  Le righe **senza esercente** ce l'hanno anch'esse, e valgono
+                  per se stesse: sono i bonifici a un privato, che non hanno
+                  nessuna sede piu' larga dove essere classificati. Prima
+                  restavano fuori — «per quelle si passa dalla scheda» — ma la
+                  scheda non lo permetteva, quindi non c'era nessuna strada. */}
+              <SceltaCategoria
+                ambito={
+                  r.merchant_id === null || eVariabile.has(r.merchant_id)
+                    ? { tipo: 'movimento', movimentoId: r.id }
+                    : { tipo: 'esercente', merchantId: r.merchant_id }
+                }
+                categoriaId={r.category_id}
+                categorie={alberoCategorie}
+                etichetta
+              />
             </li>
           ))}
         </ul>

@@ -338,7 +338,11 @@ async function DaFare({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMe
               <strong className="text-testo">{rigaMese.senza_categoria}</strong> movimenti per{' '}
               {formattaEuro(centesimi(rigaMese.spesa_senza_categoria))} sono nel totale ma senza
               categoria.{' '}
-              <Link className="text-accento" href="/revisione">
+              {/* Alla lista filtrata, non a /revisione: quella lavora sugli
+                  **esercenti**, e un bonifico a un privato non ne ha uno —
+                  quindi per le righe che piu' spesso restano scoperte era un
+                  collegamento che non portava da nessuna parte. */}
+              <Link className="text-accento" href={perMese(mese, { categoria: CATEGORIA_SENZA })}>
                 Assegnali
               </Link>
               .
