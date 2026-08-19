@@ -520,14 +520,139 @@ export type RigaConversazione = {
   ultima_at: string;
   messaggi: number;
   titolo: string | null;
+  salvata: boolean;
 };
 
 export async function leggiConversazioni(): Promise<readonly RigaConversazione[]> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
+    .from('v_conversazioni')
+    .select('*')
+    // Le salvate prima: sono quelle che l'utente ha dichiarato di voler
+    // ritrovare, e un elenco che le seppellisce sotto le estemporanee
+    // renderebbe la stella un gesto inutile.
+    .order('salvata', { ascending: false })
+    .order('ultima_at', { ascending: false })
+    .limit(50);
+
+  if (error === null) return comeArray<RigaConversazione>(data);
+
+  // La 0051 non e' ancora applicata: la vista non ha `salvata`, e ordinare su
+  // una colonna che non c'e' e' un errore. Il ripiego legge senza — tutte non
+  // salvate, che e' anche vero — invece di mostrare un elenco vuoto: le
+  // conversazioni esistono, e un guasto di schema non deve travestirsi da
+  // «non hai mai parlato col copilota».
+  const ripiego = await supabase
     .from('v_conversazioni')
     .select('*')
     .order('ultima_at', { ascending: false })
-    .limit(20);
-  return comeArray<RigaConversazione>(data);
+    .limit(50);
+  return comeArray<Omit<RigaConversazione, 'salvata'>>(ripiego.data).map((c) => ({
+    ...c,
+    salvata: false,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Il ciclo di vita delle conversazioni
+// ---------------------------------------------------------------------------
+// Una chat non salvata vive 30 giorni dall'ULTIMO messaggio, poi la pulizia
+// della sequenza quotidiana la elimina. La stella la esclude per sempre —
+// finche' non si spegne. La riga in `chat_conversations` nasce pigra, alla
+// prima stella o al primo rinomina: una conversazione senza riga e'
+// semplicemente non salvata e col titolo del primo messaggio.
+
+export const GIORNI_CONVERSAZIONE = 30;
+
+/** Quanti giorni mancano all'eliminazione automatica. `null` = non scade. */
+export function giorniAllaScadenza(
+  riga: Pick<RigaConversazione, 'ultima_at' | 'salvata'>,
+  adesso: number = Date.now(),
+): number | null {
+  if (riga.salvata) return null;
+  const ultima = Date.parse(riga.ultima_at);
+  if (Number.isNaN(ultima)) return null;
+  const passati = Math.floor((adesso - ultima) / 86_400_000);
+  return Math.max(0, GIORNI_CONVERSAZIONE - passati);
+}
+
+/**
+ * Quando e' successo, per l'elenco: «2 h fa», «ieri», «12 ago».
+ *
+ * Il default `Date.now()` sta qui e non nel componente per la stessa ragione
+ * di `freschezza()`: un componente non chiama l'orologio durante il disegno.
+ */
+export function quando(iso: string, adesso: number = Date.now()): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const ore = Math.floor((adesso - t) / 3_600_000);
+  if (ore < 1) return 'poco fa';
+  if (ore < 24) return `${ore} h fa`;
+  const giorni = Math.floor(ore / 24);
+  if (giorni === 1) return 'ieri';
+  if (giorni < 7) return `${giorni} giorni fa`;
+  return new Date(t).toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'Europe/Rome',
+  });
+}
+
+export class ConversazioneNonValida extends Error {}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function idValido(id: unknown): string {
+  if (typeof id !== 'string' || !UUID.test(id)) {
+    throw new ConversazioneNonValida('Conversazione non indicata.');
+  }
+  return id;
+}
+
+/** Accende o spegne la stella. La riga si crea qui, se non c'era. */
+export async function salvaConversazione(id: string, salvata: boolean): Promise<void> {
+  const conversazione = idValido(id);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from('chat_conversations')
+    .upsert({ id: conversazione, salvata }, { onConflict: 'id' });
+  if (error !== null) throw new Error(`Salvataggio della conversazione fallito: ${error.message}`);
+}
+
+/** Il titolo scelto dall'utente. Vuoto = torna al primo messaggio. */
+export async function rinominaConversazione(id: string, titolo: string): Promise<void> {
+  const conversazione = idValido(id);
+  const pulito = titolo.trim().slice(0, 120);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from('chat_conversations')
+    .upsert({ id: conversazione, titolo: pulito === '' ? null : pulito }, { onConflict: 'id' });
+  if (error !== null) throw new Error(`Rinomina della conversazione fallita: ${error.message}`);
+}
+
+/** Elimina la conversazione: i messaggi e l'eventuale riga. Non si torna indietro. */
+export async function eliminaConversazione(id: string): Promise<void> {
+  const conversazione = idValido(id);
+  const supabase = await createSupabaseServerClient();
+  const messaggi = await supabase
+    .from('chat_messages')
+    .delete()
+    .eq('conversazione_id', conversazione);
+  if (messaggi.error !== null) {
+    throw new Error(`Eliminazione della conversazione fallita: ${messaggi.error.message}`);
+  }
+  const riga = await supabase.from('chat_conversations').delete().eq('id', conversazione);
+  if (riga.error !== null) {
+    throw new Error(`Eliminazione della conversazione fallita: ${riga.error.message}`);
+  }
+}
+
+/** La pulizia dei 30 giorni, chiamata dalla sequenza quotidiana. */
+export async function pulisciConversazioni(): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('pulisci_conversazioni', {
+    p_giorni: GIORNI_CONVERSAZIONE,
+  });
+  if (error !== null) throw new Error(`Pulizia conversazioni fallita: ${error.message}`);
+  return Number(data ?? 0);
 }

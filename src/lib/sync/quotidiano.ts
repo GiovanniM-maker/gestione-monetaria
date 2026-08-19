@@ -13,6 +13,7 @@ import {
 } from '@/lib/tassonomia/ricerca';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
 import { GIORNI_DI_STORICO, generaAvvisi, pulisciAvvisi } from '@/lib/avvisi/leggi';
+import { GIORNI_CONVERSAZIONE, pulisciConversazioni } from '@/lib/copilota/conversazione';
 import type { AccountRow, BankConnectionRow, SyncTrigger } from '@/lib/db/types';
 
 /**
@@ -425,6 +426,25 @@ export async function eseguiSincronizzazioneQuotidiana(
       esito.avvisi = [
         ...esito.avvisi,
         `${eliminati} ${eliminati === 1 ? 'avviso più vecchio' : 'avvisi più vecchi'} di ${GIORNI_DI_STORICO} giorni eliminati dallo storico.`,
+      ];
+    }
+
+    // Stesso ciclo di vita per le conversazioni del copilota: trenta giorni
+    // dall'ultimo messaggio, salvo quelle con la stella. In un try suo: una
+    // pulizia che non riesce (la 0051 non ancora applicata) non deve marcare
+    // fallita la notte intera — ma va detta, non taciuta.
+    try {
+      const conversazioni = await pulisciConversazioni();
+      if (conversazioni > 0) {
+        esito.avvisi = [
+          ...esito.avvisi,
+          `${conversazioni} ${conversazioni === 1 ? 'conversazione ferma' : 'conversazioni ferme'} da più di ${GIORNI_CONVERSAZIONE} giorni eliminate dal copilota.`,
+        ];
+      }
+    } catch (errore) {
+      esito.avvisi = [
+        ...esito.avvisi,
+        `La pulizia delle conversazioni non è riuscita: ${errore instanceof Error ? errore.message : String(errore)}`,
       ];
     }
   } catch (errore) {

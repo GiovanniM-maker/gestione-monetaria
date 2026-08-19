@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
 import { aiConfigurata, ConfigurazioneAiMancante } from '@/lib/ai/modello';
-import { applicaProposta, chiedi, PropostaNonTrovata } from '@/lib/copilota/conversazione';
+import {
+  applicaProposta,
+  chiedi,
+  ConversazioneNonValida,
+  eliminaConversazione,
+  PropostaNonTrovata,
+  rinominaConversazione,
+  salvaConversazione,
+} from '@/lib/copilota/conversazione';
 import { ArgomentoNonValido } from '@/lib/copilota/strumenti';
 import { scadeTutto } from '@/lib/supabase/cache';
 
@@ -43,6 +51,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return risposta({ ok: true, descrizione: proposta.descrizione });
     }
 
+    // La gestione delle conversazioni: stella, titolo, eliminazione. Tre
+    // scritture piccole e nominate — le stesse che il copilot potra' un
+    // giorno esporre come strumenti, se servira'.
+    if (corpo['azione'] === 'salva') {
+      await salvaConversazione(String(corpo['id'] ?? ''), corpo['salvata'] === true);
+      return risposta({ ok: true });
+    }
+    if (corpo['azione'] === 'rinomina') {
+      await rinominaConversazione(String(corpo['id'] ?? ''), String(corpo['titolo'] ?? ''));
+      return risposta({ ok: true });
+    }
+    if (corpo['azione'] === 'elimina') {
+      await eliminaConversazione(String(corpo['id'] ?? ''));
+      return risposta({ ok: true });
+    }
+
     if (!aiConfigurata()) {
       throw new ConfigurazioneAiMancante(
         'OPENROUTER_API_KEY non è impostata su questo ambiente: il copilot non può rispondere. ' +
@@ -63,6 +87,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const atteso =
       errore instanceof ArgomentoNonValido ||
       errore instanceof PropostaNonTrovata ||
+      errore instanceof ConversazioneNonValida ||
       errore instanceof ConfigurazioneAiMancante;
 
     if (!atteso) console.error('[copilota] richiesta fallita:', messaggio);
