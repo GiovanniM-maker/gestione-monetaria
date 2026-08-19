@@ -513,6 +513,60 @@ body {
   }
 }
 
+/**
+ * Le micro-interazioni.
+ * --------------------------------------------------------------------------
+ * `.ramo-aperto` — l'apertura di un ramo della fisarmonica: breve e naturale,
+ * centosessanta millisecondi di comparsa dall'alto. Non e' decorazione: e' il
+ * feedback che dice «il tocco e' stato preso» nell'istante in cui i figli
+ * (gia' precaricati) compaiono — senza, un'apertura istantanea puo' perfino
+ * sembrare che la riga fosse gia' aperta.
+ *
+ * La pressione sui controlli a capsula si vede: un filo di scala, come i
+ * bottoni di sistema. Solo sui CONTROLLI — capsule, tondi, schede della
+ * barra — mai sulle righe dei dati: una lista che rimbalza sotto il pollice
+ * mentre si scorre e' rumore, non feedback.
+ *
+ * Lo scorrimento morbido serve alle ancore («Nel tempo» puntato dalla
+ * composizione): un salto secco a meta' pagina disorienta piu' di quanto
+ * informi. Solo per chi non ha chiesto meno movimento.
+ */
+.ramo-aperto {
+  animation: ramo-aperto 160ms ease-out;
+}
+
+@keyframes ramo-aperto {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.capsula,
+.tondo,
+.barra-voce,
+.segm-voce {
+  transition: transform 120ms ease;
+}
+.capsula:active,
+.tondo:active {
+  transform: scale(0.96);
+}
+.barra-voce:active,
+.segm-voce:active {
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

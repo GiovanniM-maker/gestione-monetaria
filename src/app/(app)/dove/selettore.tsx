@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { CAMPO_PIENO } from '@/lib/ui/controlli';
 import { Foglio } from '../foglio';
 
 /**
@@ -37,6 +38,21 @@ export function SelettoreMetrica({
   verso: string;
 }) {
   const [aperto, setAperto] = useState(false);
+  const [ricerca, setRicerca] = useState('');
+
+  // Con una quarantina di voci, scrivere tre lettere e' sempre piu' veloce che
+  // scorrere — lo stesso conto gia' fatto per il selettore di categoria. Il
+  // filtro e' in memoria: le opzioni arrivano gia' con la pagina. Mentre si
+  // filtra i titoletti dei gruppi spariscono, o resterebbero appesi sopra
+  // voci di un altro gruppo.
+  const pulita = ricerca.trim().toLowerCase();
+  const visibili =
+    pulita === '' ? opzioni : opzioni.filter((o) => o.nome.toLowerCase().includes(pulita));
+
+  function chiudi() {
+    setAperto(false);
+    setRicerca('');
+  }
 
   return (
     <>
@@ -51,14 +67,25 @@ export function SelettoreMetrica({
         </span>
       </button>
 
-      <Foglio aperto={aperto} titolo="Cosa guardare nel tempo" onChiudi={() => setAperto(false)}>
+      <Foglio aperto={aperto} titolo="Cosa guardare nel tempo" onChiudi={chiudi}>
+        <div className="pb-2">
+          <input
+            className={CAMPO_PIENO}
+            value={ricerca}
+            onChange={(e) => setRicerca(e.target.value)}
+            placeholder="Cerca una classe o una categoria"
+            aria-label="Cerca fra le metriche"
+          />
+        </div>
         <ul className="elenco text-[15px]">
-          {opzioni.map((o) => (
+          {visibili.map((o) => (
             <li key={o.token}>
-              {o.gruppo !== undefined && <p className="eti pt-3 pb-1">{o.gruppo}</p>}
+              {o.gruppo !== undefined && pulita === '' && (
+                <p className="eti pt-3 pb-1">{o.gruppo}</p>
+              )}
               <Link
                 href={verso.replaceAll('%t', encodeURIComponent(o.token))}
-                onClick={() => setAperto(false)}
+                onClick={chiudi}
                 aria-current={o.token === attuale ? 'true' : undefined}
                 className="flex min-h-12 items-center gap-3"
               >
@@ -71,6 +98,9 @@ export function SelettoreMetrica({
               </Link>
             </li>
           ))}
+          {visibili.length === 0 && (
+            <li className="py-3 text-[13px] text-testo-3">Niente con questo nome.</li>
+          )}
         </ul>
       </Foglio>
     </>

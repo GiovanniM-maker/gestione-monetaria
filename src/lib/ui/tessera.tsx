@@ -91,7 +91,10 @@ export function Avatar({
   tinta: string;
   misura?: number;
 }) {
-  const iniziale = (nome ?? '').trim().charAt(0).toUpperCase() || '?';
+  // La prima LETTERA o cifra, non il primo carattere: «(senza esercente)»
+  // mostrava una parentesi, che non e' un'iniziale — e' un refuso col vestito
+  // buono. Se un nome non ha niente di leggibile, un punto neutro.
+  const iniziale = ((nome ?? '').match(/\p{L}|\p{N}/u)?.[0] ?? '·').toUpperCase();
   return (
     <span
       aria-hidden="true"

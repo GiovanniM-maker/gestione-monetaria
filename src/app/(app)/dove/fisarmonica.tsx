@@ -181,7 +181,7 @@ function Rami({
             {aperto && stato?.fase === 'in corso' && (
               <div
                 aria-hidden="true"
-                className="animate-pulse space-y-2.5 pt-1 pb-3"
+                className="ramo-aperto animate-pulse space-y-2.5 pt-1 pb-3"
                 style={{ marginLeft: `${rientro(livello + 1)}px` }}
               >
                 <span className="block h-3.5 w-2/3 rounded-full bg-s3" />
@@ -208,7 +208,7 @@ function Rami({
             )}
 
             {aperto && stato?.fase === 'pronto' && stato.figli.length > 0 && (
-              <div style={{ marginLeft: `${rientro(livello + 1)}px` }}>
+              <div className="ramo-aperto" style={{ marginLeft: `${rientro(livello + 1)}px` }}>
                 <Rami
                   nodi={stato.figli}
                   livello={livello + 1}

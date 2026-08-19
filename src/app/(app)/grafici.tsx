@@ -210,7 +210,13 @@ export function BarraClassi({
                   className="size-[7px] shrink-0 rounded-full"
                   style={{ background: tinte[p.chiave] ?? COLORE_IGNOTO }}
                 />
-                <span className="min-w-0 flex-1 truncate">{nomi[p.chiave] ?? p.chiave}</span>
+                {/* Il non classificato non ha una riga in `discretion_classes`,
+                    quindi nessuna mappa lo nomina: senza questo ripiego la
+                    legenda lo scriveva minuscolo in mezzo a nomi propri. */}
+                <span className="min-w-0 flex-1 truncate">
+                  {nomi[p.chiave] ??
+                    (p.chiave === 'non classificato' ? 'Non classificato' : p.chiave)}
+                </span>
                 <span className="cifra shrink-0 text-testo-3">{quota}%</span>
               </li>
             );

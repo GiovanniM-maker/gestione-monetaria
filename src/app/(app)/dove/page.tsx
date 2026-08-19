@@ -293,7 +293,10 @@ async function Composizione({ mese, finestra }: { mese: string; finestra: Finest
                       className="size-2.5 shrink-0 rounded-full"
                       style={{ background: tinte[v.slug] ?? 'var(--neutro)' }}
                     />
-                    <span className="min-w-0 flex-1 truncate">{nomi[v.slug] ?? v.slug}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {nomi[v.slug] ??
+                        (v.slug === 'non classificato' ? 'Non classificato' : v.slug)}
+                    </span>
                     {/* La quota in grigio neutro: e' contesto, non un dato di
                         classe (docs/aspetto.md §4.4). */}
                     <span className="cifra w-12 shrink-0 text-right text-[13px] text-testo-3">
