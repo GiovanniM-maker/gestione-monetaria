@@ -62,9 +62,34 @@ alter table public.chat_conversations
   add column if not exists salvata boolean not null default false;
 alter table public.chat_conversations
   add column if not exists created_at timestamptz not null default now();
-alter table public.chat_conversations
-  add column if not exists ultima_at timestamptz not null default now();
 alter table public.chat_conversations add column if not exists scade_at timestamptz;
+
+-- `ultima_at` nasce **nullable e senza default**, e non e' pignoleria: con
+-- `not null default now()` le righe che esistono gia' riceverebbero l'istante
+-- della migration come «ultimo messaggio», e una conversazione ferma da tre
+-- mesi si guadagnerebbe altri trenta giorni di vita. Nascendo vuota si puo'
+-- riempire col valore vero, e solo dopo diventa obbligatoria.
+--
+-- Il riempimento tocca solo i null, quindi rieseguire non sovrascrive niente.
+alter table public.chat_conversations add column if not exists ultima_at timestamptz;
+
+update public.chat_conversations c
+   set ultima_at = coalesce(
+         (select max(m.created_at) from public.chat_messages m
+           where m.conversazione_id = c.id),
+         c.created_at)
+ where c.ultima_at is null;
+
+alter table public.chat_conversations alter column ultima_at set default now();
+alter table public.chat_conversations alter column ultima_at set not null;
+
+-- Un titolo che c'era prima di questa migration si **congela**: non sappiamo se
+-- l'ha scritto una persona, e fra i due errori possibili quello grave e' lasciare
+-- che un automatismo riscriva un titolo scelto a mano. Nel dubbio si protegge.
+-- Anche questo tocca solo cio' che non e' ancora deciso.
+update public.chat_conversations
+   set titolo_manuale = true
+ where titolo is not null and not titolo_manuale;
 
 alter table public.chat_conversations drop constraint if exists chat_conversations_titolo_len;
 alter table public.chat_conversations add constraint chat_conversations_titolo_len
