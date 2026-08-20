@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import {
   CATEGORIA_SENZA,
   CLASSE_NON_CLASSIFICATA,
@@ -251,7 +252,7 @@ export default async function MovimentiPage({
                 {/* L'iniziale sulla velatura della classe della riga: si
                     riconosce l'esercente scorrendo, prima di leggere. */}
                 <Avatar
-                  nome={r.esercente ?? r.raw_description}
+                  nome={etichettaMovimento(r)}
                   tinta={
                     r.discrezionalita !== null
                       ? (tinte[r.discrezionalita] ?? 'var(--neutro)')
@@ -259,9 +260,7 @@ export default async function MovimentiPage({
                   }
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px]">
-                    {r.esercente ?? r.raw_description ?? '(senza descrizione)'}
-                  </span>
+                  <span className="block truncate text-[15px]">{etichettaMovimento(r)}</span>
                   <span className="mt-0.5 block text-[12px] text-testo-3">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}

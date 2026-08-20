@@ -6,6 +6,7 @@ import {
   leggiVociRicorrenti,
 } from '@/lib/dove/leggi';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { CATEGORIA_SENZA, estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
 
 export const dynamic = 'force-dynamic';
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           // n'e' uno. Non e' una fuga: questa risposta va al browser
           // dell'utente, non a un modello. La regola 8 vale sul confine con
           // l'LLM, e questo non lo e'.
-          etichetta: r.esercente ?? r.raw_description ?? '(senza descrizione)',
+          etichetta: etichettaMovimento(r),
           importo: r.amount_eur ?? r.amount,
           categoria: r.categoria,
         })),

@@ -23,6 +23,13 @@ export type RigaDaConfermare = {
   currency: string;
   stato: string;
   raw_description: string | null;
+  /**
+   * La controparte: chi ha ricevuto (o mandato) i soldi. Arriva con la 0053 —
+   * prima la vista non la portava, e i bonifici si presentavano con la
+   * causale della banca («Inviato da Revolut»), che dice il canale e non il
+   * destinatario. Opzionale finche' la migration non e' applicata.
+   */
+  counterparty_raw?: string | null;
   discrezionalita: string | null;
   contesto: string | null;
   manually_categorized: boolean;

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { leggiMovimento } from '@/lib/movimenti/cerca';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { centesimiDi, formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import { leggiClassi } from '@/lib/tassonomia/classi';
@@ -63,7 +64,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
     <div className="space-y-6">
       <TestataLivello
         ritorno={{ href: '/movimenti', testo: 'tutti i movimenti' }}
-        titolo={m.esercente ?? m.raw_description ?? '(senza descrizione)'}
+        titolo={etichettaMovimento(m)}
         sottotitolo={`${m.booking_date}${m.conto === null ? '' : ` · ${m.conto}`}`}
         importo={centesimiDi(m.amount_eur ?? m.amount)}
         tinta={m.discrezionalita === null ? null : (tinte[m.discrezionalita] ?? null)}
