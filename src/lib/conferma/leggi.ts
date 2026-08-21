@@ -23,6 +23,13 @@ export type RigaDaConfermare = {
   currency: string;
   stato: string;
   raw_description: string | null;
+  /**
+   * La controparte: chi ha ricevuto (o mandato) i soldi. Arriva con la 0053 —
+   * prima la vista non la portava, e i bonifici si presentavano con la
+   * causale della banca («Inviato da Revolut»), che dice il canale e non il
+   * destinatario. Opzionale finche' la migration non e' applicata.
+   */
+  counterparty_raw?: string | null;
   discrezionalita: string | null;
   contesto: string | null;
   manually_categorized: boolean;
@@ -45,17 +52,6 @@ export type RigaDaConfermare = {
    * la manda, e la schermata deve continuare a funzionare.
    */
   motivo?: string | null;
-  /**
-   * Il nome della controparte, per le righe che un esercente non ce l'hanno.
-   *
-   * Senza, l'etichetta ripiega sulla causale — che su un invio P2P e' la stessa
-   * frase per ogni riga, quindi non distingue niente.
-   *
-   * Opzionale perche' arriva dalla 0049, come `motivo` dalla 0042: finche' non
-   * e' applicata la vista non la manda, e la schermata deve continuare a
-   * funzionare.
-   */
-  counterparty_raw?: string | null;
 };
 
 export async function leggiDaConfermare(): Promise<readonly RigaDaConfermare[]> {

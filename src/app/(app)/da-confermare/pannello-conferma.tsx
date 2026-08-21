@@ -16,9 +16,9 @@ import {
   type Ordinamento,
 } from '@/lib/conferma/gruppi';
 import { Segmentato } from '../segmentato';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
-import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -382,7 +382,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
             <li key={r.id}>
               <Link href={`/movimenti/${r.id}`} className="flex min-h-12 items-center gap-3">
                 <Avatar
-                  nome={r.esercente ?? r.raw_description}
+                  nome={etichettaMovimento(r)}
                   misura={30}
                   tinta={
                     r.discrezionalita !== null
@@ -431,7 +431,7 @@ function Carta({
   return (
     <>
       <div className="flex items-start gap-3">
-        <Avatar nome={r.esercente ?? r.raw_description} tinta={tinta ?? 'var(--neutro)'} />
+        <Avatar nome={etichettaMovimento(r)} tinta={tinta ?? 'var(--neutro)'} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[17px] font-semibold">{etichettaMovimento(r)}</span>
           <span className="cifra text-[13px] text-testo-3">{r.booking_date}</span>

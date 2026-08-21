@@ -1,9 +1,9 @@
 -- ---------------------------------------------------------------------------
--- Verifica della 0053 — `episodico` non gonfia e non allunga
+-- Verifica della 0054 — `episodico` non gonfia e non allunga
 -- ---------------------------------------------------------------------------
--- Si lancia su un database con la 0053 applicata:
+-- Si lancia su un database con la 0054 applicata:
 --
---     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/verifiche/0053_episodico.sql
+--     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/verifiche/0054_episodico.sql
 --
 -- **Non lascia niente**: tutto sta in una transazione che finisce con `rollback`.
 -- E' lanciabile in produzione senza conseguenze, ed e' cosi' che va lanciato —
@@ -23,7 +23,7 @@ values ('00000000-dead-beef-0000-000000000001', 'VERIFICA', 'IT', 'active');
 
 insert into public.accounts (id, connection_id, eb_account_uid, name, currency, include_in_totals)
 values ('00000000-dead-beef-0000-000000000002', '00000000-dead-beef-0000-000000000001',
-        'verifica-0053', 'Conto di verifica', 'EUR', true);
+        'verifica-0054', 'Conto di verifica', 'EUR', true);
 
 insert into public.merchants (id, canonical_name, is_subscription)
 values ('00000000-dead-beef-0000-000000000003', 'Esercente Di Verifica 0050', false);
@@ -35,13 +35,13 @@ insert into public.transactions
    external_id, episodico)
 values
  ('00000000-dead-beef-0000-000000000002','00000000-dead-beef-0000-000000000003',
-  'manual','booked','2026-01-10',-100,-100,'EUR','verifica-0053-a', false),
+  'manual','booked','2026-01-10',-100,-100,'EUR','verifica-0054-a', false),
  ('00000000-dead-beef-0000-000000000002','00000000-dead-beef-0000-000000000003',
-  'manual','booked','2026-02-10',-100,-100,'EUR','verifica-0053-b', false),
+  'manual','booked','2026-02-10',-100,-100,'EUR','verifica-0054-b', false),
  ('00000000-dead-beef-0000-000000000002','00000000-dead-beef-0000-000000000003',
-  'manual','booked','2026-03-10',-100,-100,'EUR','verifica-0053-c', false),
+  'manual','booked','2026-03-10',-100,-100,'EUR','verifica-0054-c', false),
  ('00000000-dead-beef-0000-000000000002','00000000-dead-beef-0000-000000000003',
-  'manual','booked','2026-06-10',-1200,-1200,'EUR','verifica-0053-d', true);
+  'manual','booked','2026-06-10',-1200,-1200,'EUR','verifica-0054-d', true);
 
 do $$
 declare
@@ -89,7 +89,7 @@ begin
   assert spesa_totale = -1500,
     format('la spesa reale e'' cambiata: %s invece di -1500', spesa_totale);
 
-  raise notice 'VERIFICA 0053: tutti e sei i controlli passati.';
+  raise notice 'VERIFICA 0054: tutti e sei i controlli passati.';
 end $$;
 
 -- `effetto_episodico` deve prevedere il numero **prima** che si applichi, e la
@@ -102,7 +102,7 @@ declare
   e record;
   costo_vero numeric;
 begin
-  select id into id_riga from public.transactions where external_id = 'verifica-0053-d';
+  select id into id_riga from public.transactions where external_id = 'verifica-0054-d';
 
   -- La si rimette non episodica, per poter chiedere «e se lo diventasse?».
   update public.transactions set episodico = false where id = id_riga;
@@ -123,7 +123,7 @@ begin
   assert e.costo_dopo is not distinct from costo_vero::text,
     format('la previsione non corrisponde: prevista %s, vera %s', e.costo_dopo, costo_vero);
 
-  raise notice 'VERIFICA 0053: la previsione di effetto_episodico e'' esatta.';
+  raise notice 'VERIFICA 0054: la previsione di effetto_episodico e'' esatta.';
 end $$;
 
 -- Le due difese dei rimborsi, che devono fallire **chiuse**.
@@ -132,7 +132,7 @@ declare
   id_riga uuid;
   passata boolean := false;
 begin
-  select id into id_riga from public.transactions where external_id = 'verifica-0053-a';
+  select id into id_riga from public.transactions where external_id = 'verifica-0054-a';
 
   begin
     update public.transactions set rimborso_stato = 'forse' where id = id_riga;
@@ -149,7 +149,7 @@ begin
   end;
   assert not passata, 'un importo di rimborso senza stato e'' stato accettato';
 
-  raise notice 'VERIFICA 0053: i check sui rimborsi tengono.';
+  raise notice 'VERIFICA 0054: i check sui rimborsi tengono.';
 end $$;
 
 rollback;

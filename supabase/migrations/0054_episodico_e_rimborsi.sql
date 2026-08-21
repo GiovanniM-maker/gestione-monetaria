@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 0053 — `episodico`, e i rimborsi come marcatore
+-- 0054 — `episodico`, e i rimborsi come marcatore
 -- ---------------------------------------------------------------------------
 -- Da `docs/copilota.md`, punti 1 e 2 dell'MVP.
 --

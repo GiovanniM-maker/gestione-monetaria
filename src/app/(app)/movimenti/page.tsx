@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import {
   CATEGORIA_SENZA,
   CLASSE_NON_CLASSIFICATA,
@@ -21,7 +22,6 @@ import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { Avatar } from '@/lib/ui/tessera';
 import { tinteDelleClassi } from '../grafici';
 import { SceltaCategoria } from '../scelta-categoria';
-import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimenti' };

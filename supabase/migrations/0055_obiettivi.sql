@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 0054 — Gli obiettivi
+-- 0055 — Gli obiettivi
 -- ---------------------------------------------------------------------------
 -- Da `docs/copilota.md`, punto 5 dell'MVP. E' l'unica delle cinque nature
 -- dell'informazione che abbia bisogno di una tabella nuova: le altre stanno

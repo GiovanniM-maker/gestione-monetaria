@@ -6,8 +6,8 @@ import {
   leggiVociRicorrenti,
 } from '@/lib/dove/leggi';
 import { cercaMovimenti } from '@/lib/movimenti/cerca';
-import { CATEGORIA_SENZA, estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
 import { etichettaMovimento } from '@/lib/movimenti/etichetta';
+import { CATEGORIA_SENZA, estremiDelMese, leggiFiltri } from '@/lib/movimenti/filtri';
 
 export const dynamic = 'force-dynamic';
 

@@ -1891,7 +1891,7 @@ inventare un identificativo di categoria.
 - Migrations numerate progressivamente. Una migration già applicata non si modifica mai: se ne scrive
   una nuova.
 - **`create or replace view` puo' bastare, e va provato prima di rassegnarsi al `drop`.**
-  Verificato con la 0053: `v_expenses` e' `select t.*`, `alter table add column` mette le colonne
+  Verificato con la 0054: `v_expenses` e' `select t.*`, `alter table add column` mette le colonne
   nuove **in coda**, e `create or replace view` ammette esattamente quella modifica — colonne
   aggiunte in fondo, le precedenti identiche per nome, tipo e ordine. Quindi la riespansione di
   `t.*` passa, e **nessuna delle tredici viste dipendenti si tocca**. La manovra col `drop` resta

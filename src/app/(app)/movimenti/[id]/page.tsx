@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { leggiMovimento } from '@/lib/movimenti/cerca';
+import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { centesimiDi, formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { BOTTONE_MINORE } from '@/lib/ui/controlli';
 import { leggiClassi } from '@/lib/tassonomia/classi';
@@ -12,7 +13,6 @@ import { SpostaMovimento } from './sposta';
 import { CorreggiMovimento } from '../../correggi';
 import { esercenteVariabile } from '@/lib/movimenti/classifica';
 import { Interruttore } from '../../esercenti/interruttore';
-import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimento' };
