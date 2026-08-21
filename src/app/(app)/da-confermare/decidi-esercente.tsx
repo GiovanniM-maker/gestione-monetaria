@@ -54,15 +54,30 @@ export function DecidiEsercente({
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
 
-  const nome = categorie.find((c) => c.id === scelto)?.percorso ?? null;
+  const [creando, setCreando] = useState(false);
+  const [nuova, setNuova] = useState('');
+  const [dentro, setDentro] = useState('');
+  /**
+   * Le categorie create qui dentro, finche' la pagina non si ricostruisce.
+   *
+   * `categorie` arriva dal server insieme alla pagina, quindi una appena creata
+   * non c'e'. Senza tenerle da parte, subito dopo averla creata la riga
+   * sparirebbe dall'elenco e le due frasi sotto direbbero «senza categoria» —
+   * cioe' il contrario di quello che e' appena successo. Un `router.refresh()`
+   * qui non serve: chiuderebbe il foglio e butterebbe la scelta in sospeso.
+   */
+  const [aggiunte, setAggiunte] = useState<{ id: string; percorso: string }[]>([]);
+
+  const tutte = [...categorie, ...aggiunte];
+  const nome = tutte.find((c) => c.id === scelto)?.percorso ?? null;
 
   // Il filtro e' in memoria, non una query: le categorie arrivano gia' con la
   // pagina, e con trentacinque voci scrivere tre lettere e' sempre piu' veloce
   // che scorrere.
   const visibili =
     cerca.trim() === ''
-      ? categorie
-      : categorie.filter((c) => c.percorso.toLowerCase().includes(cerca.trim().toLowerCase()));
+      ? tutte
+      : tutte.filter((c) => c.percorso.toLowerCase().includes(cerca.trim().toLowerCase()));
 
   async function decidi(variabile: boolean) {
     setInCorso(true);
@@ -93,6 +108,62 @@ export function DecidiEsercente({
     }
   }
 
+  /**
+   * Crea una categoria e la **sceglie**, senza assegnarla a niente.
+   *
+   * E' la differenza con lo stesso gesto dentro il selettore di riga: li'
+   * creare doveva essere seguito da un'assegnazione, qui la scrittura vera
+   * arriva dopo, con «Sempre cosi'» o «Cambiano». Quindi questo bottone non
+   * decide niente sull'esercente — mette solo la spunta su una categoria che
+   * un attimo fa non esisteva.
+   *
+   * `crea_categoria` e' rieseguibile: stesso nome sotto lo stesso padre
+   * restituisce quella che c'e' gia', e un tocco ripetuto non crea due
+   * «Pizzerie».
+   */
+  async function creaEScegli() {
+    const battuto = nuova.trim();
+    if (battuto === '') return;
+    setInCorso(true);
+    setErrore(null);
+    try {
+      const risposta = await fetch('/api/admin/categorie', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nome: battuto, padreId: dentro === '' ? null : dentro }),
+      });
+      const esito = (await risposta.json()) as Record<string, unknown>;
+      if (!risposta.ok) {
+        setErrore(String(esito['error'] ?? risposta.status));
+        return;
+      }
+      const id = typeof esito['id'] === 'string' ? esito['id'] : null;
+      if (id === null) {
+        setErrore('La categoria è stata creata ma non so quale sia.');
+        return;
+      }
+
+      // Il percorso lo compone il client, e per un motivo solo: la route torna
+      // l'identificativo e basta. E' un'etichetta che vive fino al prossimo
+      // caricamento — poi arriva quella vera dal server, che e' la sola che
+      // conta.
+      const padre = tutte.find((c) => c.id === dentro)?.percorso ?? null;
+      setAggiunte((a) => [
+        ...a,
+        { id, percorso: padre === null ? battuto : `${padre} > ${battuto}` },
+      ]);
+      setScelto(id);
+      setCreando(false);
+      setNuova('');
+      setDentro('');
+      setCerca('');
+    } catch (e) {
+      setErrore(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInCorso(false);
+    }
+  }
+
   return (
     <>
       <button
@@ -116,6 +187,9 @@ export function DecidiEsercente({
           setAperto(false);
           setCerca('');
           setErrore(null);
+          setCreando(false);
+          setNuova('');
+          setDentro('');
           // Chiudere annulla: la scelta in sospeso non deve sopravvivere a una
           // finestra chiusa senza rispondere.
           setScelto(categoriaId ?? '');
@@ -124,44 +198,118 @@ export function DecidiEsercente({
         <div className="space-y-3">
           {errore !== null && <p className="nota nota-errore text-[13px]">{errore}</p>}
 
-          <input
-            value={cerca}
-            onChange={(e) => setCerca(e.target.value)}
-            placeholder="cerca una categoria"
-            className="min-h-11 w-full rounded-full bg-s3 px-4 text-[15px] placeholder:text-testo-3"
-            disabled={inCorso}
-          />
-
-          <ul className="elenco max-h-[38vh] overflow-y-auto text-[15px]">
-            <li>
-              <button
-                type="button"
-                onClick={() => setScelto('')}
-                className="flex min-h-11 w-full items-center gap-2 text-left"
-              >
-                <span className="flex-1 text-testo-2">— senza categoria —</span>
-                {scelto === '' && <span aria-hidden="true">✓</span>}
-              </button>
-            </li>
-            {visibili.map((c) => (
-              <li key={c.id}>
+          {creando ? (
+            /* Il modulo prende il posto dell'elenco invece di aprirsi sotto: su
+               un telefono, sotto trentacinque righe, i suoi campi finirebbero
+               fuori schermo — e si starebbe scrivendo un nome senza vedere il
+               bottone che lo crea. */
+            <div className="space-y-3">
+              <input
+                value={nuova}
+                onChange={(e) => setNuova(e.target.value)}
+                placeholder="nome della categoria"
+                className="min-h-11 w-full rounded-full bg-s3 px-4 text-[15px] placeholder:text-testo-3"
+                disabled={inCorso}
+                autoFocus
+              />
+              <label className="block">
+                <span className="text-[12px] text-testo-2">dove</span>
+                <select
+                  value={dentro}
+                  onChange={(e) => setDentro(e.target.value)}
+                  className="min-h-11 w-full rounded-full bg-s3 px-3.5 text-[15px]"
+                  disabled={inCorso}
+                >
+                  <option value="">di primo livello</option>
+                  {tutte.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      dentro {c.percorso}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-[12px] text-testo-3">
+                Appena creata viene <strong>scelta</strong> qui. Sull&rsquo;esercente non cambia
+                ancora niente: decide una delle due risposte qui sotto. Se esiste gi&agrave; con lo
+                stesso nome nello stesso posto, si usa quella.
+              </p>
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setScelto(c.id)}
-                  className="flex min-h-11 w-full items-center gap-2 text-left"
+                  onClick={() => void creaEScegli()}
+                  disabled={inCorso || nuova.trim() === ''}
+                  className="min-h-11 flex-1 rounded-full bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
                 >
-                  <span className="flex-1 truncate">{c.percorso}</span>
-                  {scelto === c.id && <span aria-hidden="true">✓</span>}
+                  {inCorso ? '…' : 'Crea e scegli'}
                 </button>
-              </li>
-            ))}
-          </ul>
+                <button
+                  type="button"
+                  onClick={() => setCreando(false)}
+                  disabled={inCorso}
+                  className="min-h-11 rounded-full bg-s3 px-4 text-[13px] font-medium"
+                >
+                  Annulla
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <input
+                value={cerca}
+                onChange={(e) => setCerca(e.target.value)}
+                placeholder="cerca una categoria"
+                className="min-h-11 w-full rounded-full bg-s3 px-4 text-[15px] placeholder:text-testo-3"
+                disabled={inCorso}
+              />
+
+              <ul className="elenco max-h-[38vh] overflow-y-auto text-[15px]">
+                {/* In cima e non in fondo: il posto in cui ci si accorge che una
+                categoria manca e' mentre la si cerca, non dopo aver scorso
+                tutte le altre. Diventa «Crea "pizzeria"» se si e' gia' scritto
+                qualcosa, cosi' il nome non si ribatte. */}
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNuova(cerca.trim());
+                      setCreando(true);
+                    }}
+                    className="flex min-h-11 w-full items-center gap-2 text-left text-accento"
+                  >
+                    {cerca.trim() === '' ? '+ Nuova categoria' : `+ Crea «${cerca.trim()}»`}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setScelto('')}
+                    className="flex min-h-11 w-full items-center gap-2 text-left"
+                  >
+                    <span className="flex-1 text-testo-2">— senza categoria —</span>
+                    {scelto === '' && <span aria-hidden="true">✓</span>}
+                  </button>
+                </li>
+                {visibili.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => setScelto(c.id)}
+                      className="flex min-h-11 w-full items-center gap-2 text-left"
+                    >
+                      <span className="flex-1 truncate">{c.percorso}</span>
+                      {scelto === c.id && <span aria-hidden="true">✓</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           {/* Le due risposte, e sono anche il salvataggio. Restano attaccate in
               fondo al foglio: con trentacinque categorie, dei bottoni in coda
               alla lista si raggiungono scorrendo, e a quel punto non si sa piu'
               cosa si e' scelto. */}
-          <div className="sticky bottom-0 space-y-2 bg-s2 pt-3">
+          <div className={`sticky bottom-0 space-y-2 bg-s2 pt-3 ${creando ? 'hidden' : ''}`}>
             <button
               type="button"
               onClick={() => void decidi(false)}
