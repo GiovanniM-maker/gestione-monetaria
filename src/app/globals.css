@@ -575,3 +575,29 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Il cerchietto che gira mentre si chiede alla banca.
+   `prefers-reduced-motion` lo ferma: chi ha chiesto meno movimento non deve
+   avere una cosa che ruota all'infinito in cima allo schermo. Fermo resta
+   comunque visibile — e' un arco, non un cerchio pieno — quindi l'informazione
+   «sta lavorando» non si perde, la porta il testo accanto. */
+@keyframes gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='gira'] {
+    animation: none !important;
+  }
+}
+
+/* Il rimbalzo nativo dell'overscroll ruberebbe il gesto: su Safari e Chrome
+   mobile la pagina si stacca dal bordo e il nostro `touchmove` lavora sotto una
+   pagina che si sta gia' muovendo per conto suo. `contain` toglie il rimbalzo
+   e lascia il gesto a noi, senza disabilitare lo scorrimento. */
+html,
+body {
+  overscroll-behavior-y: contain;
+}
