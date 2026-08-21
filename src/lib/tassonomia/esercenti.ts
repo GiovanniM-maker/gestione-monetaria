@@ -1,6 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { applicaTassonomia } from './applica';
 
 /**
  * L'elenco degli esercenti, e la dichiarazione che li divide in due.
@@ -104,4 +105,81 @@ export async function impostaVariabile(id: string, variabile: boolean): Promise<
     p_variabile: variabile === true,
   });
   if (error !== null) throw new EsercenteNonValido(error.message);
+}
+
+/**
+ * La decisione che si prende su un esercente **appena comparso**.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' e' una scrittura sola e non tre
+ * ---------------------------------------------------------------------------
+ * Sono tre fatti — la categoria, se le sue spese vanno tutte insieme o una per
+ * una, e che qualcuno l'ha finalmente guardato — ma sono **una decisione**:
+ * quella che si prende la prima volta che un nome nuovo compare in «Da
+ * confermare». Spezzarla in tre chiamate vorrebbe dire poter finire con la
+ * categoria messa e il resto no, cioe' con un esercente che sembra deciso e
+ * ricompare da decidere il giorno dopo.
+ *
+ * ---------------------------------------------------------------------------
+ * `variabile` non e' un dettaglio tecnico: e' la domanda
+ * ---------------------------------------------------------------------------
+ * «Le sue spese sono sempre dello stesso tipo?» ha due risposte, e cambiano
+ * **a chi si chiede da qui in avanti**:
+ *
+ *   no  -> la categoria dell'esercente vale per tutte le sue spese, passate e
+ *          future, e la conferma di fine giornata non ha piu' niente da
+ *          chiedere su di lui;
+ *   si' -> la categoria e' il punto di partenza, e ogni spesa resta da
+ *          confermare. E' il caso Euronics: lo stesso nome ospita un computer
+ *          comprato per lavorare e una sciocchezza.
+ *
+ * In tutti e due i casi la categoria **si propaga subito** alle spese gia'
+ * registrate che nessuno ha corretto a mano: e' cio' che la rende una risposta
+ * utile invece di una preferenza per il futuro.
+ *
+ * ---------------------------------------------------------------------------
+ * `confermato_at` chiude il giro
+ * ---------------------------------------------------------------------------
+ * Senza, la domanda tornerebbe identica domani: e' proprio quel campo a dire
+ * «questo l'ha guardato una persona». `origine` passa da `ai` a `utente` per
+ * la stessa ragione — una classificazione proposta dal modello e poi
+ * confermata non e' piu' una proposta, e continuare a chiamarla cosi'
+ * significherebbe metterla in dubbio per sempre.
+ */
+export type DecisioneEsercente = {
+  id: string;
+  categoriaId: string | null;
+  /** `true` = le sue spese si classificano una per una. */
+  variabile: boolean;
+};
+
+export async function decidiEsercente(d: DecisioneEsercente): Promise<void> {
+  if (typeof d.id !== 'string' || d.id.trim() === '') {
+    throw new EsercenteNonValido('Esercente non indicato.');
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('merchants')
+    .update({
+      category_id: d.categoriaId,
+      classificazione_variabile: d.variabile === true,
+      confermato_at: new Date().toISOString(),
+      origine: 'utente',
+    })
+    .eq('id', d.id)
+    .select('id');
+
+  if (error !== null) throw new EsercenteNonValido(error.message);
+  // `false` significa «quell'esercente non esiste piu'», che chi chiama deve
+  // poter distinguere da «fatto»: senza, la schermata direbbe di aver deciso
+  // qualcosa su niente.
+  if (comeArray<{ id: string }>(data).length === 0) {
+    throw new EsercenteNonValido('Questo esercente non esiste più.');
+  }
+
+  // La categoria vive sull'esercente ma va riscritta su ogni sua transazione,
+  // o gli aggregati continuerebbero a usare quella vecchia. Le righe corrette
+  // a mano restano dove sono: e' il patto di `manually_categorized`.
+  await applicaTassonomia();
 }

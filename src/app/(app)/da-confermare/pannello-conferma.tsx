@@ -19,6 +19,7 @@ import { Segmentato } from '../segmentato';
 import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
+import { DecidiEsercente } from './decidi-esercente';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -489,6 +490,22 @@ function Carta({
         <p className="mt-2 text-[12px] text-attenzione">
           Proposta dal modello{r.motivazione !== null && `: ${r.motivazione}`}
         </p>
+      )}
+
+      {/* Un esercente che nessuno ha mai guardato si decide **qui**, la prima
+          sera che compare: e' il momento in cui ci si accorge che va deciso, e
+          finora l'unico posto per farlo era la sua scheda — dove si arriva solo
+          se si e' gia' capito che serviva.
+
+          Sopra c'e' «Proposta dal modello», che dice **che** e' da guardare;
+          questo dice **cosa fare**, ed e' il gesto che fa sparire tutti e due. */}
+      {r.merchant_id !== null && r.esercente_confermato_at === null && (
+        <DecidiEsercente
+          merchantId={r.merchant_id}
+          esercente={r.esercente ?? 'questo esercente'}
+          categoriaId={r.category_id}
+          categorie={categorie}
+        />
       )}
     </>
   );
