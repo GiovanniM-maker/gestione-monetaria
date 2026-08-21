@@ -6,7 +6,7 @@ import { sanificaMetriche } from '@/lib/report/sanifica';
 import { esercentiDaCarta } from '@/lib/tassonomia/garanzie';
 import type { StrumentoDichiarato } from '@/lib/ai/modello';
 import type { Grafico, Proposta } from './messaggi';
-import { leggiObiettivi, TIPI_OBIETTIVO } from './obiettivi';
+import { descriviObiettivo, leggiObiettivi, TIPI_OBIETTIVO } from './obiettivi';
 
 /**
  * Le operazioni che il copilot può usare.
@@ -268,9 +268,10 @@ const cercaMovimenti: Strumento = {
         // verificabili dove stanno, e spariscono insieme al movimento se il
         // movimento non viene chiesto.
         episodico: r['episodico'],
-        rimborso: r['rimborso_stato'] === null
-          ? null
-          : { stato: r['rimborso_stato'], importo: r['rimborso_importo'] },
+        rimborso:
+          r['rimborso_stato'] === null
+            ? null
+            : { stato: r['rimborso_stato'], importo: r['rimborso_importo'] },
       })),
     });
   },
@@ -1063,21 +1064,6 @@ const impostaObiettivo: Strumento = {
     };
   },
 };
-
-function descriviObiettivo(o: {
-  tipo: string;
-  valore: string | null;
-  categoria: string | null;
-  classe_nome: string | null;
-}): string {
-  const dove = o.categoria ?? o.classe_nome;
-  const quanto = o.valore === null ? '' : `${o.valore} €`;
-  if (o.tipo === 'liquidita_minima') return `tenere almeno ${quanto}`;
-  if (o.tipo === 'risparmiare') return `mettere da parte ${quanto}`;
-  if (o.tipo === 'ridurre') return `spendere meno${dove === null ? '' : ` in ${dove}`}`;
-  return `non più di ${quanto} al mese${dove === null ? '' : ` in ${dove}`}`;
-}
-
 const aggiornaEsercente: Strumento = {
   nome: 'aggiorna_esercente',
   descrizione:
