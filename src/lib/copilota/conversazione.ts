@@ -21,6 +21,13 @@ import type {
   StrumentoEseguito,
 } from './messaggi';
 import type { Context, Discretion } from '@/lib/db/types';
+import { generaTitoloSeManca } from './conversazioni';
+import {
+  creaObiettivo,
+  leggiObiettivi,
+  rinnovaObiettivo,
+  type TipoObiettivo,
+} from './obiettivi';
 
 /**
  * Il copilot.
@@ -162,11 +169,50 @@ async function istruzioni(): Promise<string> {
     )
     .join('\n');
 
+  // Gli obiettivi nel prompt e non in uno strumento: sono cinque righe, e
+  // valgono a **ogni** risposta — un consiglio dato ignorando cosa l'utente sta
+  // cercando di ottenere e' un consiglio da manuale. Uno strumento invece il
+  // modello lo chiama quando gli pare, cioe' quasi mai.
+  //
+  // Lo strumento `obiettivi` resta per chi ne vuole i dettagli e gli
+  // identificativi, che qui non compaiono.
+  const obiettivi = (await leggiObiettivi())
+    .map(
+      (o) =>
+        `- ${descriviObiettivoBreve(o)}` +
+        (o.stato === 'scaduto' ? ' [SCADUTO: chiedi se vale ancora prima di usarlo]' : ''),
+    )
+    .join('\n');
+
   return (
     `${REGOLE}\n\nOGGI È IL ${oggi}.\n\n` +
+    (obiettivi === ''
+      ? ''
+      : `COSA L'UTENTE VUOLE OTTENERE (obiettivi dichiarati da lui, non tuoi):\n${obiettivi}\n\n`) +
     `LE CLASSI DI DISCREZIONALITÀ:\n${classi}\n\n` +
     `LE CATEGORIE, con il loro identificativo:\n${albero}`
   );
+}
+
+/** Un obiettivo in una riga, senza identificativi: nel prompt non servono. */
+function descriviObiettivoBreve(o: {
+  tipo: string;
+  valore: string | null;
+  categoria: string | null;
+  classe_nome: string | null;
+  nota: string | null;
+}): string {
+  const dove = o.categoria ?? o.classe_nome;
+  const q = o.valore === null ? '' : `${o.valore} €`;
+  const frase =
+    o.tipo === 'liquidita_minima'
+      ? `tenere almeno ${q} sul conto`
+      : o.tipo === 'risparmiare'
+        ? `mettere da parte ${q}`
+        : o.tipo === 'ridurre'
+          ? `spendere meno${dove === null ? '' : ` in ${dove}`}`
+          : `non più di ${q} al mese${dove === null ? '' : ` in ${dove}`}`;
+  return o.nota === null ? frase : `${frase} (${o.nota})`;
 }
 
 // ---------------------------------------------------------------------------
@@ -283,6 +329,12 @@ export async function chiedi(conversazioneId: string, domanda: string): Promise<
   if (error !== null || data === null) {
     throw new Error(`Salvataggio del messaggio fallito: ${error?.message ?? 'nessuna riga'}`);
   }
+
+  // Il titolo, una volta sola, quando c'e' abbastanza da dire. Dopo aver
+  // salvato: e' un'etichetta, e non deve stare fra l'utente e la risposta.
+  // Riceve solo le domande dell'utente, mai i dati letti dagli strumenti.
+  const domande = [...storia.filter((m) => m.ruolo === 'utente').map((m) => m.testo), pulita];
+  await generaTitoloSeManca(conversazioneId, domande);
 
   return { conversazioneId, messaggio: data, costo };
 }
@@ -496,6 +548,41 @@ async function esegui(proposta: Proposta): Promise<void> {
     case 'elimina_classe':
       await eliminaClasse(String(a['slug']), (a['verso'] as string | null) ?? null);
       return;
+
+    case 'segna_episodica': {
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase.rpc('segna_episodico', {
+        p_id: String(a['id']),
+        p_episodico: a['episodico'] !== false,
+      });
+      if (error !== null) throw new Error(error.message);
+      // `false` significa «quel movimento non esiste piu'», che non e' la
+      // stessa cosa di «fatto»: senza questo controllo il bottone si
+      // spegnerebbe dichiarando un cambiamento mai avvenuto.
+      if (data !== true) throw new PropostaNonTrovata('Questo movimento non esiste più.');
+      return;
+    }
+
+    case 'imposta_obiettivo': {
+      const rinnova = a['rinnova_id'];
+      const mesi = typeof a['mesi'] === 'number' ? a['mesi'] : 6;
+
+      if (typeof rinnova === 'string') {
+        const fatto = await rinnovaObiettivo(rinnova, mesi);
+        if (!fatto) throw new PropostaNonTrovata('Questo obiettivo non esiste più.');
+        return;
+      }
+
+      await creaObiettivo({
+        tipo: a['tipo'] as TipoObiettivo,
+        categoriaId: (a['categoria_id'] as string | null) ?? null,
+        classe: (a['classe'] as string | null) ?? null,
+        valore: (a['valore'] as string | null) ?? null,
+        nota: (a['nota'] as string | null) ?? null,
+        mesi,
+      });
+      return;
+    }
   }
 }
 

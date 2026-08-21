@@ -250,7 +250,13 @@ export default async function MovimentiPage({
                 className="flex min-h-14 items-center justify-between gap-3 py-1"
               >
                 {/* L'iniziale sulla velatura della classe della riga: si
-                    riconosce l'esercente scorrendo, prima di leggere. */}
+                    riconosce l'esercente scorrendo, prima di leggere.
+
+                    Riceve la STESSA etichetta mostrata sotto, non
+                    `r.esercente`: su un bonifico a un privato l'iniziale
+                    sarebbe quella di «Sent from Revolut» mentre la riga dice
+                    un nome, e due iniziali diverse per la stessa riga sono
+                    peggio di nessuna iniziale. */}
                 <Avatar
                   nome={etichettaMovimento(r)}
                   tinta={

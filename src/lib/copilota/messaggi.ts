@@ -13,6 +13,8 @@
 export type Proposta = {
   operazione:
     | 'correggi_movimento'
+    | 'segna_episodica'
+    | 'imposta_obiettivo'
     | 'aggiorna_esercente'
     | 'crea_categoria'
     | 'sposta_movimento'

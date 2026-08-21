@@ -21,6 +21,7 @@
 | 8     | Motore alert (SQL)                        | **completata** |
 | 9     | Report periodico AI                       | **completata** |
 | 10    | Chat copilot                              | **completata** |
+| 11    | Copilota: memoria tipizzata (MVP 1–6)     | **in corso**   |
 
 Aggiornare questa tabella è parte del commit di chiusura di ogni fase.
 
@@ -31,6 +32,15 @@ elenco e non un consiglio — e le decisioni prese il 13 agosto 2026: ricerca we
 consigli, regola 8 estesa ai motori di ricerca (**solo esercenti garantiti da carta, solo il nome**),
 quattro sincronizzazioni al giorno più una a ogni apertura, query del copilota proposte e approvate.
 Va letto prima di aprire il prossimo cantiere.
+
+**Il copilota ha una specifica, e le sue decisioni sono prese.** `docs/copilota.md` e' la
+direzione definitiva del prossimo cantiere, decisa in due passaggi il 19 agosto 2026. La regola che
+la regge: **tutto cio' che il copilota sa, deve poterlo sapere anche il resto dell'applicazione** —
+quindi un fatto che cambia un numero vive nello schema, uno che non cambia nessun numero vive in una
+tabella tipizzata, e niente vive in un posto che solo il copilota legge. Ne discendono `episodico`
+(il caso Booking.com, gia' noto dalla Fase 5), i widget come domande salvate con grammatica chiusa,
+un solo motore di avvisi, e una `/dove` che resta la fisarmonica. Va letto prima di aprire il
+cantiere; la critica lunga da cui esce sta in git al commit `117f8a5`.
 
 **L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
 2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
@@ -1880,6 +1890,14 @@ inventare un identificativo di categoria.
   5 minuti.
 - Migrations numerate progressivamente. Una migration già applicata non si modifica mai: se ne scrive
   una nuova.
+- **`create or replace view` puo' bastare, e va provato prima di rassegnarsi al `drop`.**
+  Verificato con la 0054: `v_expenses` e' `select t.*`, `alter table add column` mette le colonne
+  nuove **in coda**, e `create or replace view` ammette esattamente quella modifica — colonne
+  aggiunte in fondo, le precedenti identiche per nome, tipo e ordine. Quindi la riespansione di
+  `t.*` passa, e **nessuna delle tredici viste dipendenti si tocca**. La manovra col `drop` resta
+  necessaria quando cambia una colonna esistente; per aggiungerne una, provare prima il `replace`
+  costa trenta secondi su Postgres locale e risparmia la manovra che e' gia' fallita due volte.
+  L'elenco delle dipendenti non si deduce a memoria: lo dice `pg_depend` su una replica.
 - **Una vista definita con `t.*` congela le colonne alla creazione.** Aggiungere una colonna alla
   tabella non la fa comparire nella vista, e la query che la usa fallisce con
   `column "x" does not exist` — che sembra un errore di battitura e non lo è. Ogni colonna nuova su
@@ -1978,6 +1996,9 @@ transactions
   is_refund boolean
   manually_categorized boolean default false
   excluded_from_analysis boolean default false
+  episodico boolean default false     -- una tantum: resta nella spesa, esce dalle ricorrenze
+  rimborso_stato text                 -- atteso | ricevuto | negato. Solo marcatore (0050)
+  rimborso_importo numeric(14,2)      -- quanto torna, in EUR e positivo
   notes text
   created_at, updated_at
   UNIQUE (account_id, COALESCE(external_id, dedupe_key))

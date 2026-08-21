@@ -6,6 +6,7 @@ import { sanificaMetriche } from '@/lib/report/sanifica';
 import { esercentiDaCarta } from '@/lib/tassonomia/garanzie';
 import type { StrumentoDichiarato } from '@/lib/ai/modello';
 import type { Grafico, Proposta } from './messaggi';
+import { leggiObiettivi, TIPI_OBIETTIVO } from './obiettivi';
 
 /**
  * Le operazioni che il copilot può usare.
@@ -262,6 +263,14 @@ const cercaMovimenti: Strumento = {
         stato: r['stato'],
         corretto_a_mano: r['manually_categorized'],
         fuori_dalla_spesa: r['fuori_dalla_spesa'],
+        // I fatti che l'utente ha dichiarato su QUESTA riga. Arrivano accanto
+        // alla riga che descrivono, non in un blocco di «memoria»: sono
+        // verificabili dove stanno, e spariscono insieme al movimento se il
+        // movimento non viene chiesto.
+        episodico: r['episodico'],
+        rimborso: r['rimborso_stato'] === null
+          ? null
+          : { stato: r['rimborso_stato'], importo: r['rimborso_importo'] },
       })),
     });
   },
@@ -436,7 +445,8 @@ const trovaEsercente: Strumento = {
     const { data, error } = await supabase
       .from('merchants')
       .select(
-        'id, canonical_name, category_id, discretion, context, is_subscription, origine, confermato_at',
+        'id, canonical_name, category_id, discretion, context, is_subscription, origine, ' +
+          'confermato_at, classificazione_variabile',
       )
       // `%` e `_` sono i jolly di `like`: lasciarli passare da un testo scritto
       // dal modello farebbe rispondere l'intera tabella a una ricerca vuota.
@@ -454,6 +464,10 @@ const trovaEsercente: Strumento = {
         contesto: m['context'],
         abbonamento: m['is_subscription'],
         proposto_dal_modello: m['origine'] === 'ai' && m['confermato_at'] === null,
+        // Dichiarato variabile = sotto questo nome convivono spese diverse, e
+        // la categoria si decide riga per riga. Serve al modello per non
+        // proporre un cambio d'esercente quando la sede giusta e' la riga.
+        classificazione_riga_per_riga: m['classificazione_variabile'],
       })),
     });
   },
@@ -852,6 +866,217 @@ const correggiMovimento: Strumento = {
     };
   },
 };
+
+/**
+ * Segna una spesa come una tantum.
+ *
+ * E' la scrittura che il caso `Booking.com` aspetta dalla Fase 5: quattro
+ * prenotazioni in tre mesi che il rilevatore legge come abitudine, e nessun
+ * criterio basato sul tempo puo' distinguere un viaggio da una consuetudine —
+ * l'informazione non e' nei dati bancari, e' nella testa di chi ha comprato.
+ *
+ * **L'effetto lo calcola il server**, con `effetto_episodico`, e non e' una
+ * cortesia: sono due cifre, e valgono le regole di sempre. Il modello che
+ * scrivesse «passa da 266 a 41» le sbaglierebbe nel modo misurato in Fase 4 —
+ * in modo credibile, e nessuno le ricontrolla. Qui vengono da una funzione SQL
+ * che usa la stessa formula del cruscotto.
+ */
+const segnaEpisodica: Strumento = {
+  nome: 'segna_episodica',
+  descrizione:
+    'Prepara di segnare UNA transazione come spesa una tantum: resta nella spesa del ' +
+    'mese e nella cronologia, ma esce dal calcolo delle ricorrenze e dagli avvisi di ' +
+    'picco. Usalo quando l’utente dice che una spesa era eccezionale — un viaggio, un ' +
+    'acquisto singolo — e non un comportamento che si ripete. NON usarlo per correggere ' +
+    'una classificazione sbagliata: per quella c’è correggi_movimento.',
+  parametri: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', description: 'Identificativo del movimento.' },
+      episodico: {
+        type: 'boolean',
+        description: 'false per togliere il segno. Predefinito true.',
+      },
+    },
+    required: ['id'],
+  },
+  esegui: async (a) => {
+    const id = identificativo(a['id'], 'id');
+    if (id === null) throw new ArgomentoNonValido("Serve l'identificativo del movimento.");
+    const episodico = a['episodico'] === false ? false : true;
+
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc('effetto_episodico', { p_id: id });
+    if (error !== null) throw new Error(error.message);
+
+    const e = comeArray<Record<string, unknown>>(data)[0];
+    if (e === undefined) throw new ArgomentoNonValido(`Nessun movimento con identificativo ${id}.`);
+
+    if (e['gia_episodico'] === episodico) {
+      throw new ArgomentoNonValido(
+        episodico
+          ? 'Questa spesa è già segnata come episodica.'
+          : 'Questa spesa non è segnata come episodica.',
+      );
+    }
+
+    const esercente = typeof e['esercente'] === 'string' ? e['esercente'] : 'esercente sconosciuto';
+    const prima = e['costo_prima'];
+    const dopo = e['costo_dopo'];
+
+    // La frase sull'effetto la compone il server, dagli stessi valori che ha
+    // letto. `costo_dopo` nullo non e' un errore: senza quella riga l'esercente
+    // esce dalla metrica — meno di tre occorrenze, tre mesi o 75 giorni — e lo
+    // si dice a parole invece di mostrare un trattino.
+    const effetto =
+      prima === null
+        ? 'Questo esercente non è fra le ricorrenze, quindi nessun costo mensile cambia.'
+        : dopo === null
+          ? `Il costo ricorrente stimato (${String(prima)} €/mese) sparisce: senza questa ` +
+            'spesa l’esercente non ha più abbastanza storia per entrare nella metrica.'
+          : `Il costo ricorrente stimato passa da ${String(prima)} a ${String(dopo)} €/mese.`;
+
+    return {
+      dati: PREPARATA,
+      proposta: {
+        operazione: 'segna_episodica',
+        argomenti: { id, episodico },
+        descrizione: episodico
+          ? `Segna come spesa episodica: ${esercente} · ${String(e['booking_date'])} · ` +
+            `${String(e['amount_eur'])} €. Resta nella spesa del mese, ma non entrerà più ` +
+            `nel calcolo delle spese ricorrenti. ${effetto}`
+          : `Togli il segno di spesa episodica: ${esercente} · ${String(e['booking_date'])} · ` +
+            `${String(e['amount_eur'])} €. Tornerà a contare fra le ricorrenze.`,
+      },
+    };
+  },
+};
+
+/**
+ * Gli obiettivi: leggerli e proporne uno.
+ *
+ * Sono **una tabella stretta**, non una memoria: quattro tipi, un bersaglio
+ * strutturato, un valore, e una scadenza obbligatoria. Se una cosa che l'utente
+ * dice non ci entra, non ci va infilata come nota — vuol dire che e' un'altra
+ * natura di informazione, e va nel posto suo.
+ */
+const obiettiviStrumento: Strumento = {
+  nome: 'obiettivi',
+  descrizione:
+    "Elenca gli obiettivi dell'utente, con quelli scaduti. Serve per capire cosa sta " +
+    'cercando di ottenere prima di dare un consiglio. Un obiettivo SCADUTO non vale ' +
+    'più: chiedi se vale ancora invece di darlo per buono.',
+  parametri: { type: 'object', properties: {} },
+  esegui: async () => fuori({ obiettivi: await leggiObiettivi() }),
+};
+
+const impostaObiettivo: Strumento = {
+  nome: 'imposta_obiettivo',
+  descrizione:
+    "Prepara un obiettivo nuovo, oppure il rinnovo di uno scaduto. Usalo quando l'utente " +
+    'dice cosa vuole ottenere («voglio tenere 5.000 € sul conto», «voglio spendere meno ' +
+    'di 300 al mese in ristoranti»). NON usarlo per fatti su una spesa: quelli sono ' +
+    'segna_episodica o correggi_movimento.',
+  parametri: {
+    type: 'object',
+    properties: {
+      tipo: {
+        type: 'string',
+        enum: [...TIPI_OBIETTIVO],
+        description:
+          'tetto_di_spesa (meno di X al mese in una categoria o classe) · ' +
+          'liquidita_minima (tenere almeno X) · ridurre (spendere meno in qualcosa, ' +
+          'senza una cifra) · risparmiare (mettere via X).',
+      },
+      valore: { type: 'number', description: 'In euro, positivo. Obbligatorio salvo «ridurre».' },
+      categoria_id: STRINGA,
+      classe: CLASSE,
+      nota: { type: 'string', description: 'Perché, in poche parole.' },
+      mesi: { type: 'integer', description: 'Per quanti mesi vale. Predefinito 6.' },
+      rinnova_id: {
+        type: 'string',
+        description: 'Identificativo di un obiettivo scaduto da rinnovare, invece di crearne uno.',
+      },
+    },
+    required: ['tipo'],
+  },
+  esegui: async (a) => {
+    const rinnova = identificativo(a['rinnova_id'], 'rinnova_id');
+    const mesi = intero(a['mesi'], 6, 60);
+
+    if (rinnova !== null) {
+      const esistenti = await leggiObiettivi();
+      const o = esistenti.find((x) => x.id === rinnova);
+      if (o === undefined) throw new ArgomentoNonValido('Questo obiettivo non esiste.');
+      return {
+        dati: PREPARATA,
+        proposta: {
+          operazione: 'imposta_obiettivo',
+          argomenti: { rinnova_id: rinnova, mesi },
+          descrizione: `Rinnova l’obiettivo «${descriviObiettivo(o)}» per altri ${mesi} mesi.`,
+        },
+      };
+    }
+
+    const tipo = fraQuesti(a['tipo'], TIPI_OBIETTIVO, 'tipo');
+    if (tipo === null) throw new ArgomentoNonValido('Serve il tipo di obiettivo.');
+
+    const categoriaId = identificativo(a['categoria_id'], 'categoria_id');
+    const classe = await classeValida(a['classe']);
+    const nota = testo(a['nota']);
+
+    // L'importo non passa da un float nemmeno qui: arriva come numero JSON dal
+    // modello e diventa subito una stringa decimale, che e' la forma in cui
+    // Postgres lo vuole. Due decimali, perche' un obiettivo e' un importo.
+    const grezzo = a['valore'];
+    const valore =
+      typeof grezzo === 'number' && Number.isFinite(grezzo) && grezzo > 0
+        ? grezzo.toFixed(2)
+        : null;
+
+    // Il nome del bersaglio lo risolve il server: la descrizione che l'utente
+    // legge non deve contenere un identificativo, e nemmeno un nome che il
+    // modello si ricorda male.
+    const bersaglio =
+      categoriaId !== null
+        ? ` in ${await nomeCategoria(categoriaId)}`
+        : classe !== null
+          ? ` in ${classe}`
+          : '';
+
+    const frase: Record<string, string> = {
+      tetto_di_spesa: `Non più di ${valore ?? '—'} € al mese${bersaglio}`,
+      liquidita_minima: `Tenere almeno ${valore ?? '—'} € sul conto`,
+      ridurre: `Spendere meno${bersaglio}`,
+      risparmiare: `Mettere da parte ${valore ?? '—'} €`,
+    };
+
+    return {
+      dati: PREPARATA,
+      proposta: {
+        operazione: 'imposta_obiettivo',
+        argomenti: { tipo, valore, categoria_id: categoriaId, classe, nota, mesi },
+        descrizione:
+          `Nuovo obiettivo: ${frase[tipo] ?? tipo}. Vale ${mesi} mesi, poi ti chiederò ` +
+          `se è ancora valido.${nota === null ? '' : ` Nota: «${nota}».`}`,
+      },
+    };
+  },
+};
+
+function descriviObiettivo(o: {
+  tipo: string;
+  valore: string | null;
+  categoria: string | null;
+  classe_nome: string | null;
+}): string {
+  const dove = o.categoria ?? o.classe_nome;
+  const quanto = o.valore === null ? '' : `${o.valore} €`;
+  if (o.tipo === 'liquidita_minima') return `tenere almeno ${quanto}`;
+  if (o.tipo === 'risparmiare') return `mettere da parte ${quanto}`;
+  if (o.tipo === 'ridurre') return `spendere meno${dove === null ? '' : ` in ${dove}`}`;
+  return `non più di ${quanto} al mese${dove === null ? '' : ` in ${dove}`}`;
+}
 
 const aggiornaEsercente: Strumento = {
   nome: 'aggiorna_esercente',
@@ -1253,7 +1478,10 @@ export const STRUMENTI: readonly Strumento[] = [
   statoEAvvisi,
   doveTagliare,
   graficoMensile,
+  obiettiviStrumento,
   correggiMovimento,
+  segnaEpisodica,
+  impostaObiettivo,
   aggiornaEsercente,
   creaCategoria,
   spostaMovimentoStrumento,

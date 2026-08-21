@@ -7,6 +7,7 @@ import { Menu } from './menu';
 import { Barra } from './barra';
 import { Aggiornamento } from './aggiornamento';
 import { Sincronizza } from './sincronizza';
+import { TiraPerAggiornare } from './tira-per-aggiornare';
 import { VERSIONE } from '@/lib/versione';
 
 /**
@@ -71,6 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           movimenti qualunque sia la schermata su cui si atterra, e da qui non
           si rimonta navigando fra le schede. */}
       <Sincronizza />
+      <TiraPerAggiornare />
       <Aggiornamento versione={VERSIONE} />
       <Barra />
     </div>
