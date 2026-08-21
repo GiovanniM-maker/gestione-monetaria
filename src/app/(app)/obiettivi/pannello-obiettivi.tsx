@@ -4,12 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import type { DiscretionClassRow } from '@/lib/db/types';
-import {
-  descriviObiettivo,
-  descriviScadenza,
-  type RigaObiettivo,
-  type TipoObiettivo,
-} from '@/lib/copilota/obiettivi';
+import { descriviObiettivo, descriviScadenza } from '@/lib/copilota/obiettivi-frasi';
+import type { RigaObiettivo, TipoObiettivo } from '@/lib/copilota/obiettivi';
 import { Foglio } from '../foglio';
 
 /**
