@@ -24,6 +24,7 @@ import type { Context, Discretion } from '@/lib/db/types';
 import { generaTitoloSeManca } from './conversazioni';
 import {
   creaObiettivo,
+  descriviObiettivo,
   leggiObiettivi,
   rinnovaObiettivo,
   type TipoObiettivo,
@@ -179,7 +180,7 @@ async function istruzioni(): Promise<string> {
   const obiettivi = (await leggiObiettivi())
     .map(
       (o) =>
-        `- ${descriviObiettivoBreve(o)}` +
+        `- ${descriviObiettivo(o) + (o.nota === null ? '' : ` (${o.nota})`)}` +
         (o.stato === 'scaduto' ? ' [SCADUTO: chiedi se vale ancora prima di usarlo]' : ''),
     )
     .join('\n');
@@ -192,27 +193,6 @@ async function istruzioni(): Promise<string> {
     `LE CLASSI DI DISCREZIONALITÀ:\n${classi}\n\n` +
     `LE CATEGORIE, con il loro identificativo:\n${albero}`
   );
-}
-
-/** Un obiettivo in una riga, senza identificativi: nel prompt non servono. */
-function descriviObiettivoBreve(o: {
-  tipo: string;
-  valore: string | null;
-  categoria: string | null;
-  classe_nome: string | null;
-  nota: string | null;
-}): string {
-  const dove = o.categoria ?? o.classe_nome;
-  const q = o.valore === null ? '' : `${o.valore} €`;
-  const frase =
-    o.tipo === 'liquidita_minima'
-      ? `tenere almeno ${q} sul conto`
-      : o.tipo === 'risparmiare'
-        ? `mettere da parte ${q}`
-        : o.tipo === 'ridurre'
-          ? `spendere meno${dove === null ? '' : ` in ${dove}`}`
-          : `non più di ${q} al mese${dove === null ? '' : ` in ${dove}`}`;
-  return o.nota === null ? frase : `${frase} (${o.nota})`;
 }
 
 // ---------------------------------------------------------------------------

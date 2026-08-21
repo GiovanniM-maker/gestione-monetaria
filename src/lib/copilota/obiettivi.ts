@@ -160,3 +160,8 @@ export function fraMesi(mesi: number, oggi = new Date()): string {
 
   return `${String(annoDopo).padStart(4, '0')}-${String(meseDopo).padStart(2, '0')}-${String(giornoDopo).padStart(2, '0')}`;
 }
+
+// Le frasi stanno in un modulo puro: le legge anche la schermata, che e' un
+// componente client e non puo' toccare niente di `server-only`. Riesportate
+// per non obbligare chi legge da qui a sapere dove sono finite.
+export { descriviObiettivo, descriviScadenza } from './obiettivi-frasi';

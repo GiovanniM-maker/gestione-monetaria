@@ -49,6 +49,7 @@ const GRUPPI: { titolo: string; voci: Voce[] }[] = [
       { href: '/categorie', nome: 'Categorie', nota: 'crea, rinomina, elimina' },
       { href: '/classi', nome: 'Classi', nota: 'essenziale, utile, voluttuario…' },
       { href: '/esercenti', nome: 'Esercenti', nota: 'fissi e variabili' },
+      { href: '/obiettivi', nome: 'Obiettivi', nota: 'cosa vuoi ottenere' },
       { href: '/revisione', nome: 'Revisione', nota: 'le etichette senza esercente' },
     ],
   },
