@@ -33,11 +33,15 @@ export function TestataPagina({
   titolo,
   cifra,
   etichetta,
+  pastiglia,
   tinta,
   figure,
   perche,
   azioni,
+  illustrazione,
 }: {
+  /** Lo stato in una parola, sotto la cifra: «da confermare». */
+  pastiglia?: string;
   titolo: string;
   /** Il numero grande. Una stringa gia' formattata, o niente. */
   cifra?: string | null;
@@ -50,34 +54,65 @@ export function TestataPagina({
   /** La prosa che prima stava in cima. Finisce sotto un «perche'?». */
   perche?: React.ReactNode;
   azioni?: React.ReactNode;
+  /**
+   * Il percorso dell'illustrazione di testata, da `public/illustrazioni/`.
+   *
+   * Una per schermata al massimo, solo qui in alto, e con `alt` vuoto: e'
+   * decorazione dichiarata, non dice niente che il titolo non dica gia'
+   * (docs/aspetto.md §3.6). Con l'illustrazione la scheda diventa un eroe —
+   * fondo sfumato e bagliore — perche' un oggetto di vetro su una superficie
+   * piatta sembra incollato, non appoggiato.
+   */
+  illustrazione?: string;
 }) {
   return (
     <div className="space-y-3">
       <div
-        className="scheda space-y-1 p-5"
+        className={`scheda space-y-1 p-5 ${illustrazione === undefined ? '' : 'eroe'}`}
         style={
           tinta === null || tinta === undefined
             ? undefined
             : {
-                backgroundImage: `radial-gradient(24rem 12rem at 8% 0%, color-mix(in oklab, ${tinta} 22%, transparent), transparent 70%)`,
+                backgroundImage: `radial-gradient(24rem 12rem at 8% 0%, color-mix(in oklab, ${tinta} 22%, transparent), transparent 70%)${illustrazione === undefined ? '' : ', var(--eroe-fondo)'}`,
               }
         }
       >
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">{titolo}</h1>
-
-        {cifra !== null && cifra !== undefined && (
-          <p className="numerone pt-1 text-[34px]">{cifra}</p>
+        {illustrazione !== undefined && (
+          <img
+            src={illustrazione}
+            alt=""
+            width={64}
+            height={64}
+            className="eroe-ill drop-shadow-[0_6px_16px_rgb(90_80_224/0.3)]"
+          />
         )}
-        {etichetta !== null && etichetta !== undefined && (
-          <p className="text-[13px] text-testo-3">{etichetta}</p>
+        {/* Col vetro nell'angolo il titolo si ferma prima: un titolo lungo
+            che gli passasse sotto sembrerebbe un difetto, non una scelta. */}
+        <h1
+          className={`text-[22px] font-bold tracking-[-0.03em] ${illustrazione === undefined ? '' : 'pr-16'}`}
+        >
+          {titolo}
+        </h1>
+
+        {/* La micro-etichetta sta SOPRA il numero (Fetta 3): dice cosa misura
+            prima che lo si legga, e spenta com'e' lo fa sembrare piu' grande
+            senza ingrandirlo. */}
+        {etichetta !== null && etichetta !== undefined && <p className="eti pt-1.5">{etichetta}</p>}
+        {cifra !== null && cifra !== undefined && (
+          <p className="numerone pt-0.5 text-[34px]">{cifra}</p>
+        )}
+        {pastiglia !== undefined && (
+          <p className="pt-1.5">
+            <span className="pastiglia">{pastiglia}</span>
+          </p>
         )}
 
         {figure !== undefined && figure.length > 0 && (
           <dl className="flex flex-wrap gap-x-6 gap-y-2 pt-3">
             {figure.map((f) => (
               <div key={f.etichetta}>
-                <dd className="cifra text-[17px] font-semibold">{f.valore}</dd>
-                <dt className="text-[12px] text-testo-3">{f.etichetta}</dt>
+                <dt className="eti">{f.etichetta}</dt>
+                <dd className="cifra pt-0.5 text-[17px] font-semibold">{f.valore}</dd>
               </div>
             ))}
           </dl>

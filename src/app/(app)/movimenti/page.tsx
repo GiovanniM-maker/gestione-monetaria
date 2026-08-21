@@ -18,6 +18,8 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import { categorieSceglibili } from '@/lib/tassonomia/categorie';
 import { leggiClassi } from '@/lib/tassonomia/classi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
+import { Avatar } from '@/lib/ui/tessera';
+import { tinteDelleClassi } from '../grafici';
 import { SceltaCategoria } from '../scelta-categoria';
 import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 
@@ -72,6 +74,7 @@ export default async function MovimentiPage({
   ]);
 
   const eVariabile = new Set(comeArray<{ id: string }>(variabili).map((m) => m.id));
+  const tinte = tinteDelleClassi(classi);
   const primaDellaPagina = (filtri.pagina - 1) * PER_PAGINA;
 
   // I due nomi del riassunto senza una query in piu': la categoria sta
@@ -246,7 +249,23 @@ export default async function MovimentiPage({
                 href={`/movimenti/${r.id}`}
                 className="flex min-h-14 items-center justify-between gap-3 py-1"
               >
-                <span className="min-w-0">
+                {/* L'iniziale sulla velatura della classe della riga: si
+                    riconosce l'esercente scorrendo, prima di leggere.
+
+                    Riceve la STESSA etichetta mostrata sotto, non
+                    `r.esercente`: su un bonifico a un privato l'iniziale
+                    sarebbe quella di «Sent from Revolut» mentre la riga dice
+                    un nome, e due iniziali diverse per la stessa riga sono
+                    peggio di nessuna iniziale. */}
+                <Avatar
+                  nome={etichettaMovimento(r)}
+                  tinta={
+                    r.discrezionalita !== null
+                      ? (tinte[r.discrezionalita] ?? 'var(--neutro)')
+                      : 'var(--neutro)'
+                  }
+                />
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px]">{etichettaMovimento(r)}</span>
                   <span className="mt-0.5 block text-[12px] text-testo-3">
                     {r.booking_date}

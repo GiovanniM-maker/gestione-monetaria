@@ -87,3 +87,35 @@ export async function generaAvvisi(): Promise<number> {
   if (error !== null) throw new Error(`Generazione avvisi fallita: ${error.message}`);
   return Number(data ?? 0);
 }
+
+/**
+ * Il ciclo di vita di un avviso, in due numeri.
+ *
+ * Nell'**Inbox** della home un avviso sta al massimo sette giorni: dopo, o e'
+ * stato gestito o non lo sara' — e un invito che resta li' per settimane
+ * insegna a non leggere gli inviti. Resta pero' consultabile nello **storico**
+ * (`/avvisi`) per novanta giorni, poi la pulizia notturna lo elimina: uno
+ * storico senza fine non e' uno storico, e' un archivio che nessuno apre.
+ */
+export const GIORNI_IN_INBOX = 7;
+export const GIORNI_DI_STORICO = 90;
+
+/**
+ * Elimina gli avvisi piu' vecchi dello storico. Gira nella sequenza quotidiana.
+ *
+ * Qualunque sia lo stato, `new` compreso: un avviso di novanta giorni fa mai
+ * letto non e' un avviso in attesa, e' un fatto vecchio — e la `dedupe_key`
+ * contiene il valore che l'ha scatenato, quindi se la condizione e' ancora
+ * vera l'avviso rinasce alla generazione successiva, nuovo davvero.
+ */
+export async function pulisciAvvisi(adesso: number = Date.now()): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const limite = new Date(adesso - GIORNI_DI_STORICO * 86_400_000).toISOString();
+  const { data, error } = await supabase
+    .from('alerts')
+    .delete()
+    .lt('created_at', limite)
+    .select('id');
+  if (error !== null) throw new Error(`Pulizia avvisi fallita: ${error.message}`);
+  return comeArray<{ id: string }>(data).length;
+}

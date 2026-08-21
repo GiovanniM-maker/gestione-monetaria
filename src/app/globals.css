@@ -102,6 +102,13 @@
 
   --r-scheda: 22px;
   --r-controllo: 14px;
+
+  /* La pendenza delle superfici e il bagliore dell'eroe (vedi `.scheda` e
+     `.eroe` in fondo). Sul chiaro la pendenza e' quasi nulla: una scheda
+     bianca non ha un «alto» da illuminare. */
+  --s2-alto: #ffffff;
+  --eroe-fondo: linear-gradient(165deg, #ffffff 40%, #f2f0ff 100%);
+  --eroe-bagliore: radial-gradient(120% 90% at 86% 10%, rgb(90 80 224 / 0.1), transparent 55%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -141,6 +148,12 @@
     --classe-ciano: #70d7ff;
     --classe-bruno: #b59469;
     --neutro: #98989f;
+
+    /* Sul nero la pendenza si vede, ed e' lei a dare corpo alla scheda:
+       tre punti percentuali dall'alto in basso, non un faro. */
+    --s2-alto: #1e1e26;
+    --eroe-fondo: linear-gradient(165deg, #26263a 0%, #1b1b26 48%, #17171e 100%);
+    --eroe-bagliore: radial-gradient(120% 90% at 86% 10%, rgb(143 138 255 / 0.18), transparent 55%);
   }
 }
 
@@ -207,9 +220,245 @@ body {
  * a sollevarlo e' la **luce sul bordo alto**.
  */
 .scheda {
-  background: var(--s2);
+  /* La pendenza: dal 17 agosto le schede non sono piu' un colore piatto ma
+     una sfumatura di pochi punti, piu' chiara in alto — il vocabolario di iOS,
+     dove la luce viene da sopra. Si percepisce, non si vede. */
+  background: linear-gradient(180deg, var(--s2-alto), var(--s2));
   border-radius: var(--r-scheda);
   box-shadow: var(--ombra), var(--rilievo);
+}
+
+/**
+ * L'eroe: la scheda del numerone, e SOLO lei.
+ *
+ * L'unico bagliore radiale dell'applicazione, dietro l'illustrazione: la fa
+ * sedere nella scheda invece di fluttuarci sopra. Un bagliore per schermata e'
+ * profondita'; uno per scheda sarebbe un casino'. E mai sui dati: la barra
+ * segmentata, i pallini e le cifre restano piatti — un dato lucidato e' un
+ * dato truccato.
+ */
+.eroe {
+  position: relative;
+  overflow: hidden;
+  background: var(--eroe-fondo);
+}
+.eroe::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--eroe-bagliore);
+  pointer-events: none;
+}
+/* Il contenuto sta sopra il bagliore, senza che chi scrive debba saperlo.
+   Tranne l'illustrazione, che ha una posizione sua: alzare TUTTI i figli a
+   `relative` le spegnerebbe l'`absolute`, ed e' successo — la sfera e' finita
+   in alto a sinistra, impilata sopra l'etichetta. */
+.eroe > :not(.eroe-ill) {
+  position: relative;
+}
+.eroe-ill {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+/**
+ * Il rilievo del bottone principale: luce sul bordo alto e una sfumatura di
+ * pochi punti sopra il colore che il bottone gia' ha. Additivo di proposito —
+ * non decide il colore, lo solleva — cosi' vale per l'indaco del bottone e
+ * per qualunque altro fondo a cui venga applicato.
+ */
+.rialzo {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 55%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22);
+}
+
+/**
+ * La tessera di classe: l'icona di vetro sul suo posto a sedere.
+ *
+ * L'immagine la mette chi la usa (`Tessera` in lib/ui): qui c'e' il posto —
+ * misura, raggio, e la velatura della tinta che fa da fondo. La velatura resta
+ * anche sotto l'icona di vetro, ed e' la rete di sicurezza: una classe appena
+ * creata da /classi non ha un'icona, e la sua tessera e' comunque un quadrato
+ * del suo colore invece di un buco.
+ */
+/**
+ * Le primitive delle testate (Fetta 3 di docs/aspetto.md).
+ * --------------------------------------------------------------------------
+ * `.eti` — la micro-etichetta maiuscola sopra un numero grande. Dice cosa
+ * misura il numero senza rubargli peso: e' piccola, spaziata e spenta, e
+ * proprio per questo il numero sotto sembra piu' grande senza crescere.
+ *
+ * `.pastiglia` — lo stato in una riga: «in corso», «da confermare». Un fatto
+ * breve dentro una capsula, mai un bersaglio: se si puo' toccare, e' un
+ * bottone e si veste da bottone.
+ *
+ * `.segm` / `.segm-voce` — il controllo segmentato: due o tre scelte, quella
+ * attiva e' una pastiglia SOLLEVATA sul solco, non un riempimento d'accento.
+ * L'accento resta la voce dell'applicazione (collegamenti, bottone
+ * principale): un controllo che dice «sei qui» non grida.
+ *
+ * `.tondo` — il bottone circolare di testata (il menu, e chi verra').
+ */
+.eti {
+  font-size: 10.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--testo-3);
+}
+
+.pastiglia {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accento) 12%, var(--s2));
+  color: var(--accento);
+}
+
+.segm {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--s2);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.segm-voce {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44, come ogni bersaglio: la regola di lib/ui/controlli.ts non ha
+     eccezioni estetiche, e un controllo compatto che si sbaglia col pollice
+     non e' compatto — e' rotto. */
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--testo-2);
+}
+.segm-voce[aria-current],
+.segm-voce[aria-pressed='true'] {
+  background: linear-gradient(180deg, var(--s2-alto), var(--s3));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 2px 6px rgb(0 0 0 / 0.18);
+  color: var(--testo);
+  font-weight: 600;
+}
+
+.tondo {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--s2-alto), var(--s2));
+  box-shadow: var(--rilievo);
+  color: var(--testo);
+}
+
+/**
+ * `.capsula` — il fratello largo del tondo: stessa superficie sollevata,
+ * stessa altezza, ma a capsula. E' il bottone del mese in testa alla home e a
+ * «Dove»: sta al posto dove Revolut mette la barra di ricerca, e ne prende la
+ * forma — i lati sono mezzi cerchi, come tutti i controlli dal 19 agosto.
+ */
+.capsula {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--s2-alto), var(--s2));
+  box-shadow: var(--rilievo);
+  color: var(--testo);
+}
+
+/**
+ * La barra in basso, galleggiante (alla Revolut).
+ * --------------------------------------------------------------------------
+ * `.galleggiante` — la capsula staccata dai bordi: raggio pieno e la stessa
+ * coppia ombra+rilievo delle schede, perche' un oggetto che galleggia deve
+ * proiettare come un oggetto, non come una striscia incollata al fondo.
+ *
+ * `.barra-voce[aria-current]` — la scheda accesa e' una pastiglia, non un
+ * cambio di colore del testo e basta: e' il sistema di Revolut, e rende
+ * «dove sono» leggibile in coda all'occhio. La velatura e' dell'accento —
+ * la voce dell'applicazione — mai di una tinta di classe.
+ */
+.galleggiante {
+  border-radius: 999px;
+  box-shadow: var(--ombra), var(--rilievo);
+}
+.barra-voce {
+  border-radius: 999px;
+}
+.barra-voce[aria-current] {
+  background: color-mix(in oklab, var(--accento) 14%, transparent);
+}
+
+/**
+ * L'avatar di un esercente: l'iniziale sulla velatura della sua classe.
+ * Il cerchio contro il quadrato della tessera: una categoria e' un posto,
+ * un esercente e' qualcuno, e le due forme si distinguono in coda all'occhio.
+ */
+.avatar {
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta, var(--testo-2));
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--tinta, var(--neutro)) 24%, var(--s2)),
+    color-mix(in oklab, var(--tinta, var(--neutro)) 13%, var(--s2))
+  );
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1);
+}
+
+/**
+ * Il marchietto di una categoria (livello 1 e 2 della discesa): l'icona della
+ * categoria in un cerchietto, discreta di proposito. Le classi hanno la
+ * codifica forte — tessera e tinta piena — e le categorie una a mezza voce:
+ * il glifo e' monocromo (testo secondario) e la tinta della classe
+ * predefinita entra solo come velatura leggera del fondo. Un elenco di
+ * categorie tutte accese sarebbe un arcobaleno, e un colore che non
+ * distingue non informa.
+ */
+.marchietto {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--testo-2);
+  background: color-mix(in oklab, var(--tinta, var(--neutro)) 10%, var(--s3));
+}
+
+.tessera {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--tinta, var(--neutro)) 26%, var(--s2)),
+    color-mix(in oklab, var(--tinta, var(--neutro)) 14%, var(--s2))
+  );
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
 }
 
 /**
@@ -261,6 +510,60 @@ body {
 @supports not (backdrop-filter: blur(1px)) {
   .velato {
     background: var(--s1);
+  }
+}
+
+/**
+ * Le micro-interazioni.
+ * --------------------------------------------------------------------------
+ * `.ramo-aperto` — l'apertura di un ramo della fisarmonica: breve e naturale,
+ * centosessanta millisecondi di comparsa dall'alto. Non e' decorazione: e' il
+ * feedback che dice «il tocco e' stato preso» nell'istante in cui i figli
+ * (gia' precaricati) compaiono — senza, un'apertura istantanea puo' perfino
+ * sembrare che la riga fosse gia' aperta.
+ *
+ * La pressione sui controlli a capsula si vede: un filo di scala, come i
+ * bottoni di sistema. Solo sui CONTROLLI — capsule, tondi, schede della
+ * barra — mai sulle righe dei dati: una lista che rimbalza sotto il pollice
+ * mentre si scorre e' rumore, non feedback.
+ *
+ * Lo scorrimento morbido serve alle ancore («Nel tempo» puntato dalla
+ * composizione): un salto secco a meta' pagina disorienta piu' di quanto
+ * informi. Solo per chi non ha chiesto meno movimento.
+ */
+.ramo-aperto {
+  animation: ramo-aperto 160ms ease-out;
+}
+
+@keyframes ramo-aperto {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.capsula,
+.tondo,
+.barra-voce,
+.segm-voce {
+  transition: transform 120ms ease;
+}
+.capsula:active,
+.tondo:active {
+  transform: scale(0.96);
+}
+.barra-voce:active,
+.segm-voce:active {
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 

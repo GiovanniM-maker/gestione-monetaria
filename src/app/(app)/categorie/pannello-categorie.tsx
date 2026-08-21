@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
+import { comeIcona, Icona, ICONE_CATEGORIA } from '@/lib/ui/icone';
 import type { NodoAlbero } from '@/lib/tassonomia/categorie';
 import { Foglio } from '../foglio';
 
@@ -53,6 +54,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
 
   const [daCreare, setDaCreare] = useState<DaCreare>(null);
   const [daEliminare, setDaEliminare] = useState<NodoAlbero | null>(null);
+  const [daIconare, setDaIconare] = useState<NodoAlbero | null>(null);
   const [spostaSu, setSpostaSu] = useState('');
 
   async function scrivi(metodo: string, corpo: unknown, dopo: () => void) {
@@ -142,6 +144,20 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
                     ` · di norma ${c.discrezionalita_predefinita}`}
                 </span>
               </Link>
+
+              {/* Il marchietto della riga E' il bottone che lo cambia: lo
+                  stato e il controllo nello stesso posto — un'icona che non
+                  c'e' si vede (i puntini) e si tocca per sceglierla. */}
+              <button
+                type="button"
+                aria-label={`scegli l’icona di ${c.nome}`}
+                className="marchietto shrink-0"
+                style={{ width: 44, height: 44 }}
+                disabled={inCorso}
+                onClick={() => setDaIconare(c)}
+              >
+                <Icona nome={comeIcona(c.icon ?? null) ?? 'punti'} misura={18} />
+              </button>
 
               {/* Aggiungere una figlia si fa qui, guardando il ramo: e' l'unico
                   posto in cui si sa gia' dove va. */}
@@ -260,6 +276,54 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
                 Annulla
               </button>
             </div>
+          </div>
+        )}
+      </Foglio>
+
+      {/* Il foglio dell'icona: l'insieme chiuso dei glifi, in una griglia di
+          bersagli veri. Il colore non si sceglie — lo porta la classe
+          predefinita, ed e' l'unica cosa che il colore dice qui dentro. */}
+      <Foglio
+        aperto={daIconare !== null}
+        titolo={daIconare === null ? '' : `L’icona di «${daIconare.nome}»`}
+        nota="Un glifo monocromo: il colore resta alla classe predefinita."
+        onChiudi={() => setDaIconare(null)}
+      >
+        {daIconare !== null && (
+          <div className="space-y-4 pb-2">
+            <div className="grid grid-cols-5 justify-items-center gap-2">
+              {ICONE_CATEGORIA.map((nome) => {
+                const attiva = comeIcona(daIconare.icon ?? null) === nome;
+                return (
+                  <button
+                    key={nome}
+                    type="button"
+                    aria-label={`icona ${nome}`}
+                    aria-pressed={attiva}
+                    className={`marchietto ${attiva ? 'ring-2 ring-(--accento)' : ''}`}
+                    style={{ width: 52, height: 52 }}
+                    disabled={inCorso}
+                    onClick={() =>
+                      void scrivi('PATCH', { id: daIconare.id, icona: nome }, () =>
+                        setDaIconare(null),
+                      )
+                    }
+                  >
+                    <Icona nome={nome} misura={22} />
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className={BOTTONE_MINORE}
+              disabled={inCorso}
+              onClick={() =>
+                void scrivi('PATCH', { id: daIconare.id, icona: null }, () => setDaIconare(null))
+              }
+            >
+              senza icona
+            </button>
           </div>
         )}
       </Foglio>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { leggiAvvisi } from '@/lib/avvisi/leggi';
+import { GIORNI_DI_STORICO, GIORNI_IN_INBOX, leggiAvvisi } from '@/lib/avvisi/leggi';
 import { PannelloAvvisi } from './pannello-avvisi';
 import { conta, TestataPagina } from '../testata';
 
@@ -33,7 +33,9 @@ export default async function AvvisiPage() {
             Solo due cose meritano un avviso: che il <strong>costo ricorrente</strong> sia cambiato,
             e che i numeri abbiano smesso di essere <strong>affidabili</strong>. Tutto il resto è
             rumore, e il rumore in un canale di avvisi non è neutro: spegne il canale. Un avviso
-            ignorato non torna.
+            ignorato non torna. Nell&rsquo;Inbox della home un avviso sta{' '}
+            <strong>{GIORNI_IN_INBOX} giorni</strong>; questo storico ne conserva{' '}
+            <strong>{GIORNI_DI_STORICO}</strong>, poi la pulizia notturna lo elimina.
           </p>
         }
       />

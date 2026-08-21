@@ -105,7 +105,18 @@ const TAVOLOZZA = [
  * ambra come un voluttuario che cresce, e va benissimo cosi': il giudizio e' di
  * chi guarda.
  */
-export function Freccia({ riga }: { riga: Variazione | undefined }) {
+export function Freccia({
+  riga,
+  sotto = false,
+}: {
+  riga: Variazione | undefined;
+  /**
+   * Sotto l'importo invece che accanto. Negli elenchi la colonna destra e' su
+   * due piani — importo sopra, delta sotto — cosi' il nome si allinea
+   * all'importo e la riga piccola (contesto, movimenti) alla percentuale.
+   */
+  sotto?: boolean;
+}) {
   if (riga === undefined) return null;
   const s = segnoDi(riga);
   if (s === null) return null;
@@ -114,7 +125,10 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
     s.tono === 'su' ? 'text-attenzione' : s.tono === 'giu' ? 'text-conferma' : 'text-testo-3';
 
   return (
-    <span className={`cifra ml-2 text-xs whitespace-nowrap ${colore}`} title={s.descrizione}>
+    <span
+      className={`cifra whitespace-nowrap ${sotto ? 'block text-[12px]' : 'ml-2 text-xs'} ${colore}`}
+      title={s.descrizione}
+    >
       <span aria-hidden="true">{s.simbolo}</span> {s.testo}
       {/* Il puntino dice «questo confronto poggia su pochi mesi». Non toglie il
           numero, che e' vero: toglie l'enfasi, che sarebbe eccessiva. */}
@@ -140,22 +154,33 @@ export function Freccia({ riga }: { riga: Variazione | undefined }) {
  * Le voci restano quelle anche quando i contesti le raddoppiano: `personale` e
  * `business` restano distinti nell'elenco sotto, dove c'e' spazio per dirlo.
  */
-export function BarraClassi({ voci, tinte }: { voci: readonly Voce[]; tinte: Tinte }) {
+export function BarraClassi({
+  voci,
+  tinte,
+  nomi,
+}: {
+  voci: readonly Voce[];
+  tinte: Tinte;
+  /**
+   * Da slug a nome mostrato, per la legenda. Senza, la barra resta muta come
+   * prima: la legenda e' un'aggiunta della Fetta 3, non un obbligo di chi
+   * disegna una barra in un angolo stretto.
+   */
+  nomi?: Readonly<Record<string, string>>;
+}) {
   const pezzi = fette(voci);
   if (pezzi.every((p) => p.lunghezza === 0)) return null;
+  const visibili = pezzi.filter((p) => p.lunghezza > 0);
+  const totale = visibili.reduce((s, p) => s + (p.valore < 0n ? -p.valore : p.valore), 0n);
 
   return (
-    <div
-      className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full"
-      role="img"
-      aria-label={pezzi
-        .filter((p) => p.lunghezza > 0)
-        .map((p) => `${p.chiave} ${formattaEuro(p.valore)}`)
-        .join(', ')}
-    >
-      {pezzi
-        .filter((p) => p.lunghezza > 0)
-        .map((p) => (
+    <div>
+      <div
+        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full"
+        role="img"
+        aria-label={visibili.map((p) => `${p.chiave} ${formattaEuro(p.valore)}`).join(', ')}
+      >
+        {visibili.map((p) => (
           <span
             key={p.chiave}
             className="h-full rounded-full"
@@ -165,6 +190,39 @@ export function BarraClassi({ voci, tinte }: { voci: readonly Voce[]; tinte: Tin
             }}
           />
         ))}
+      </div>
+
+      {/* La legenda sotto la barra (Fetta 3): pallino, nome, quota. Gli
+          importi NON ci sono — stanno nell'elenco subito sotto, e ripeterli
+          qui a corpo undici sarebbe la copia che diverge. La percentuale e'
+          in grigio, non nel colore della fetta: un 6% azzurrino su nero sta
+          sotto il contrasto minimo, e il colore lo porta gia' il pallino
+          (docs/aspetto.md §4.4). */}
+      {nomi !== undefined && (
+        <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {visibili.map((p) => {
+            const peso = p.valore < 0n ? -p.valore : p.valore;
+            const quota = totale === 0n ? 0 : Number((peso * 100n) / totale);
+            return (
+              <li key={p.chiave} className="flex min-w-0 items-center gap-1.5 text-[11.5px]">
+                <span
+                  aria-hidden="true"
+                  className="size-[7px] shrink-0 rounded-full"
+                  style={{ background: tinte[p.chiave] ?? COLORE_IGNOTO }}
+                />
+                {/* Il non classificato non ha una riga in `discretion_classes`,
+                    quindi nessuna mappa lo nomina: senza questo ripiego la
+                    legenda lo scriveva minuscolo in mezzo a nomi propri. */}
+                <span className="min-w-0 flex-1 truncate">
+                  {nomi[p.chiave] ??
+                    (p.chiave === 'non classificato' ? 'Non classificato' : p.chiave)}
+                </span>
+                <span className="cifra shrink-0 text-testo-3">{quota}%</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

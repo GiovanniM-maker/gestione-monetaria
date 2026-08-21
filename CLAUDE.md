@@ -1144,6 +1144,95 @@ loro a maggio», e il cruscotto la perdeva per strada — e sulla scheda di un m
 della banca sono finiti sotto un «apri»: sono diagnostica, si guardano quando una riga non si
 riconosce, e aperti erano due terzi della schermata.
 
+#### La revisione Revolut, 19 agosto 2026
+
+Da una specifica scritta dall'utente, con un principio solo: **mai da una classe alle transazioni
+in un colpo**. La gerarchia e' una regola globale — classe → categorie → *pagina* dei movimenti —
+e vive nei nodi (`lib/dove/nodi.ts`): una classe si apre in loco sulle sue categorie, una categoria
+con figlie si apre ancora, una **foglia naviga** a `/movimenti` portandosi **tutti** i filtri
+(periodo, classe, contesto, categoria — `versoMovimenti()`). Perdere un filtro nella discesa non
+da' errore: mostra una lista plausibile e sbagliata.
+
+Cosa ne discende, in ordine di visibilita':
+
+- **La home usa la fisarmonica di `/dove`** (`nodiPerClasse`, condiviso): «Per classe» si apre
+  dove sta, e **«In cosa» non esiste piu'** — erano le stesse categorie, un elenco doppio.
+- **L'eroe non ha piu' la carta**: il numerone vive sul fondo della pagina, gerarchia dalla
+  taglia e dallo spazio. Le schede restano dove raggruppano davvero. La sfera e la tinta
+  dominante se ne vanno con la carta.
+- **L'intestazione della home e di «Dove» e' il mese**, una capsula a mezzi cerchi col menu
+  accanto (`SceltaMese` con `menu`; `Intestazione` nasconde quella del layout solo li').
+- **La barra in basso galleggia**: capsula staccata dai bordi, scheda attiva in una pastiglia
+  d'accento — il sistema di Revolut, copiato di proposito.
+- **Il delta sta sotto l'importo**, mai accanto: nome ↔ importo, riga piccola ↔ percentuale.
+  Vale in fisarmonica e in `Ripartizione` (`Freccia` con `sotto`).
+- **Il non classificato e' ultimo e sbiadito** (`sbiadito` sul nodo): non e' una classe, e' un
+  lavoro da fare. Resta cliccabile e senza frecce (§4.3 di aspetto.md).
+- **Bottoni e campi a capsula piena** (`rounded-full` in `lib/ui/controlli.ts`): i lati sono
+  mezzi cerchi, come la barra di ricerca di Revolut.
+- **I «perche'?» si vestono da collegamento** (accento, non grigio): un elemento interattivo che
+  sembra testo secondario non si tocca.
+- **L'Inbox** raccoglie in fondo alla home tutto cio' che aspetta un gesto — da confermare, note
+  diagnostiche, avvisi, stato — con `/avvisi` come storico. La riga «Dove sono finiti» sparisce:
+  «Dove» e' gia' una scheda della barra.
+- **Le tessere Abbonamenti/Abitudini sono collegamenti** ai blocchi di `/abbonamenti`
+  (`#abbonamento`, `#abitudine`).
+
+I due pezzi inizialmente rimandati sono arrivati lo stesso giorno, con la **0050**:
+
+- **`/ricorrente/abbonamento` e `/ricorrente/abitudine`** — le tessere del cruscotto aprono una
+  pagina con la stessa gerarchia, ristretta a quel tipo. Quello che si scende e' un **tasso**
+  (`costo_mensile`, la colonna della metrica, solo voci `nella_metrica`): la somma dei rami deve
+  tornare col numero della tessera, ed e' per questo che non e' la spesa di un mese. Il fondo
+  della discesa sono le **voci** (una ricorrenza E' un esercente), e la voce naviga a
+  `/movimenti?esercente=…`, che sono i suoi addebiti. SQL: `ripartizione_ricorrente` e
+  `voci_ricorrenti`, stessa forma di `ripartizione_dove` — la fisarmonica non sa quale sta
+  disegnando. La gestione (giudizi, disdette) resta su `/abbonamenti`: quella e' manutenzione.
+- **Il ciclo di vita dell'Inbox**: 7 giorni in vista sulla home (filtro in lettura,
+  `GIORNI_IN_INBOX`), 90 di storico su `/avvisi`, poi la pulizia nella sequenza quotidiana
+  (`pulisciAvvisi`) li elimina — qualunque stato: se la condizione e' ancora vera, la
+  `dedupe_key` fa rinascere l'avviso nuovo davvero.
+- Nella stessa migration, `ripartizione_dove` ordinava sul **testo** dell'importo ('2' < '4',
+  quindi −21,96 prima di −469,90): ora ordina sul numero.
+- E una regola pagata provando la 0050 prima di applicarla: **un errore di RPC si lancia, non si
+  ingoia**. `const { data }` da solo trasformava una funzione assente in «niente qui dentro» —
+  un guasto travestito da risposta. Le tre letture di `lib/dove/leggi.ts` ora lanciano, e la
+  fisarmonica mostra la sua nota d'errore.
+
+#### La seconda iterazione, 19 agosto 2026, sera
+
+Cinque aree dalla specifica successiva dell'utente, in ordine di priorita':
+
+- **La discesa e' istantanea.** La lentezza non era la query, era il viaggio pagato al tocco: il
+  primo livello sotto ogni classe ora arriva **con la pagina** (`precaricati` sul nodo, prefetch
+  in parallelo deduplicato da `cache()`), e aprire una classe e' un accordion locale — figli a
+  schermo sotto i 120 ms misurati. I livelli piu' in giu' arrivano al tocco ma il ramo si apre
+  SUBITO con due righe d'attesa; un prefetch fallito lascia il ramo apribile col viaggio. Le
+  pagine senza `loading.tsx` l'hanno ricevuto: senza, Next tiene a schermo la pagina vecchia per
+  tutto il viaggio e il tocco sembra non registrato.
+- **Il copilota e' un elenco di conversazioni** (`/copilota`), con la chat su `?c=<uuid>` e una
+  testata sua: indietro, titolo, **stella**, menu con rinomina/elimina. Una conversazione non
+  salvata vive **30 giorni dall'ultimo messaggio** (pulizia nella sequenza quotidiana,
+  `pulisci_conversazioni` della **0051**); la stella la salva per sempre. La scadenza si dice nel
+  foglio di gestione, e in vista solo sotto i quattro giorni col gesto accanto. Senza la 0051
+  l'elenco **ripiega** sulla vista vecchia invece di mostrarsi vuoto.
+- **Il numerone della home e' il centro**: 54–64 px, centrato, aria sopra e sotto.
+- **Le categorie hanno il marchietto**: l'icona nel cerchietto, glifo monocromo, velatura leggera
+  della classe predefinita. Le classi tengono la codifica forte; niente arcobaleno.
+- **«Dove» cambia mestiere**: non un altro elenco ma l'analisi — il mese **giorno per giorno**
+  (`spesa_giornaliera`, 0052), la composizione ad anello per classe (il tocco punta il grafico,
+  non le transazioni), **«Nel tempo»** — UN grafico con selettore (totale / classi / ricorrente /
+  categorie) e finestra 3/6/12 nell'indirizzo — i **costi ricorrenti su scala annuale** (12 × il
+  tasso mensile, «un ritmo, non una previsione», piu' `spesa_mensile_ricorrente` della 0052 per
+  l'andamento), **2–4 insight** composti dalle stesse `variazione_pct` delle frecce (si sceglie
+  cosa dire, non si calcola), e «Da chi». La geometria e' quella della Fase 10: zero sempre nel
+  dominio, importi mai da un float. La discesa per classe resta alla home; la fisarmonica di
+  /dove se ne va con il suo doppione.
+
+Le migration **0049–0052** vanno applicate nel SQL editor di Supabase, in ordine. Fino ad allora
+ogni pezzo degrada dichiarandosi: marchietti coi puntini, ramo del ricorrente con la nota
+d'errore, grafico giornaliero con la nota, elenco del copilota senza stelle.
+
 #### Misurato dopo, a 390 px, in tutti e due i temi
 
 Nessuna schermata sborda di lato; tre bersagli sotto i 44 px in tutta l'applicazione (erano 313 solo
@@ -1802,7 +1891,7 @@ inventare un identificativo di categoria.
 - Migrations numerate progressivamente. Una migration già applicata non si modifica mai: se ne scrive
   una nuova.
 - **`create or replace view` puo' bastare, e va provato prima di rassegnarsi al `drop`.**
-  Verificato con la 0050: `v_expenses` e' `select t.*`, `alter table add column` mette le colonne
+  Verificato con la 0053: `v_expenses` e' `select t.*`, `alter table add column` mette le colonne
   nuove **in coda**, e `create or replace view` ammette esattamente quella modifica — colonne
   aggiunte in fondo, le precedenti identiche per nome, tipo e ordine. Quindi la riespansione di
   `t.*` passa, e **nessuna delle tredici viste dipendenti si tocca**. La manovra col `drop` resta

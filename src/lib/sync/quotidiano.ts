@@ -12,9 +12,9 @@ import {
   type EsitoArricchimento,
 } from '@/lib/tassonomia/ricerca';
 import { rilevaAbbonamenti, type EsitoRilevamento } from '@/lib/abbonamenti/rileva';
-import { generaAvvisi } from '@/lib/avvisi/leggi';
+import { GIORNI_DI_STORICO, generaAvvisi, pulisciAvvisi } from '@/lib/avvisi/leggi';
+import { GIORNI_CONVERSAZIONE, pulisciConversazioni } from '@/lib/copilota/conversazione';
 import type { AccountRow, BankConnectionRow, SyncTrigger } from '@/lib/db/types';
-import { pulisciConversazioniScadute } from '@/lib/copilota/conversazioni';
 
 /**
  * La sequenza quotidiana, senza nessuno che la guardi.
@@ -171,8 +171,6 @@ export type EsitoQuotidiano = {
   } | null;
   ricorrenze: EsitoRilevamento | null;
   avvisiCreati: number | null;
-  /** Conversazioni scadute cancellate. `null` = il passo non e' arrivato. */
-  conversazioniPulite: number | null;
   errore: string | null;
   durataMs: number;
 };
@@ -193,7 +191,6 @@ function vuoto(): EsitoQuotidiano {
     proposte: null,
     ricorrenze: null,
     avvisiCreati: null,
-    conversazioniPulite: null,
     errore: null,
     durataMs: 0,
   };
@@ -421,15 +418,35 @@ export async function eseguiSincronizzazioneQuotidiana(
     // aggiornato `expected_amount`.
     esito.avvisiCreati = await generaAvvisi();
 
-    // Le conversazioni scadute. Qui e non in un lavoro suo: e' gia' il posto
-    // dove sta il lavoro periodico, e un secondo scheduler sarebbe una seconda
-    // cosa che puo' non girare in silenzio — che e' precisamente il guasto
-    // costato tre giorni di dati fermi in Fase 7.
-    //
-    // Dopo gli avvisi, e dentro lo stesso `try`: una pulizia fallita non deve
-    // impedire il resto, ed e' l'ultima cosa del giro proprio perche' e' la
-    // meno urgente di tutte.
-    esito.conversazioniPulite = await pulisciConversazioniScadute();
+    // E la pulizia dello storico dopo la generazione: oltre i novanta giorni
+    // un avviso si elimina. Se ne parla nel resoconto solo quando ha tolto
+    // qualcosa — una riga «0 eliminati» a ogni giro insegna a non leggerlo.
+    const eliminati = await pulisciAvvisi();
+    if (eliminati > 0) {
+      esito.avvisi = [
+        ...esito.avvisi,
+        `${eliminati} ${eliminati === 1 ? 'avviso più vecchio' : 'avvisi più vecchi'} di ${GIORNI_DI_STORICO} giorni eliminati dallo storico.`,
+      ];
+    }
+
+    // Stesso ciclo di vita per le conversazioni del copilota: trenta giorni
+    // dall'ultimo messaggio, salvo quelle con la stella. In un try suo: una
+    // pulizia che non riesce (la 0051 non ancora applicata) non deve marcare
+    // fallita la notte intera — ma va detta, non taciuta.
+    try {
+      const conversazioni = await pulisciConversazioni();
+      if (conversazioni > 0) {
+        esito.avvisi = [
+          ...esito.avvisi,
+          `${conversazioni} ${conversazioni === 1 ? 'conversazione ferma' : 'conversazioni ferme'} da più di ${GIORNI_CONVERSAZIONE} giorni eliminate dal copilota.`,
+        ];
+      }
+    } catch (errore) {
+      esito.avvisi = [
+        ...esito.avvisi,
+        `La pulizia delle conversazioni non è riuscita: ${errore instanceof Error ? errore.message : String(errore)}`,
+      ];
+    }
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     esito.errore = esito.errore === null ? messaggio : `${esito.errore} · ${messaggio}`;

@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react';
 import { centesimiDi } from '@/lib/abbonamenti/formato';
+import type { Variazione } from '@/lib/cruscotto/andamento';
+import { CATEGORIA_SENZA, estremiDelMese } from '@/lib/movimenti/filtri';
 
 /**
  * Da cosa risponde il database a cosa disegna la fisarmonica.
@@ -32,6 +35,13 @@ export type Apertura =
       classe: string | null;
       contesto: string | null;
       categoria: string | null;
+      /**
+       * `abbonamento` o `abitudine`: la stessa discesa, ristretta al costo
+       * ricorrente di quel tipo. Assente = la spesa del mese, come sempre.
+       * Viaggia con OGNI apertura del ramo: perderla a un livello mostrerebbe
+       * la spesa intera sotto un titolo che promette il ricorrente.
+       */
+      ricorrenza?: string | null;
     }
   | {
       tipo: 'movimenti';
@@ -39,6 +49,19 @@ export type Apertura =
       contesto: string | null;
       categoria: string | null;
       /** Solo i movimenti di QUESTO nodo, senza le categorie discendenti. */
+      soloQuesta: boolean;
+    }
+  | {
+      /**
+       * Le voci ricorrenti (gli esercenti) sotto una categoria: il fondo della
+       * discesa del ricorrente. Una ricorrenza E' un esercente, e le sue
+       * transazioni si aprono dalla sua lista movimenti.
+       */
+      tipo: 'ricorrenze';
+      ricorrenza: string;
+      classe: string | null;
+      contesto: string | null;
+      categoria: string | null;
       soloQuesta: boolean;
     };
 
@@ -54,6 +77,38 @@ export type Nodo = {
   apertura: Apertura | null;
   /** Dove porta il tocco quando il nodo non si apre. */
   href: string | null;
+  /**
+   * Cosa precede la riga al posto del pallino: una `Tessera` sulla home. E' un
+   * nodo e non una chiave, come in `Ripartizione`: chi compone la lista sa
+   * gia' che forma serve. Solo il primo livello ne ha una — i figli arrivano
+   * dall'API come dati puri e restano col pallino.
+   */
+  tessera?: ReactNode;
+  /** Il confronto col mese tipico, mostrato sotto l'importo. */
+  variazione?: Variazione;
+  /**
+   * Sbiadita: e' la riga del non classificato, che non e' una classe ma un
+   * lavoro da fare. Sta per ultima e a mezza voce (docs/aspetto.md §4.3).
+   */
+  sbiadito?: boolean;
+  /**
+   * L'identificativo della categoria, quando il nodo e' una categoria.
+   * `null` = «senza categoria». Serve alla fisarmonica per disegnare il
+   * marchietto — l'icona della categoria nel suo cerchietto — senza che
+   * questo modulo debba sapere che aspetto abbia.
+   */
+  categoria?: string | null;
+  /**
+   * I figli gia' noti, quando chi costruisce l'albero li ha prefetti.
+   *
+   * E' la risposta alla lentezza percepita della discesa: il primo livello
+   * sotto ogni classe arriva **con la pagina**, e il tocco che lo apre non
+   * paga nessun viaggio — la fisarmonica diventa un accordion locale, non una
+   * navigazione remota travestita. I livelli piu' in giu' continuano ad
+   * arrivare al tocco: prefetchare tutto sarebbe spedire l'albero intero per
+   * aprirne un ramo.
+   */
+  precaricati?: readonly Nodo[];
 };
 
 export type RigaRipartizione = {
@@ -77,7 +132,38 @@ export type RigaMovimentoDove = {
 const conta = (n: number, singolare: string, plurale: string): string =>
   `${n} ${n === 1 ? singolare : plurale}`;
 
-/** Come si apre una categoria: sulle figlie se ne ha, sui suoi movimenti se no. */
+/**
+ * La lista dei movimenti gia' filtrata, per il tocco su una categoria foglia.
+ *
+ * Dal 19 agosto la gerarchia e' una regola globale: classe → categorie →
+ * **pagina** dei movimenti. Una categoria senza figlie non apre piu' i
+ * movimenti in loco — li apre su `/movimenti`, che ha il totale in cima, il
+ * riassunto dei filtri e la paginazione — portandosi dietro **tutti** i filtri
+ * del punto in cui si era: periodo, classe, contesto, categoria. Perdere un
+ * filtro nella discesa non da' errore: mostra una lista plausibile e sbagliata.
+ */
+export function versoMovimenti(
+  mese: string,
+  classe: string | null,
+  contesto: string | null,
+  categoria: string | null,
+): string {
+  const p = new URLSearchParams();
+  const periodo = estremiDelMese(mese);
+  if (periodo !== null) {
+    p.set('da', periodo.da);
+    p.set('a', periodo.a);
+  }
+  // `null` qui significa «senza categoria», non «tutte»: chi arriva a una
+  // foglia ci arriva da una riga precisa, e l'assenza del parametro aprirebbe
+  // l'intero mese — la lista plausibile e sbagliata di cui sopra.
+  p.set('categoria', categoria ?? CATEGORIA_SENZA);
+  if (classe !== null) p.set('classe', classe);
+  if (contesto !== null) p.set('contesto', contesto);
+  return `/movimenti?${p.toString()}`;
+}
+
+/** Come si apre una categoria con delle figlie. Le foglie non si aprono: navigano. */
 export function aperturaDi(
   r: Pick<RigaRipartizione, 'category_id' | 'figli'>,
   classe: string | null,
@@ -103,18 +189,41 @@ export function categorieComeNodi(
   prefisso: string,
   classe: string | null,
   contesto: string | null,
+  /** Il tipo di ricorrenza quando la discesa e' quella del ricorrente. */
+  ricorrenza: string | null = null,
 ): readonly Nodo[] {
   return righe.flatMap((r): Nodo[] => {
-    const chiave = `${prefisso}|${classe ?? '*'}|${contesto ?? '*'}|${r.category_id ?? 'nessuna'}`;
+    const chiave = `${prefisso}|${ricorrenza ?? '*'}|${classe ?? '*'}|${contesto ?? '*'}|${r.category_id ?? 'nessuna'}`;
+    const voci = ricorrenza !== null;
 
+    // Una foglia e' un collegamento, non un ramo: la regola globale della
+    // discesa e' classe → categorie → pagina dei movimenti, mai i movimenti
+    // srotolati sotto la classe. Nel ricorrente invece la foglia si apre
+    // ancora, sulle VOCI: e' l'esercente il fondo di quella discesa, e la
+    // pagina delle transazioni e' la sua.
+    const foglia = r.figli === 0;
     const nodo: Nodo = {
       chiave,
       etichetta: r.nome,
-      dettaglio: conta(r.movimenti, 'movimento', 'movimenti'),
+      dettaglio: voci
+        ? conta(r.movimenti, 'voce', 'voci')
+        : conta(r.movimenti, 'movimento', 'movimenti'),
       importo: r.spesa,
       tinta: null,
-      apertura: aperturaDi(r, classe, contesto),
-      href: null,
+      categoria: r.category_id,
+      apertura: foglia
+        ? voci
+          ? {
+              tipo: 'ricorrenze',
+              ricorrenza,
+              classe,
+              contesto,
+              categoria: r.category_id,
+              soloQuesta: false,
+            }
+          : null
+        : { tipo: 'categorie', classe, contesto, categoria: r.category_id, ricorrenza },
+      href: foglia && !voci ? versoMovimenti(prefisso, classe, contesto, r.category_id) : null,
     };
 
     // Senza figlie la riga «direttamente qui» sarebbe un doppione del nodo che
@@ -126,20 +235,64 @@ export function categorieComeNodi(
       {
         chiave: `${chiave}|diretta`,
         etichetta: `${r.nome}, direttamente qui`,
-        dettaglio: `${conta(r.movimenti_diretti, 'movimento', 'movimenti')} · non in una sottocategoria`,
+        dettaglio: voci
+          ? `${conta(r.movimenti_diretti, 'voce', 'voci')} · non in una sottocategoria`
+          : `${conta(r.movimenti_diretti, 'movimento', 'movimenti')} · non in una sottocategoria`,
         importo: r.spesa_diretta,
         tinta: null,
-        apertura: {
-          tipo: 'movimenti',
-          classe,
-          contesto,
-          categoria: r.category_id,
-          soloQuesta: true,
-        },
+        categoria: r.category_id,
+        apertura: voci
+          ? {
+              tipo: 'ricorrenze',
+              ricorrenza,
+              classe,
+              contesto,
+              categoria: r.category_id,
+              soloQuesta: true,
+            }
+          : {
+              tipo: 'movimenti',
+              classe,
+              contesto,
+              categoria: r.category_id,
+              soloQuesta: true,
+            },
         href: null,
       },
     ];
   });
+}
+
+export type RigaVoceRicorrente = {
+  merchant_id: string;
+  esercente: string;
+  costo_mensile: string | null;
+  occorrenze: number;
+  cadenza: string;
+  stato: string;
+};
+
+/**
+ * Le voci ricorrenti come nodi: il fondo della discesa del ricorrente.
+ *
+ * Una voce non si apre: naviga alla lista movimenti del suo esercente, che
+ * sono esattamente gli addebiti della ricorrenza. L'importo mostrato e' il
+ * costo **al mese** — la stessa unita' dei rami sopra, o la somma delle righe
+ * non tornerebbe col totale del ramo.
+ */
+export function ricorrenzeComeNodi(
+  righe: readonly RigaVoceRicorrente[],
+  categoria: string | null,
+): readonly Nodo[] {
+  return righe.map((r) => ({
+    chiave: `voce|${r.merchant_id}|${categoria ?? '*'}`,
+    etichetta: r.esercente,
+    dettaglio: `${conta(r.occorrenze, 'addebito', 'addebiti')} · al mese`,
+    importo: r.costo_mensile ?? '0',
+    tinta: null,
+    apertura: null,
+    href: `/movimenti?esercente=${r.merchant_id}`,
+  }));
 }
 
 export function movimentiComeNodi(

@@ -6,7 +6,7 @@ import { meseDaData } from './mesi';
 import { leggiStatoSistema } from '@/lib/movimenti/cerca';
 import { confronta, leggiPeriodi, type RigaPeriodo } from './confronto';
 import { quanteDaConfermare } from '@/lib/conferma/leggi';
-import { GIA_SUL_CRUSCOTTO, leggiAvvisi } from '@/lib/avvisi/leggi';
+import { GIA_SUL_CRUSCOTTO, GIORNI_IN_INBOX, leggiAvvisi } from '@/lib/avvisi/leggi';
 import {
   finestraDiConfronto,
   leggiVariazioniCategorie,
@@ -146,6 +146,41 @@ export const leggiCategorie = cache(
   }),
 );
 
+/** L'aspetto di una categoria: la chiave dell'icona e la classe che la tinge. */
+export type AspettoCategoria = { icona: string | null; classe: string | null };
+
+/**
+ * Icona e discrezionalita' predefinita di ogni categoria, per le tessere.
+ *
+ * Da `v_categorie_albero`, con `select('*')` e non con l'elenco dei campi, di
+ * proposito: la colonna `icon` arriva con la 0049, e finche' quella migration
+ * non e' applicata chiederla per nome sarebbe un errore su tutta la lettura.
+ * Cosi' invece manca solo il glifo, e le tessere restano velature colorate —
+ * il degrado che la Fetta 2 prevede, non un cruscotto rotto.
+ */
+export const leggiAspettoCategorie = cache(
+  // Un oggetto semplice e NON una `Map`: cio' che esce da `inCache` passa da
+  // `unstable_cache`, che serializza in JSON. Una Map serializzata diventa
+  // `{}`, e al primo colpo di cache `aspetto.get` non e' piu' una funzione —
+  // la home intera muore con un digest. In anteprima non si vede, perche'
+  // senza sessione la cache e' scavalcata: e' il guasto che compare solo in
+  // produzione, trovato il 19 agosto 2026.
+  inCache('aspetto-categorie', async (sb): Promise<Readonly<Record<string, AspettoCategoria>>> => {
+    const { data } = await sb.from('v_categorie_albero').select('*');
+    type Riga = {
+      id: string;
+      icon?: string | null;
+      discrezionalita_predefinita: string | null;
+    };
+    return Object.fromEntries(
+      comeArray<Riga>(data).map((c) => [
+        c.id,
+        { icona: c.icon ?? null, classe: c.discrezionalita_predefinita },
+      ]),
+    );
+  }),
+);
+
 export const leggiEsercenti = cache(
   inCache('esercenti-del-mese', async (sb, mese: string): Promise<readonly RigaEsercente[]> => {
     const { data } = await sb
@@ -196,7 +231,13 @@ export const leggiDaConfermare = cache(quanteDaConfermare);
 
 export const leggiAvvisiNuovi = cache(async () => {
   const avvisi = await leggiAvvisi(true);
-  return avvisi.filter((a) => !GIA_SUL_CRUSCOTTO.includes(a.type));
+  // Nell'Inbox solo gli avvisi recenti: dopo sette giorni un invito non letto
+  // non e' piu' un invito, e' arredamento. Restano nello storico (/avvisi) per
+  // novanta giorni — e' la pulizia notturna a farli sparire da li'.
+  const limite = Date.now() - GIORNI_IN_INBOX * 86_400_000;
+  return avvisi.filter(
+    (a) => !GIA_SUL_CRUSCOTTO.includes(a.type) && Date.parse(a.created_at) >= limite,
+  );
 });
 
 /**

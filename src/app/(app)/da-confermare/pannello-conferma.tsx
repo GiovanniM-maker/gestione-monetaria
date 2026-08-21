@@ -8,12 +8,14 @@ import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { tinteDelleClassi } from '../grafici';
+import { Avatar } from '@/lib/ui/tessera';
 import {
   ORDINAMENTI,
   raggruppaPerTempo,
   type ChiaveGruppo,
   type Ordinamento,
 } from '@/lib/conferma/gruppi';
+import { Segmentato } from '../segmentato';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
 import { etichettaMovimento } from '@/lib/movimenti/etichetta';
@@ -124,20 +126,27 @@ export function PannelloConferma({
         {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
 
         <div className="scheda space-y-3 p-6 text-center">
-          <p
-            className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
-            style={{
-              // `--conferma` e non `--investimento`: le tinte non si chiamano
-              // piu' come le classi, perche' le classi si rinominano.
-              background: inPari
-                ? 'color-mix(in oklab, var(--conferma) 18%, transparent)'
-                : 'var(--s3)',
-              color: inPari ? 'var(--conferma)' : 'var(--testo-3)',
-            }}
-            aria-hidden="true"
-          >
-            ✓
-          </p>
+          {/* La spunta verde di vetro quando e' una lode vera; il cerchio
+              spento quando la lista e' vuota perche' non e' arrivato niente.
+              Dare l'illustrazione anche al secondo caso vestirebbe a festa
+              una risposta che e' «non lo so». */}
+          {inPari ? (
+            <img
+              src="/illustrazioni/sei-in-pari.webp"
+              alt=""
+              width={84}
+              height={84}
+              className="mx-auto drop-shadow-[0_8px_20px_rgb(48_209_88/0.25)]"
+            />
+          ) : (
+            <p
+              className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
+              style={{ background: 'var(--s3)', color: 'var(--testo-3)' }}
+              aria-hidden="true"
+            >
+              ✓
+            </p>
+          )}
           <p className="text-[17px] font-semibold">
             {inPari ? 'Sei in pari.' : 'Niente da confermare.'}
           </p>
@@ -177,20 +186,16 @@ export function PannelloConferma({
         <p className="text-[13px] text-testo-2">
           {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
         </p>
-        <div className="flex gap-1" role="group" aria-label="Come ordinare">
-          {ORDINAMENTI.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => setOrdinamento(o)}
-              aria-pressed={ordinamento === o}
-              className={`inline-flex min-h-11 items-center rounded-controllo px-3 text-[13px] sm:min-h-9 ${
-                ordinamento === o ? 'bg-accento text-accento-testo' : 'bg-s2 text-testo-2'
-              }`}
-            >
-              {o === 'data' ? 'per data' : 'per importo'}
-            </button>
-          ))}
+        <div className="w-[210px]">
+          <Segmentato
+            etichetta="Come ordinare"
+            voci={ORDINAMENTI.map((o) => ({
+              chiave: o,
+              testo: o === 'data' ? 'per data' : 'per importo',
+              attiva: ordinamento === o,
+              onScegli: () => setOrdinamento(o),
+            }))}
+          />
         </div>
       </div>
 
@@ -347,6 +352,7 @@ export function PannelloConferma({
  * piu' rapido di far smettere di credere a una schermata.
  */
 function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: string | null }) {
+  const tinte = tinteDelleClassi(useClassi());
   const totale = righe.reduce((s, r) => {
     const { totale: v, nonLetti } = sommaCosti([r.amount_eur ?? r.amount]);
     return nonLetti > 0 ? s : s + v;
@@ -375,6 +381,15 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
           {righe.map((r) => (
             <li key={r.id}>
               <Link href={`/movimenti/${r.id}`} className="flex min-h-12 items-center gap-3">
+                <Avatar
+                  nome={r.esercente ?? r.raw_description}
+                  misura={30}
+                  tinta={
+                    r.discrezionalita !== null
+                      ? (tinte[r.discrezionalita] ?? 'var(--neutro)')
+                      : 'var(--neutro)'
+                  }
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{etichettaMovimento(r)}</span>
                   <span className="block truncate text-[12px] text-testo-3">
@@ -415,7 +430,8 @@ function Carta({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <Avatar nome={r.esercente ?? r.raw_description} tinta={tinta ?? 'var(--neutro)'} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[17px] font-semibold">{etichettaMovimento(r)}</span>
           <span className="cifra text-[13px] text-testo-3">{r.booking_date}</span>

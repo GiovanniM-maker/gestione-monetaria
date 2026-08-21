@@ -105,7 +105,7 @@ export async function creaObiettivo(o: NuovoObiettivo): Promise<string> {
     .select('id')
     .single<{ id: string }>();
 
-  // La coerenza fra tipo, bersaglio e valore la impone il `check` della 0051,
+  // La coerenza fra tipo, bersaglio e valore la impone il `check` della 0054,
   // che e' anche l'unico posto che la conosce: ripeterla qui vorrebbe dire due
   // elenchi della stessa regola, e quello in TypeScript sarebbe scavalcabile
   // chiamando la tabella per un'altra strada.

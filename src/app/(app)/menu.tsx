@@ -91,10 +91,12 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
         onClick={() => setApertoDa(percorso)}
         aria-expanded={aperto}
         aria-controls="menu-principale"
-        className="-mr-2 inline-flex size-11 items-center justify-center rounded-full text-testo-2"
+        // Il bottone tondo di testata (Fetta 3): una superficie sollevata, non
+        // un glifo nudo che fluttua nell'angolo.
+        className="tondo -mr-1"
       >
         <span className="sr-only">Apri il menu</span>
-        <span aria-hidden="true" className="text-xl leading-none">
+        <span aria-hidden="true" className="text-[17px] leading-none text-testo-2">
           ☰
         </span>
       </button>

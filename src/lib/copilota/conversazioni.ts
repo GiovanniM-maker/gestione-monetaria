@@ -1,21 +1,23 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { comeArray } from '@/lib/enablebanking/redact';
 import { aiConfigurata, chiediAlModello } from '@/lib/ai/modello';
 
 /**
- * Le conversazioni come oggetti, non come `conversazione_id` ripetuto.
+ * Il titolo generato di una conversazione.
  *
  * ---------------------------------------------------------------------------
- * Il confine che queste funzioni devono tenere vero
+ * Perche' questo file contiene una cosa sola
  * ---------------------------------------------------------------------------
- * **Una chat non contiene mai niente di duraturo.** Contiene le tracce di come
- * una cosa duratura e' nata. Quindi `elimina` porta via i messaggi e le
- * proposte mai applicate, e **non tocca** le correzioni gia' applicate — che
- * vivono su `transactions` — ne' gli obiettivi.
+ * Il ciclo di vita delle conversazioni — la stella, il rinomina, la scadenza a
+ * trenta giorni, la pulizia — vive in `conversazione.ts` e nella migration
+ * `0051_conversazioni_salvate`, ed e' arrivato da un'altra parte mentre questo
+ * ramo lavorava. Qui resta solo cio' che quel disegno non aveva: **il titolo
+ * scritto dal modello**.
  *
- * E' verificabile, ed e' il test che conta: se cancellando una conversazione
- * smettesse di funzionare qualcos'altro, il confine sarebbe disegnato male.
+ * La riga in `chat_conversations` nasce **pigra**, alla prima stella o al primo
+ * rinomina. Il titolo generato e' il terzo motivo per cui puo' nascere, e non
+ * cambia quella regola: una conversazione senza riga e' semplicemente non
+ * salvata e col titolo del primo messaggio.
  *
  * ---------------------------------------------------------------------------
  * Il titolo lo scrive il modello, e non viola il principio server-derived
@@ -31,78 +33,6 @@ import { aiConfigurata, chiediAlModello } from '@/lib/ai/modello';
  * che si cercava ieri oggi si chiama in un altro modo.
  */
 
-export type RigaConversazioneCompleta = {
-  conversazione_id: string;
-  iniziata_at: string;
-  ultima_at: string;
-  messaggi: number;
-  titolo: string | null;
-  salvata: boolean;
-  scade_at: string | null;
-  titolo_manuale: boolean;
-};
-
-export async function leggiConversazioniComplete(): Promise<readonly RigaConversazioneCompleta[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('v_conversazioni')
-    .select('*')
-    .order('ultima_at', { ascending: false })
-    .limit(100);
-  return comeArray<RigaConversazioneCompleta>(data);
-}
-
-/** La stella. `false` rimette una scadenza a trenta giorni da adesso. */
-export async function conservaConversazione(id: string, salvata = true): Promise<boolean> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc('conserva_conversazione', {
-    p_id: id,
-    p_salvata: salvata,
-  });
-  if (error !== null) throw new Error(`Salvataggio della conversazione fallito: ${error.message}`);
-  return data === true;
-}
-
-/** Il titolo scritto a mano: da qui in poi nessun automatismo lo tocca. */
-export async function rinominaConversazione(id: string, titolo: string): Promise<boolean> {
-  const pulito = titolo.trim().slice(0, 120);
-  if (pulito === '') throw new Error('Il titolo è vuoto.');
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc('titola_conversazione', {
-    p_id: id,
-    p_titolo: pulito,
-    p_manuale: true,
-  });
-  if (error !== null) throw new Error(`Rinomina fallita: ${error.message}`);
-  return data === true;
-}
-
-/**
- * Cancella una conversazione: i messaggi, e la riga.
- *
- * Non tocca nient'altro, e non e' una svista: cio' che e' nato qui e ha valore
- * — una correzione applicata, un obiettivo — e' stato **copiato fuori** nel
- * momento in cui e' stato applicato, e vive per conto suo.
- */
-export async function eliminaConversazione(id: string): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-
-  const { error: e1 } = await supabase.from('chat_messages').delete().eq('conversazione_id', id);
-  if (e1 !== null) throw new Error(`Cancellazione dei messaggi fallita: ${e1.message}`);
-
-  const { error: e2 } = await supabase.from('chat_conversations').delete().eq('id', id);
-  if (e2 !== null) throw new Error(`Cancellazione della conversazione fallita: ${e2.message}`);
-}
-
-/** La spazzata delle scadute. La chiama la sequenza quotidiana. */
-export async function pulisciConversazioniScadute(): Promise<number> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc('pulisci_conversazioni_scadute');
-  if (error !== null) throw new Error(`Pulizia delle conversazioni fallita: ${error.message}`);
-  return typeof data === 'number' ? data : 0;
-}
-
 const ISTRUZIONI_TITOLO =
   'Scrivi un titolo per questa conversazione: da due a cinque parole, in italiano, ' +
   'senza virgolette, senza punto finale, senza preamboli. Deve dire di COSA si parla, ' +
@@ -113,12 +43,12 @@ const ISTRUZIONI_TITOLO =
  * dire.
  *
  * Fallisce **in silenzio**: senza titolo `v_conversazioni` ripiega sulla prima
- * domanda troncata, che e' una risposta accettabile. Far fallire una risposta
- * del copilota perche' non si e' riusciti a dargli un'etichetta sarebbe il
- * rapporto sbagliato fra le due cose.
+ * domanda dell'utente, che e' una risposta accettabile. Far fallire una
+ * risposta del copilota perche' non si e' riusciti a dargli un'etichetta
+ * sarebbe il rapporto sbagliato fra le due cose.
  *
- * Riceve **solo il testo dei messaggi dell'utente**: non e' un canale verso cui
- * far uscire dati bancari, e le domande le ha scritte l'utente stesso.
+ * Riceve **solo il testo delle domande dell'utente**: non e' un canale verso
+ * cui far uscire dati bancari, e quelle frasi le ha scritte l'utente stesso.
  */
 export async function generaTitoloSeManca(
   id: string,
@@ -133,8 +63,10 @@ export async function generaTitoloSeManca(
     .eq('id', id)
     .maybeSingle<{ titolo: string | null }>();
 
-  // Congelato: c'e' gia' un titolo, non se ne scrive un altro.
-  if (riga === null || riga.titolo !== null) return;
+  // Congelato: se un titolo c'e' gia' — generato ieri o scritto a mano — non se
+  // ne scrive un altro. `riga === null` invece significa che la riga pigra non
+  // e' ancora nata, ed e' il caso normale: si procede.
+  if (riga !== null && riga.titolo !== null) return;
 
   try {
     const risposta = await chiediAlModello({
@@ -142,19 +74,17 @@ export async function generaTitoloSeManca(
       prompt: domandeUtente.slice(0, 4).join('\n'),
       maxTokens: 24,
     });
+
     const titolo = risposta.testo
       .trim()
       .replace(/^["«»']|["«»'.]$/g, '')
       .slice(0, 120);
     if (titolo === '') return;
 
-    // `p_manuale: false`, quindi la funzione SQL rifiuta da sola se nel
-    // frattempo l'utente ne ha scritto uno a mano.
-    await supabase.rpc('titola_conversazione', {
-      p_id: id,
-      p_titolo: titolo,
-      p_manuale: false,
-    });
+    // `upsert` come `salvaConversazione` e `rinominaConversazione`: e' la
+    // stessa riga pigra, e crearla in un modo diverso vorrebbe dire due
+    // percorsi verso la stessa tabella.
+    await supabase.from('chat_conversations').upsert({ id, titolo }, { onConflict: 'id' });
   } catch (errore) {
     console.error('[copilota] titolo non generato:', errore);
   }

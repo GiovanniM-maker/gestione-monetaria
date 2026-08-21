@@ -29,7 +29,10 @@
  * Le tinte non stanno qui: stanno in `globals.css`, in un posto solo.
  */
 const BASE_CAMPO =
-  'rounded-controllo bg-s3 px-3.5 text-[15px] text-testo placeholder:text-testo-3 ' +
+  // A capsula piena, come la barra di ricerca di Revolut: i lati sono mezzi
+  // cerchi. Vale per campi e bottoni insieme — due raggi diversi sulla stessa
+  // riga si vedono subito, e si vedono come un errore.
+  'rounded-full bg-s3 px-4 text-[15px] text-testo placeholder:text-testo-3 ' +
   'outline-none focus:ring-2 focus:ring-(--accento)';
 
 /** Campo a piena larghezza sul telefono, compatto da `sm` in su. */
@@ -47,7 +50,7 @@ export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10`;
  * togliere significato al colore dei dati.
  */
 export const BOTTONE =
-  'inline-flex min-h-11 items-center justify-center rounded-controllo bg-accento px-4 ' +
+  'inline-flex min-h-11 items-center justify-center rounded-full bg-accento px-5 ' +
   'text-[15px] font-semibold text-accento-testo disabled:opacity-40 sm:min-h-10';
 
 /**
@@ -57,8 +60,8 @@ export const BOTTONE =
  * dell'applicazione, non un ripiego.
  */
 export const BOTTONE_MINORE =
-  'inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 ' +
-  'px-3.5 text-[13px] font-medium text-testo disabled:opacity-40 sm:min-h-9';
+  'inline-flex min-h-11 items-center justify-center rounded-full bg-s3 ' +
+  'px-4 text-[13px] font-medium text-testo disabled:opacity-40 sm:min-h-9';
 
 /**
  * Una casella di spunta piccola quanto il carattere si sbaglia sempre. Il

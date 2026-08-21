@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 0049 — «Da confermare» dice a CHI, non solo COME
+-- 0055 — «Da confermare» dice a CHI, non solo COME
 -- ---------------------------------------------------------------------------
 -- Su un invio P2P la banca scrive la stessa identica causale su ogni riga:
 -- `Sent from Revolut` sull'affitto, sulla farmacia e sui trenta euro a un

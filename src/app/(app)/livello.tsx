@@ -112,6 +112,13 @@ export type VoceLivello = {
   /** Dove porta il tocco. `null` per una voce che non si puo' aprire. */
   href: string | null;
   variazione?: Variazione | undefined;
+  /**
+   * Cosa precede la riga: una `TesseraCategoria`, un `Avatar`. E' un nodo e
+   * non una chiave, cosi' questo componente non deve sapere che forme
+   * esistono — chi compone la lista sa gia' se sta elencando categorie o
+   * esercenti.
+   */
+  tessera?: React.ReactNode;
 };
 
 /**
@@ -134,22 +141,25 @@ export function Ripartizione({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
+      <h2 className="eti px-1">{titolo}</h2>
       {nota !== undefined && <p className="text-[13px] text-testo-3">{nota}</p>}
       <div className="scheda px-4">
         <ul className="elenco text-[15px]">
           {voci.map((v) => {
             const dentro = (
               <>
+                {v.tessera}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{v.etichetta}</span>
                   {v.dettaglio !== null && v.dettaglio !== undefined && (
                     <span className="block truncate text-[12px] text-testo-3">{v.dettaglio}</span>
                   )}
                 </span>
-                <span className="cifra shrink-0 whitespace-nowrap">
-                  {formattaEuro(v.valore)}
-                  <Freccia riga={v.variazione} />
+                {/* Su due piani, come la colonna sinistra: il nome si allinea
+                    all'importo e la riga piccola alla percentuale. */}
+                <span className="shrink-0 text-right">
+                  <span className="cifra block whitespace-nowrap">{formattaEuro(v.valore)}</span>
+                  <Freccia riga={v.variazione} sotto />
                 </span>
               </>
             );
@@ -206,7 +216,7 @@ export function MesePerMese({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
+      <h2 className="eti px-1">{titolo}</h2>
       <div className="scheda px-4">
         <ul className="elenco">
           {righe.map((r) => {

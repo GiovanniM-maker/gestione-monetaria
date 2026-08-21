@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Icona, type NomeIcona } from '@/lib/ui/icone';
 
 /**
  * La barra in basso: quattro schede, dove arriva il pollice.
@@ -31,26 +32,37 @@ import { usePathname } from 'next/navigation';
  * ---------------------------------------------------------------------------
  * Il materiale
  * ---------------------------------------------------------------------------
- * Traslucida, non opaca: il contenuto che scorre sotto si intravede e la barra
- * sembra appoggiata sopra la schermata invece che incollata al fondo. Con
- * `env(safe-area-inset-bottom)`, o sui telefoni con la barra dei gesti l'ultima
- * scheda finisce sotto il dito del sistema.
+ * Dal 19 agosto **galleggia** (il sistema di Revolut, copiato di proposito):
+ * una capsula staccata dai bordi, traslucida, con la scheda attiva dentro una
+ * pastiglia. Una striscia incollata al fondo e' un pezzo di cornice; una
+ * capsula che proietta un'ombra e' un oggetto, e l'occhio la trova prima.
+ * Traslucida resta: il contenuto che scorre sotto si intravede. Con
+ * `env(safe-area-inset-bottom)`, o sui telefoni con la barra dei gesti la
+ * capsula finisce sotto il dito del sistema.
  */
 
-type Scheda = { href: string; nome: string; icona: string; anche?: readonly string[] };
+/**
+ * Icone vere al posto di `◧ ✓ ◍ ✳`.
+ *
+ * Quelli non erano icone: erano glifi tipografici, disegnati da chi ha fatto
+ * il carattere, con un peso e uno stile che non c'entravano niente col resto.
+ * Quattro schede su quattro, in fondo a ogni schermata — la differenza che si
+ * nota di piu' senza saperla nominare (docs/aspetto.md, Fetta 1).
+ */
+type Scheda = { href: string; nome: string; icona: NomeIcona; anche?: readonly string[] };
 
 const SCHEDE: readonly Scheda[] = [
-  { href: '/', nome: 'Oggi', icona: '◧' },
-  { href: '/da-confermare', nome: 'Conferma', icona: '✓' },
+  { href: '/', nome: 'Oggi', icona: 'casa' },
+  { href: '/da-confermare', nome: 'Conferma', icona: 'spunta' },
   {
     href: '/dove',
     nome: 'Dove',
-    icona: '◍',
+    icona: 'strati',
     // La discesa passa da queste schermate: la scheda resta accesa mentre si
     // scende, o sembrerebbe di essere usciti dalla sezione.
     anche: ['/movimenti', '/categoria', '/esercente', '/abbonamenti'],
   },
-  { href: '/copilota', nome: 'Chiedi', icona: '✳' },
+  { href: '/copilota', nome: 'Chiedi', icona: 'scintilla' },
 ];
 
 export function Barra() {
@@ -63,11 +75,10 @@ export function Barra() {
 
   return (
     <nav
-      className="velato fixed inset-x-0 bottom-0 z-40 border-t border-(--filo)
-                 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 px-4"
       aria-label="Navigazione principale"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="velato galleggiante mx-auto grid max-w-md grid-cols-4 p-1.5">
         {SCHEDE.map((s) => {
           const qui = attiva(s);
           return (
@@ -75,12 +86,10 @@ export function Barra() {
               <Link
                 href={s.href}
                 aria-current={qui ? 'page' : undefined}
-                className={`flex min-h-11 flex-col items-center justify-center gap-0.5 pt-2 text-[10px] font-medium
+                className={`barra-voce flex min-h-12 flex-col items-center justify-center gap-0.5 text-[10px] font-medium
                             ${qui ? 'text-accento' : 'text-testo-3'}`}
               >
-                <span aria-hidden="true" className="text-[17px] leading-none">
-                  {s.icona}
-                </span>
+                <Icona nome={s.icona} misura={21} spessore={qui ? 2 : 1.75} />
                 {s.nome}
               </Link>
             </li>
