@@ -86,7 +86,7 @@ export function Barra() {
               <Link
                 href={s.href}
                 aria-current={qui ? 'page' : undefined}
-                className={`barra-voce flex min-h-12 flex-col items-center justify-center gap-0.5 text-[10px] font-medium
+                className={`barra-voce flex min-h-12 flex-col items-center justify-center gap-0.5 text-eti font-medium
                             ${qui ? 'text-accento' : 'text-testo-3'}`}
               >
                 <Icona nome={s.icona} misura={21} spessore={qui ? 2 : 1.75} />

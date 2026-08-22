@@ -192,7 +192,7 @@ function Rami({
 
             {aperto && stato?.fase === 'errore' && (
               <p
-                className="nota nota-errore mb-2 text-[13px]"
+                className="nota nota-errore mb-2 text-sec"
                 style={{ marginLeft: `${rientro(livello + 1)}px` }}
               >
                 {stato.messaggio}
@@ -201,7 +201,7 @@ function Rami({
 
             {aperto && stato?.fase === 'pronto' && stato.figli.length === 0 && (
               <p
-                className="pb-2 text-[13px] text-testo-3"
+                className="pb-2 text-sec text-testo-3"
                 style={{ marginLeft: `${rientro(livello + 1)}px` }}
               >
                 Niente qui dentro.
@@ -309,7 +309,7 @@ function Riga({
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px]">{nodo.etichetta}</span>
+        <span className="block truncate text-corpo">{nodo.etichetta}</span>
         <span className="mt-1 flex items-center gap-2">
           <span className="h-1 w-14 shrink-0 overflow-hidden rounded-full bg-s3">
             <span
@@ -318,7 +318,7 @@ function Riga({
             />
           </span>
           {nodo.dettaglio !== null && (
-            <span className="cifra truncate text-[12px] text-testo-3">{nodo.dettaglio}</span>
+            <span className="cifra truncate text-min text-testo-3">{nodo.dettaglio}</span>
           )}
         </span>
       </span>

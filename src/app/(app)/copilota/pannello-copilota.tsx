@@ -135,7 +135,7 @@ export function PannelloCopilota({
       <div className="space-y-4">
         {righe.length === 0 && (
           <div className="rounded-lg border border-dashed border-filo p-4">
-            <p className="text-sm text-testo-2">Per esempio:</p>
+            <p className="text-sec text-testo-2">Per esempio:</p>
             <ul className="mt-2 space-y-1">
               {ESEMPI.map((e) => (
                 <li key={e}>
@@ -143,7 +143,7 @@ export function PannelloCopilota({
                     type="button"
                     onClick={() => void invia(e)}
                     disabled={inCorso}
-                    className="flex min-h-11 w-full items-center text-left text-sm text-testo-2 underline decoration-(--filo) underline-offset-4"
+                    className="flex min-h-11 w-full items-center text-left text-sec text-testo-2 underline decoration-(--filo) underline-offset-4"
                   >
                     {e}
                   </button>
@@ -157,7 +157,7 @@ export function PannelloCopilota({
           <Messaggio key={r.id} riga={r} occupato={inCorso} onApplica={applica} />
         ))}
 
-        {inCorso && <p className="text-sm text-testo-2">sto guardando i dati…</p>}
+        {inCorso && <p className="text-sec text-testo-2">sto guardando i dati…</p>}
         <div ref={fondo} />
       </div>
 
@@ -200,7 +200,7 @@ function Messaggio({
 }) {
   if (riga.ruolo === 'utente') {
     return (
-      <p className="ml-auto max-w-[85%] break-words rounded-2xl rounded-br-sm bg-accento px-3 py-2 text-sm text-accento-testo">
+      <p className="ml-auto max-w-[85%] break-words rounded-2xl rounded-br-sm bg-accento px-3 py-2 text-sec text-accento-testo">
         {riga.testo}
       </p>
     );
@@ -208,10 +208,10 @@ function Messaggio({
 
   return (
     <div className="max-w-[95%] space-y-2 break-words">
-      <div className="space-y-2 text-sm">
+      <div className="space-y-2 text-sec">
         {analizza(riga.testo).map((blocco, i) =>
           blocco.tipo === 'titolo' ? (
-            <h2 key={i} className="pt-1 text-sm font-semibold">
+            <h2 key={i} className="pt-1 text-sec font-semibold">
               {blocco.testo}
             </h2>
           ) : blocco.tipo === 'elenco' ? (
@@ -231,7 +231,7 @@ function Messaggio({
       </div>
 
       {riga.cifre_inventate !== null && riga.cifre_inventate.length > 0 && (
-        <p className="nota nota-avviso text-[13px]">
+        <p className="nota nota-avviso text-sec">
           <strong>
             {riga.cifre_inventate.length === 1
               ? 'Una cifra'
@@ -256,7 +256,7 @@ function Messaggio({
       ))}
 
       {riga.strumenti !== null && riga.strumenti.length > 0 && (
-        <details className="text-xs text-testo-2">
+        <details className="text-min text-testo-2">
           <summary className="inline-flex min-h-11 cursor-pointer items-center">
             da dove vengono i numeri ({riga.strumenti.length})
           </summary>
@@ -264,7 +264,7 @@ function Messaggio({
             {riga.strumenti.map((s, i) => (
               <li key={i}>
                 <code className="font-medium">{s.nome}</code>
-                <pre className="mt-1 max-h-56 overflow-auto rounded-md bg-s3 p-2 text-[11px] leading-relaxed">
+                <pre className="mt-1 max-h-56 overflow-auto rounded-md bg-s3 p-2 text-eti leading-relaxed">
                   {JSON.stringify(s.argomenti)}
                   {'\n→ '}
                   {JSON.stringify(s.dati, null, 1)}
@@ -291,10 +291,10 @@ function Scheda({
 
   return (
     <div className="scheda p-3">
-      <p className="text-xs uppercase tracking-wide text-testo-2">
+      <p className="text-min uppercase tracking-wide text-testo-2">
         {fatta ? 'applicata' : 'da applicare'}
       </p>
-      <p className="mt-1 text-sm">{proposta.descrizione}</p>
+      <p className="mt-1 text-sec">{proposta.descrizione}</p>
       {!fatta && (
         <button
           type="button"

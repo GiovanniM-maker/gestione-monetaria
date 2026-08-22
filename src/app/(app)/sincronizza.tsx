@@ -160,7 +160,7 @@ export function Sincronizza() {
                  bottom-[calc(4.25rem+env(safe-area-inset-bottom))]"
       role="status"
     >
-      <div className="mx-auto max-w-md px-4 py-2 text-[13px]">
+      <div className="mx-auto max-w-md px-4 py-2 text-sec">
         <strong>{nuovi}</strong> {nuovi === 1 ? 'movimento nuovo' : 'movimenti nuovi'} appena
         arrivati dalla banca.
       </div>

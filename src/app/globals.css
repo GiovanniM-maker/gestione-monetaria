@@ -193,6 +193,31 @@
   --eroe-bagliore: radial-gradient(120% 90% at 86% 10%, rgb(143 138 255 / 0.18), transparent 55%);
 }
 
+/**
+ * La scala tipografica, in sette passi.
+ * --------------------------------------------------------------------------
+ * Prima erano **venti misure arbitrarie in pixel** piu' sei classi Tailwind, e
+ * `text-sm` e `text-[14px]` erano la stessa cosa scritta in due modi novantatre'
+ * volte. Non si vedeva a occhio — e infatti nessuno se n'era accorto — ma
+ * rendeva impossibile cambiare la scala.
+ *
+ * **In `rem` e non in `px`**, ed e' la parte che vale di piu': una misura in
+ * pixel ignora l'impostazione del carattere del browser, quindi chi la alza per
+ * leggere meglio non ottiene niente. In `rem` la scala intera si muove con lui.
+ *
+ * I quattro «eroe» — il numerone della home, di «Dove», del ricorrente e dei
+ * livelli — restano fuori: non sono deriva, sono quattro gerarchie decise una
+ * per una, e fonderle sarebbe una scelta di prodotto travestita da pulizia.
+ */
+@theme {
+  --text-titolo: 1.375rem; /* 22 — titolo di schermata */
+  --text-sez: 1.0625rem; /* 17 — testata di scheda */
+  --text-corpo: 0.9375rem; /* 15 — nome di riga, prosa */
+  --text-sec: 0.8125rem; /* 13 — dettaglio sotto un nome */
+  --text-min: 0.75rem; /* 12 — delta, conteggi */
+  --text-eti: 0.6875rem; /* 11 — maiuscoletto sopra un numero */
+}
+
 @theme inline {
   --color-s0: var(--s0);
   --color-s1: var(--s1);

@@ -41,7 +41,7 @@ import { Icona } from '@/lib/ui/icone';
  * Il cappello di un livello: da dove si torna, dove si e', quanto.
  *
  * L'importo e' un `.numerone` a 34 px in tutti e quattro i livelli. Prima erano
- * `text-3xl` qui, `text-2xl` la', `text-xl` altrove: scendendo, il numero
+ * `text-3xl` qui, `text-[22px]` la', `text-[22px]` altrove: scendendo, il numero
  * cambiava taglia a ogni tocco, e la stessa cifra sembrava contare di meno.
  */
 export function TestataLivello({
@@ -67,10 +67,7 @@ export function TestataLivello({
 }) {
   return (
     <div className="space-y-3">
-      <Link
-        href={ritorno.href}
-        className="inline-flex min-h-11 items-center text-[13px] text-accento"
-      >
+      <Link href={ritorno.href} className="inline-flex min-h-11 items-center text-sec text-accento">
         <Icona nome="chevron" misura={15} className="mr-0.5 rotate-180" />
         {ritorno.testo}
       </Link>
@@ -85,15 +82,15 @@ export function TestataLivello({
               }
         }
       >
-        <h1 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h1>
+        <h1 className="text-sez font-semibold tracking-[-0.02em]">{titolo}</h1>
         {sottotitolo !== null && sottotitolo !== undefined && (
-          <p className="text-[13px] text-testo-2">{sottotitolo}</p>
+          <p className="text-sec text-testo-2">{sottotitolo}</p>
         )}
         <p className="numerone pt-1 text-[34px]">
           {formattaEuro(importo)}
           <Freccia riga={variazione} />
         </p>
-        {nota !== null && nota !== undefined && <p className="text-[13px] text-testo-3">{nota}</p>}
+        {nota !== null && nota !== undefined && <p className="text-sec text-testo-3">{nota}</p>}
       </div>
 
       {azioni !== undefined && <div className="flex flex-wrap gap-2">{azioni}</div>}
@@ -144,9 +141,9 @@ export function Ripartizione({
   return (
     <section className="space-y-3">
       <h2 className="eti px-1">{titolo}</h2>
-      {nota !== undefined && <p className="text-[13px] text-testo-3">{nota}</p>}
+      {nota !== undefined && <p className="text-sec text-testo-3">{nota}</p>}
       <div className="scheda px-4">
-        <ul className="elenco text-[15px]">
+        <ul className="elenco text-corpo">
           {voci.map((v) => {
             const dentro = (
               <>
@@ -154,7 +151,7 @@ export function Ripartizione({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{v.etichetta}</span>
                   {v.dettaglio !== null && v.dettaglio !== undefined && (
-                    <span className="block truncate text-[12px] text-testo-3">{v.dettaglio}</span>
+                    <span className="block truncate text-min text-testo-3">{v.dettaglio}</span>
                   )}
                 </span>
                 {/* Su due piani, come la colonna sinistra: il nome si allinea
@@ -227,7 +224,7 @@ export function MesePerMese({
                   {/* `whitespace-nowrap`: «ago 26» a tredici pixel non ci sta in
                       quarantotto, e andando a capo alza la riga di un piano. */}
                   <span
-                    className={`w-14 shrink-0 text-[13px] whitespace-nowrap sm:w-16 ${
+                    className={`w-14 shrink-0 text-sec whitespace-nowrap sm:w-16 ${
                       qui ? 'font-semibold text-testo' : 'text-testo-2'
                     }`}
                   >
@@ -243,7 +240,7 @@ export function MesePerMese({
                     />
                   </span>
                   <span
-                    className={`cifra w-24 shrink-0 text-right text-[13px] sm:w-28 ${
+                    className={`cifra w-24 shrink-0 text-right text-sec sm:w-28 ${
                       qui ? 'font-semibold' : 'text-testo-2'
                     }`}
                   >

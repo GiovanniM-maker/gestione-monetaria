@@ -39,9 +39,9 @@ export function Vuoto({
 }) {
   return (
     <div className={nudo ? 'py-6 text-center' : 'scheda px-5 py-8 text-center'}>
-      <p className="text-[15px] font-semibold">{titolo}</p>
+      <p className="text-corpo font-semibold">{titolo}</p>
       {perche !== undefined && (
-        <p className="mx-auto mt-1.5 max-w-[34ch] text-[13px] text-testo-2">{perche}</p>
+        <p className="mx-auto mt-1.5 max-w-[34ch] text-sec text-testo-2">{perche}</p>
       )}
       {azioni !== undefined && (
         <div className="mt-4 flex flex-wrap justify-center gap-2">{azioni}</div>

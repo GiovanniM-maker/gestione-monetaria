@@ -32,7 +32,7 @@ const BASE_CAMPO =
   // A capsula piena, come la barra di ricerca di Revolut: i lati sono mezzi
   // cerchi. Vale per campi e bottoni insieme — due raggi diversi sulla stessa
   // riga si vedono subito, e si vedono come un errore.
-  'rounded-full bg-s3 px-4 text-[15px] text-testo placeholder:text-testo-3 ' +
+  'rounded-full bg-s3 px-4 text-corpo text-testo placeholder:text-testo-3 ' +
   // Lo stesso anello di tutto il resto, e non un `ring` diverso: `outline-none`
   // spegneva la regola di sistema e la sostituiva con un'ombra, quindi
   // l'applicazione aveva **due** linguaggi del fuoco. Qui pero' vale su
@@ -57,7 +57,7 @@ export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10`;
  */
 export const BOTTONE =
   'inline-flex min-h-11 items-center justify-center rounded-full bg-accento px-5 ' +
-  'text-[15px] font-semibold text-accento-testo disabled:opacity-40 sm:min-h-10';
+  'text-corpo font-semibold text-accento-testo disabled:opacity-40 sm:min-h-10';
 
 /**
  * Bottone secondario. Alto 44 px come il principale finche' lo schermo e'
@@ -67,7 +67,7 @@ export const BOTTONE =
  */
 export const BOTTONE_MINORE =
   'inline-flex min-h-11 items-center justify-center rounded-full bg-s3 ' +
-  'px-4 text-[13px] font-medium text-testo disabled:opacity-40 sm:min-h-9';
+  'px-4 text-sec font-medium text-testo disabled:opacity-40 sm:min-h-9';
 
 /**
  * Una casella di spunta piccola quanto il carattere si sbaglia sempre. Il
@@ -75,4 +75,4 @@ export const BOTTONE_MINORE =
  */
 export const CASELLA = 'size-4 shrink-0 accent-(--accento)';
 export const ETICHETTA_CASELLA =
-  'inline-flex min-h-11 items-center gap-2 text-[13px] text-testo-2 sm:min-h-0';
+  'inline-flex min-h-11 items-center gap-2 text-sec text-testo-2 sm:min-h-0';

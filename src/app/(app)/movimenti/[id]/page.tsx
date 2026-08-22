@@ -90,13 +90,13 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
       {/* Perche' questa riga non e' nella spesa reale. E' la prima cosa da
           sapere quando si e' arrivati qui perche' un totale non tornava. */}
       {m.fuori_dalla_spesa !== null && (
-        <p className="nota nota-avviso text-[14px]">
+        <p className="nota nota-avviso text-sec">
           Non entra nella spesa reale: <strong>{m.fuori_dalla_spesa}</strong>.
         </p>
       )}
 
       {m.stato === 'pending' && (
-        <p className="nota nota-avviso text-[14px]">
+        <p className="nota nota-avviso text-sec">
           Movimento <strong>provvisorio</strong>: la banca non l&rsquo;ha ancora contabilizzato.
           L&rsquo;importo pu&ograve; cambiare, e la data di valuta non c&rsquo;&egrave; ancora.
         </p>
@@ -138,7 +138,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
           uscire, cambiare, e tornare a cercare la riga. */}
       {m.merchant_id !== null && (
         <section className="space-y-2 scheda p-3">
-          <h2 className="text-sm font-medium">{m.esercente ?? 'Questo esercente'}</h2>
+          <h2 className="text-sec font-medium">{m.esercente ?? 'Questo esercente'}</h2>
           <Interruttore id={m.merchant_id} variabile={variabile} />
         </section>
       )}
@@ -157,7 +157,7 @@ export default async function MovimentoPage({ params }: { params: Promise<{ id: 
         <SpostaMovimento id={m.id} esercenteAttuale={m.esercente} categorie={categorie} />
       </div>
 
-      <p className="text-xs text-testo-2">
+      <p className="text-min text-testo-2">
         Per cambiare la classificazione di <strong>tutte</strong> le occorrenze di questo esercente
         si passa dalla{' '}
         {m.merchant_id === null ? (
@@ -187,14 +187,14 @@ function Blocco({
   if (chiuso !== true) {
     return (
       <section className="scheda p-4">
-        <h2 className="text-[15px] font-medium">{titolo}</h2>
+        <h2 className="text-corpo font-medium">{titolo}</h2>
         {dentro}
       </section>
     );
   }
   return (
     <details className="scheda p-4">
-      <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px] font-medium">
+      <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-corpo font-medium">
         {titolo}
         <Icona nome="chevron" misura={16} className="text-testo-3" />
       </summary>
@@ -205,7 +205,7 @@ function Blocco({
 
 function Voce({ nome, valore }: { nome: string; valore: string | null }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-[14px]">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-sec">
       <dt className="text-testo-2">{nome}</dt>
       <dd className="min-w-0 text-right break-words">{valore ?? '—'}</dd>
     </div>

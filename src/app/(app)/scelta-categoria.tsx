@@ -224,7 +224,7 @@ export function SceltaCategoria({
           type="button"
           onClick={() => setAperto(true)}
           disabled={inCorso}
-          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-controllo bg-s3 px-3 text-left text-[13px] sm:min-h-9 ${
+          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-controllo bg-s3 px-3 text-left text-sec sm:min-h-9 ${
             inCorso ? 'opacity-60' : ''
           }`}
         >
@@ -240,7 +240,7 @@ export function SceltaCategoria({
           essere troncata — cioe' l'informazione che dice quanto costa il tocco
           spariva esattamente sullo schermo su cui il tocco avviene. */}
       {etichetta === true && (
-        <p className="mt-1 text-[11px] text-testo-2">{PORTATA[ambito.tipo].breve}</p>
+        <p className="mt-1 text-eti text-testo-2">{PORTATA[ambito.tipo].breve}</p>
       )}
 
       <NotaErrore errore={errore} />
@@ -265,7 +265,7 @@ export function SceltaCategoria({
               value={nuova}
               onChange={(e) => setNuova(e.target.value)}
               placeholder="nome della categoria"
-              className="min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
+              className="min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-corpo placeholder:text-testo-3"
               disabled={inCorso}
               // Niente `autoFocus`: dentro un foglio apre la tastiera **prima**
               // che si sia visto cosa c'e' dentro, e su uno schermo stretto la
@@ -274,11 +274,11 @@ export function SceltaCategoria({
               // guardare l'elenco lo vede.
             />
             <label className="block">
-              <span className="text-[12px] text-testo-2">dove</span>
+              <span className="text-min text-testo-2">dove</span>
               <select
                 value={dentro}
                 onChange={(e) => setDentro(e.target.value)}
-                className="min-h-11 w-full rounded-controllo bg-s3 px-3 text-[15px]"
+                className="min-h-11 w-full rounded-controllo bg-s3 px-3 text-corpo"
                 disabled={inCorso}
               >
                 <option value="">di primo livello</option>
@@ -289,7 +289,7 @@ export function SceltaCategoria({
                 ))}
               </select>
             </label>
-            <p className="text-[12px] text-testo-3">
+            <p className="text-min text-testo-3">
               Appena creata viene <strong>scelta</strong> qui: per assegnarla serve
               &laquo;Salva&raquo;, come per ogni altra. Se esiste gi&agrave; con lo stesso nome
               nello stesso posto, si usa quella.
@@ -299,7 +299,7 @@ export function SceltaCategoria({
                 type="button"
                 onClick={() => void creaEAssegna()}
                 disabled={inCorso || nuova.trim() === ''}
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-corpo font-semibold text-accento-testo disabled:opacity-40"
               >
                 {inCorso ? '…' : 'Crea e scegli'}
               </button>
@@ -307,7 +307,7 @@ export function SceltaCategoria({
                 type="button"
                 onClick={() => setCreando(false)}
                 disabled={inCorso}
-                className="inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 px-3.5 text-[13px] font-medium"
+                className="inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 px-3.5 text-sec font-medium"
               >
                 Annulla
               </button>
@@ -320,7 +320,7 @@ export function SceltaCategoria({
               value={cerca}
               onChange={(e) => setCerca(e.target.value)}
               placeholder="cerca una categoria"
-              className="mb-2 min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
+              className="mb-2 min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-corpo placeholder:text-testo-3"
             />
 
             {/* Il posto in cui ci si accorge che una categoria manca e' questo:
@@ -333,15 +333,15 @@ export function SceltaCategoria({
                 setCreando(true);
                 setNuova(cerca.trim());
               }}
-              className="mb-1 flex min-h-12 w-full items-center gap-2 text-left text-[15px] text-accento"
+              className="mb-1 flex min-h-12 w-full items-center gap-2 text-left text-corpo text-accento"
             >
-              <span aria-hidden="true" className="text-[19px] leading-none">
+              <span aria-hidden="true" className="text-sez leading-none">
                 +
               </span>
               {cerca.trim() === '' ? 'Nuova categoria' : `Crea «${cerca.trim()}»`}
             </button>
 
-            <ul className="elenco text-[15px]">
+            <ul className="elenco text-corpo">
               <Riga
                 testo="senza categoria"
                 scelta={scelto === ''}
@@ -359,7 +359,7 @@ export function SceltaCategoria({
             </ul>
 
             {viste.length === 0 && (
-              <p className="py-6 text-center text-[14px] text-testo-2">
+              <p className="py-6 text-center text-sec text-testo-2">
                 Nessuna categoria con questo nome.
               </p>
             )}
@@ -382,7 +382,7 @@ export function SceltaCategoria({
                 type="button"
                 onClick={() => void cambia(scelto)}
                 disabled={inCorso || scelto === valore}
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo bg-accento text-corpo font-semibold text-accento-testo disabled:opacity-40"
               >
                 {inCorso ? '…' : scelto === valore ? 'Nessuna modifica' : 'Salva'}
               </button>
@@ -394,7 +394,7 @@ export function SceltaCategoria({
                   setCerca('');
                 }}
                 disabled={inCorso}
-                className="inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 px-3.5 text-[13px] font-medium"
+                className="inline-flex min-h-11 items-center justify-center rounded-controllo bg-s3 px-3.5 text-sec font-medium"
               >
                 Annulla
               </button>

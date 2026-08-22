@@ -62,7 +62,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
       <NotaErrore errore={errore} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-testo-2">
+        <p className="text-sec text-testo-2">
           {visibili.length} {visibili.length === 1 ? 'avviso' : 'avvisi'}
         </p>
         {chiusi > 0 && (
@@ -79,7 +79,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
       </div>
 
       {visibili.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-filo p-6 text-sm text-testo-2">
+        <p className="rounded-lg border border-dashed border-filo p-6 text-sec text-testo-2">
           Nessun avviso. Il costo ricorrente non è cambiato e i dati arrivano.
         </p>
       ) : (
@@ -94,8 +94,8 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
                 }`}
               >
                 <p className="font-medium">{a.title}</p>
-                <p className="mt-1 text-sm">{a.body}</p>
-                <p className="mt-1 text-xs opacity-70">
+                <p className="mt-1 text-sec">{a.body}</p>
+                <p className="mt-1 text-min opacity-70">
                   {a.created_at.slice(0, 10)}
                   {a.status !== 'new' && ` · ${a.status === 'dismissed' ? 'ignorato' : 'letto'}`}
                 </p>

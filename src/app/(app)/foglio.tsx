@@ -477,8 +477,8 @@ export function Foglio({
 
           <div className="flex items-start gap-3 px-5 pt-1 pb-3">
             <div className="min-w-0 flex-1">
-              <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
-              {nota !== undefined && <p className="mt-0.5 text-[12px] text-testo-3">{nota}</p>}
+              <h2 className="text-sez font-semibold tracking-[-0.02em]">{titolo}</h2>
+              {nota !== undefined && <p className="mt-0.5 text-min text-testo-3">{nota}</p>}
             </div>
             <button
               type="button"
@@ -486,7 +486,7 @@ export function Foglio({
               className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-testo-2"
             >
               <span className="sr-only">Chiudi</span>
-              <span aria-hidden="true" className="text-[17px] leading-none">
+              <span aria-hidden="true" className="text-sez leading-none">
                 ✕
               </span>
             </button>

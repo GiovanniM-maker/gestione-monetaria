@@ -202,7 +202,7 @@ async function GiornoPerGiorno({ mese, inCorso }: { mese: string; inCorso: boole
     righe = await leggiSpesaGiornaliera(mese);
   } catch (errore) {
     return (
-      <p className="nota nota-errore text-[13px]">
+      <p className="nota nota-errore text-sec">
         Il grafico giornaliero non arriva:{' '}
         {errore instanceof Error ? errore.message : String(errore)}
       </p>
@@ -284,7 +284,7 @@ async function Composizione({ mese, finestra }: { mese: string; finestra: Finest
             }))}
             totale={totale}
           />
-          <ul className="elenco w-full min-w-0 flex-1 text-[15px]">
+          <ul className="elenco w-full min-w-0 flex-1 text-corpo">
             {voci.map((v) => {
               const residuale = v.slug === 'non classificato';
               return (
@@ -307,7 +307,7 @@ async function Composizione({ mese, finestra }: { mese: string; finestra: Finest
                     </span>
                     {/* La quota in grigio neutro: e' contesto, non un dato di
                         classe (docs/aspetto.md §4.4). */}
-                    <span className="cifra w-12 shrink-0 text-right text-[13px] text-testo-3">
+                    <span className="cifra w-12 shrink-0 text-right text-sec text-testo-3">
                       {quotaPercentuale(v.valore, totale).toFixed(0)}%
                     </span>
                     <span className="cifra shrink-0 whitespace-nowrap">
@@ -372,8 +372,8 @@ function Anello({
         </g>
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="cifra text-sm font-semibold">{formattaEuro(totale)}</span>
-        <span className="text-[10px] text-testo-3">nel mese</span>
+        <span className="cifra text-sec font-semibold">{formattaEuro(totale)}</span>
+        <span className="text-eti text-testo-3">nel mese</span>
       </div>
     </div>
   );
@@ -439,7 +439,7 @@ async function NelTempo({
         nome={nome}
         opzioni={opzioni}
       >
-        <p className="nota nota-errore text-[13px]">
+        <p className="nota nota-errore text-sec">
           L&rsquo;andamento non arriva: {errore instanceof Error ? errore.message : String(errore)}
         </p>
       </SezioneNelTempo>
@@ -457,7 +457,7 @@ async function NelTempo({
       opzioni={opzioni}
     >
       {ultime.length < 2 ? (
-        <p className="px-1 text-[13px] text-testo-3">
+        <p className="px-1 text-sec text-testo-3">
           Non ci sono abbastanza mesi con dei dati per disegnare {nome.toLowerCase()}.
         </p>
       ) : (
@@ -562,21 +562,21 @@ async function RicorrenteAnnuale() {
       <h2 className="eti px-1">Costi ricorrenti, su un anno</h2>
       <div className="grid grid-cols-2 gap-3">
         <Link href="/ricorrente/abbonamento" className="scheda p-4">
-          <p className="text-[13px] text-testo-2">Abbonamenti</p>
-          <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
+          <p className="text-sec text-testo-2">Abbonamenti</p>
+          <p className="numerone mt-1.5 text-sez whitespace-nowrap">
             {formattaEuro(abbonamenti * 12n)}
           </p>
-          <p className="mt-1.5 text-[12px] text-testo-3">all&rsquo;anno, al ritmo di oggi</p>
+          <p className="mt-1.5 text-min text-testo-3">all&rsquo;anno, al ritmo di oggi</p>
         </Link>
         <Link href="/ricorrente/abitudine" className="scheda p-4">
-          <p className="text-[13px] text-testo-2">Abitudini</p>
-          <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
+          <p className="text-sec text-testo-2">Abitudini</p>
+          <p className="numerone mt-1.5 text-sez whitespace-nowrap">
             {formattaEuro(abitudini * 12n)}
           </p>
-          <p className="mt-1.5 text-[12px] text-testo-3">all&rsquo;anno, al ritmo di oggi</p>
+          <p className="mt-1.5 text-min text-testo-3">all&rsquo;anno, al ritmo di oggi</p>
         </Link>
       </div>
-      <p className="px-1 text-[12px] text-testo-3">
+      <p className="px-1 text-min text-testo-3">
         Dodici volte il costo mensile misurato su tutto lo storico — un ritmo, non una previsione.
       </p>
 
@@ -714,14 +714,14 @@ async function Insight({ mese, totali }: { mese: string; totali: number }) {
         {carte.slice(0, 4).map((c) =>
           c.href === null ? (
             <div key={c.titolo} className="scheda p-4">
-              <p className="text-[14px] font-semibold">{c.titolo}</p>
-              <p className="mt-1 text-[13px] text-testo-2">{c.corpo}</p>
+              <p className="text-sec font-semibold">{c.titolo}</p>
+              <p className="mt-1 text-sec text-testo-2">{c.corpo}</p>
             </div>
           ) : (
             <Link key={c.titolo} href={c.href} className="scheda flex items-center gap-3 p-4">
               <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-semibold">{c.titolo}</span>
-                <span className="mt-1 block text-[13px] text-testo-2">{c.corpo}</span>
+                <span className="block text-sec font-semibold">{c.titolo}</span>
+                <span className="mt-1 block text-sec text-testo-2">{c.corpo}</span>
               </span>
               <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
             </Link>

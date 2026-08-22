@@ -59,10 +59,10 @@ export function SelettoreMetrica({
       <button
         type="button"
         onClick={() => setAperto(true)}
-        className="capsula text-[14px] font-semibold"
+        className="capsula text-sec font-semibold"
       >
         <span className="max-w-48 truncate">{nome}</span>
-        <span aria-hidden="true" className="text-[12px] font-normal text-testo-3">
+        <span aria-hidden="true" className="text-min font-normal text-testo-3">
           ⌄
         </span>
       </button>
@@ -77,7 +77,7 @@ export function SelettoreMetrica({
             aria-label="Cerca fra le metriche"
           />
         </div>
-        <ul className="elenco text-[15px]">
+        <ul className="elenco text-corpo">
           {visibili.map((o) => (
             <li key={o.token}>
               {o.gruppo !== undefined && pulita === '' && (
@@ -99,7 +99,7 @@ export function SelettoreMetrica({
             </li>
           ))}
           {visibili.length === 0 && (
-            <li className="py-3 text-center text-[13px] text-testo-2">
+            <li className="py-3 text-center text-sec text-testo-2">
               Niente contiene &laquo;{ricerca.trim()}&raquo;. Prova con meno lettere.
             </li>
           )}

@@ -138,7 +138,7 @@ export function PannelloObiettivi({
       {obiettivi.length === 0 ? (
         /* Un vuoto che spiega invece di dire «nessun risultato»: qui non manca
            niente, semplicemente non ne hai ancora dichiarato uno. */
-        <p className="scheda p-5 text-[13px] text-testo-2">
+        <p className="scheda p-5 text-sec text-testo-2">
           Non ne hai dichiarato nessuno. Un obiettivo non cambia nessun numero: serve al copilota
           per sapere <strong>cosa stai cercando di ottenere</strong>, e darti un consiglio che
           riguarda te invece di un consiglio da manuale.
@@ -149,15 +149,15 @@ export function PannelloObiettivi({
             <li key={o.id} className="py-3">
               <div className="flex items-start gap-3">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px]">{descriviObiettivo(o)}</span>
-                  <span className="mt-0.5 block text-[12px] text-testo-3">
+                  <span className="block text-corpo">{descriviObiettivo(o)}</span>
+                  <span className="mt-0.5 block text-min text-testo-3">
                     {descriviScadenza(o)}
                     {o.nota !== null && ` · ${o.nota}`}
                   </span>
                 </span>
 
                 {o.stato === 'scaduto' && (
-                  <span className="shrink-0 rounded-full bg-s3 px-2 py-0.5 text-[11px] text-testo-2">
+                  <span className="shrink-0 rounded-full bg-s3 px-2 py-0.5 text-eti text-testo-2">
                     scaduto
                   </span>
                 )}
@@ -202,7 +202,7 @@ export function PannelloObiettivi({
       >
         <div className="space-y-3">
           <label className="block">
-            <span className="text-[12px] text-testo-2">che tipo</span>
+            <span className="text-min text-testo-2">che tipo</span>
             <select
               value={tipo}
               onChange={(e) => {
@@ -224,11 +224,11 @@ export function PannelloObiettivi({
               ))}
             </select>
           </label>
-          <p className="text-[12px] text-testo-3">{TIPI.find((t) => t.valore === tipo)?.spiega}</p>
+          <p className="text-min text-testo-3">{TIPI.find((t) => t.valore === tipo)?.spiega}</p>
 
           {VUOLE_VALORE[tipo] && (
             <label className="block">
-              <span className="text-[12px] text-testo-2">quanto, in euro</span>
+              <span className="text-min text-testo-2">quanto, in euro</span>
               <input
                 value={valore}
                 onChange={(e) => setValore(e.target.value.replace(/[^\d.,]/g, ''))}
@@ -242,7 +242,7 @@ export function PannelloObiettivi({
 
           {VUOLE_BERSAGLIO[tipo] && (
             <label className="block">
-              <span className="text-[12px] text-testo-2">su cosa</span>
+              <span className="text-min text-testo-2">su cosa</span>
               <select
                 value={bersaglio}
                 onChange={(e) => setBersaglio(e.target.value)}
@@ -269,7 +269,7 @@ export function PannelloObiettivi({
           )}
 
           <label className="block">
-            <span className="text-[12px] text-testo-2">per quanto vale</span>
+            <span className="text-min text-testo-2">per quanto vale</span>
             <select
               value={mesi}
               onChange={(e) => setMesi(Number(e.target.value))}
@@ -283,13 +283,13 @@ export function PannelloObiettivi({
               ))}
             </select>
           </label>
-          <p className="text-[12px] text-testo-3">
+          <p className="text-min text-testo-3">
             Alla scadenza non sparisce: resta qui, marcato, e il copilota ti chiede se vale ancora
             invece di darlo per buono.
           </p>
 
           <label className="block">
-            <span className="text-[12px] text-testo-2">perché (facoltativo)</span>
+            <span className="text-min text-testo-2">perché (facoltativo)</span>
             <input
               value={nota}
               onChange={(e) => setNota(e.target.value.slice(0, 280))}

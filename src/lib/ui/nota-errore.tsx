@@ -36,15 +36,15 @@ export function NotaErrore({
 
   return (
     <div className="nota nota-errore space-y-2" role="alert">
-      <p className="text-[14px] font-semibold">{errore.titolo}</p>
-      {!compatta && <p className="text-[13px] text-testo-2">{errore.spiegazione}</p>}
+      <p className="text-sec font-semibold">{errore.titolo}</p>
+      {!compatta && <p className="text-sec text-testo-2">{errore.spiegazione}</p>}
 
       {(errore.rientra || (errore.riprova && onRiprova !== undefined)) && (
         <div className="flex flex-wrap gap-2 pt-0.5">
           {errore.rientra && (
             <Link
               href={`/login?ritorno=${encodeURIComponent(ritorno)}`}
-              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-[13px] font-medium sm:min-h-9"
+              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-sec font-medium sm:min-h-9"
             >
               Rientra
             </Link>
@@ -53,7 +53,7 @@ export function NotaErrore({
             <button
               type="button"
               onClick={onRiprova}
-              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-[13px] font-medium sm:min-h-9"
+              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-sec font-medium sm:min-h-9"
             >
               Riprova
             </button>
@@ -63,10 +63,10 @@ export function NotaErrore({
 
       {errore.dettaglio !== null && !compatta && (
         <details>
-          <summary className="min-h-11 cursor-pointer text-[12px] text-testo-2 sm:min-h-0">
+          <summary className="min-h-11 cursor-pointer text-min text-testo-2 sm:min-h-0">
             dettagli tecnici
           </summary>
-          <p className="mt-1 font-mono text-[11px] break-words text-testo-2">{errore.dettaglio}</p>
+          <p className="mt-1 font-mono text-eti break-words text-testo-2">{errore.dettaglio}</p>
         </details>
       )}
     </div>

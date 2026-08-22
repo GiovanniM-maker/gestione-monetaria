@@ -110,7 +110,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
   return (
     <div className="space-y-4">
       <NotaErrore errore={errore} />
-      {esito !== null && <p className="nota nota-esito text-[14px]">{esito}</p>}
+      {esito !== null && <p className="nota nota-esito text-sec">{esito}</p>}
 
       <button
         type="button"
@@ -132,8 +132,8 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
                 href={`/categoria/${c.id}`}
                 className="flex min-h-12 min-w-0 flex-1 flex-col justify-center"
               >
-                <span className="truncate text-[15px]">{c.nome}</span>
-                <span className="truncate text-[12px] text-testo-3">
+                <span className="truncate text-corpo">{c.nome}</span>
+                <span className="truncate text-min text-testo-3">
                   {c.esercenti === null || c.movimenti === null ? (
                     <span title="conteggi non disponibili">— · —</span>
                   ) : (
@@ -166,7 +166,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
               <button
                 type="button"
                 aria-label={`aggiungi una sottocategoria dentro ${c.nome}`}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-[19px] text-testo-2"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-sez text-testo-2"
                 disabled={inCorso}
                 onClick={() => setDaCreare({ padre: c })}
               >
@@ -175,7 +175,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
               <button
                 type="button"
                 aria-label={`elimina ${c.nome}`}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-[15px] text-testo-3"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-corpo text-testo-3"
                 disabled={inCorso}
                 onClick={() => {
                   setDaEliminare(c);
@@ -209,7 +209,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
       >
         {daEliminare !== null && (
           <div className="space-y-3">
-            <p className="text-[14px] text-testo-2">
+            <p className="text-sec text-testo-2">
               {contenuto === null ? (
                 <>
                   <strong className="text-testo">Non so quanto contiene</strong> — i conteggi non
@@ -382,7 +382,7 @@ function Creazione({
           autoFocus
         />
         <label className="block">
-          <span className="text-[12px] text-testo-2">discrezionalità predefinita</span>
+          <span className="text-min text-testo-2">discrezionalità predefinita</span>
           <select
             value={discrezionalita}
             onChange={(e) => setDiscrezionalita(e.target.value)}
@@ -397,7 +397,7 @@ function Creazione({
             ))}
           </select>
         </label>
-        <p className="text-[12px] text-testo-3">
+        <p className="text-min text-testo-3">
           La discrezionalità predefinita si applica agli esercenti che finiranno qui e non hanno una
           scelta propria. Si può lasciare vuota e decidere caso per caso.
         </p>

@@ -49,21 +49,21 @@ async function prova<T>(chiamata: () => Promise<T>): Promise<Esito<T>> {
 function Riquadro({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
     <section className="scheda p-4">
-      <h2 className="mb-3 text-sm font-semibold tracking-tight">{titolo}</h2>
+      <h2 className="mb-3 text-sec font-semibold tracking-tight">{titolo}</h2>
       {children}
     </section>
   );
 }
 
 function Errore({ children }: { children: React.ReactNode }) {
-  return <p className="nota nota-errore text-[14px] break-words">{children}</p>;
+  return <p className="nota nota-errore text-sec break-words">{children}</p>;
 }
 
 function Grezzo({ etichetta, valore }: { etichetta: string; valore: unknown }) {
   return (
     <details className="mt-1">
-      <summary className="cursor-pointer text-xs text-testo-2">{etichetta}</summary>
-      <pre className="mt-1 max-h-72 overflow-auto rounded bg-s3 p-2 text-[11px] leading-snug">
+      <summary className="cursor-pointer text-min text-testo-2">{etichetta}</summary>
+      <pre className="mt-1 max-h-72 overflow-auto rounded bg-s3 p-2 text-eti leading-snug">
         {jsonRedatto(valore)}
       </pre>
     </details>
@@ -92,12 +92,12 @@ function Configurazione() {
   ];
 
   return (
-    <ul className="space-y-1 text-sm">
+    <ul className="space-y-1 text-sec">
       {righe.map((riga) => (
         <li key={riga.nome} className="flex gap-2">
           <span aria-hidden>{riga.ok ? '✅' : '❌'}</span>
           <span>
-            <span className="font-mono text-xs">{riga.nome}</span>{' '}
+            <span className="font-mono text-min">{riga.nome}</span>{' '}
             <span className="text-testo-2">· {riga.dettaglio}</span>
           </span>
         </li>
@@ -126,7 +126,7 @@ async function Connettori() {
       {revolut.map((aspsp, indice) => (
         <li
           key={`${aspsp.name}-${aspsp.country}-${indice}`}
-          className="flex items-center justify-between gap-4 text-sm"
+          className="flex items-center justify-between gap-4 text-sec"
         >
           <span>
             {aspsp.name} <span className="text-testo-2">({aspsp.country})</span>
@@ -151,7 +151,7 @@ async function Connettori() {
             )}
             <button
               type="submit"
-              className="rounded-md bg-accento px-3 py-1 text-xs font-medium text-accento-testo"
+              className="rounded-md bg-accento px-3 py-1 text-min font-medium text-accento-testo"
             >
               Autorizza
             </button>
@@ -169,7 +169,7 @@ async function IntestazioneConto({ accountUid }: { accountUid: string }) {
   }
   return (
     <>
-      <p className="text-sm font-medium">{describeAccount(esito.valore)}</p>
+      <p className="text-sec font-medium">{describeAccount(esito.valore)}</p>
       <Grezzo etichetta="risposta grezza · details" valore={esito.valore} />
     </>
   );
@@ -186,9 +186,9 @@ async function Saldi({ accountUid }: { accountUid: string }) {
   return (
     <>
       {saldi.length === 0 ? (
-        <p className="text-xs text-testo-2">Nessun saldo nella risposta.</p>
+        <p className="text-min text-testo-2">Nessun saldo nella risposta.</p>
       ) : (
-        <ul className="text-sm">
+        <ul className="text-sec">
           {saldi.map((saldo, indice) => (
             <li key={indice}>
               <span className="font-medium">
@@ -213,12 +213,12 @@ async function UltimeTransazioni({ accountUid }: { accountUid: string }) {
 
   return (
     <>
-      <p className="text-xs text-testo-2">
+      <p className="text-min text-testo-2">
         {movimenti.length} transazioni nella prima pagina
         {typeof risposta?.continuation_key === 'string' ? ' · altre pagine disponibili' : ''}
       </p>
       {movimenti.length > 0 && (
-        <ul className="mt-1 space-y-0.5 font-mono text-xs">
+        <ul className="mt-1 space-y-0.5 font-mono text-min">
           {movimenti.slice(0, 5).map((t, indice) => (
             <li key={indice}>
               {t.booking_date ?? '—'} · {t.credit_debit_indicator ?? '—'} ·{' '}
@@ -236,7 +236,7 @@ function Conto({ accountUid }: { accountUid: string }) {
   return (
     <li className="space-y-1 border-t border-filo pt-3 first:border-0 first:pt-0">
       <IntestazioneConto accountUid={accountUid} />
-      <p className="font-mono text-xs break-all text-testo-2">uid {accountUid}</p>
+      <p className="font-mono text-min break-all text-testo-2">uid {accountUid}</p>
       <Saldi accountUid={accountUid} />
       <UltimeTransazioni accountUid={accountUid} />
     </li>
@@ -270,7 +270,7 @@ async function SessioneCorrente() {
 
   if (sessionId === undefined) {
     return (
-      <p className="text-sm text-testo-2">
+      <p className="text-sec text-testo-2">
         Nessuna sessione attiva. Avvia un&rsquo;autorizzazione qui sopra.
       </p>
     );
@@ -293,7 +293,7 @@ async function SessioneCorrente() {
 
   return (
     <div className="space-y-3">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sec">
         <dt className="text-testo-2">Banca</dt>
         <dd>
           {testo(sessione.aspsp?.name)} ({testo(sessione.aspsp?.country)})
@@ -334,11 +334,11 @@ export default async function DebugEbPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.03em]">
+        <h1 className="flex items-center gap-2.5 text-titolo font-bold tracking-[-0.03em]">
           <img src="/illustrazioni/consenso.webp" alt="" width={30} height={30} />
           Debug Enable Banking
         </h1>
-        <p className="mt-1 text-[13px] text-testo-2">
+        <p className="mt-1 text-sec text-testo-2">
           Verifica della Fase 1. Nessun dato viene salvato: quello che vedi arriva direttamente
           dall&rsquo;API a ogni caricamento della pagina. Gli IBAN sono mascherati anche nei dump
           grezzi.
@@ -346,9 +346,7 @@ export default async function DebugEbPage({
       </div>
 
       {errore !== undefined && <Errore>{errore}</Errore>}
-      {ok !== undefined && (
-        <p className="nota nota-esito text-[14px]">Autorizzazione completata.</p>
-      )}
+      {ok !== undefined && <p className="nota nota-esito text-sec">Autorizzazione completata.</p>}
 
       <Riquadro titolo="Configurazione">
         <Configurazione />

@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Ingestion' };
 function Riquadro({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
     <section className="scheda p-4">
-      <h2 className="mb-3 text-sm font-semibold tracking-tight">{titolo}</h2>
+      <h2 className="mb-3 text-sec font-semibold tracking-tight">{titolo}</h2>
       {children}
     </section>
   );
@@ -83,8 +83,8 @@ export default async function DebugSyncPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Ingestion</h1>
-        <p className="mt-1 text-[13px] text-testo-2">
+        <h1 className="text-titolo font-bold tracking-[-0.03em]">Ingestion</h1>
+        <p className="mt-1 text-sec text-testo-2">
           Fase 2. I payload arrivano integrali in <code>raw_transactions</code>, che non viene mai
           modificata ne&rsquo; cancellata. La normalizzazione e&rsquo; lavoro della Fase 3.
         </p>
@@ -92,11 +92,11 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo="Connessioni">
         {elencoConnessioni.length === 0 ? (
-          <p className="text-sm text-testo-2">
+          <p className="text-sec text-testo-2">
             Nessuna connessione. Registra i conti dal pannello qui sotto.
           </p>
         ) : (
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-sec">
             {elencoConnessioni.map((c) => (
               <li key={c.id}>
                 <span className="font-medium">
@@ -115,9 +115,9 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo={`Conti (${elencoConti.length})`}>
         {elencoConti.length === 0 ? (
-          <p className="text-sm text-testo-2">Nessun conto registrato.</p>
+          <p className="text-sec text-testo-2">Nessun conto registrato.</p>
         ) : (
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-sec">
             {elencoConti.map((c) => (
               <li key={c.id}>
                 <span className="font-medium">{c.name ?? 'Conto'}</span>
@@ -138,13 +138,13 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo={`Uscite per mese · ${movimenti ?? 0} movimenti normalizzati`}>
         {mesi.length === 0 ? (
-          <p className="text-sm text-testo-2">
+          <p className="text-sec text-testo-2">
             Nessun movimento normalizzato. Premi <strong>3 · Normalizza</strong>.
           </p>
         ) : (
           <>
-            <table className="w-full max-w-md text-left text-sm">
-              <thead className="text-xs text-testo-2">
+            <table className="w-full max-w-md text-left text-sec">
+              <thead className="text-min text-testo-2">
                 <tr>
                   <th className="py-1 pr-4">mese</th>
                   <th className="py-1 pr-4 text-right">uscite</th>
@@ -166,7 +166,7 @@ export default async function DebugSyncPage() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-xs text-testo-2">
+            <p className="mt-2 text-min text-testo-2">
               Solo uscite reali: esclusi giroconti, rimborsi, conti fuori dai totali e movimenti a
               importo zero. E&rsquo; il numero da confrontare con l&rsquo;app della banca.
             </p>
@@ -181,7 +181,7 @@ export default async function DebugSyncPage() {
           risposta e' una riga sola. */}
       <Riquadro titolo="Lo scheduler">
         {cron === undefined ? (
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-sec">
             <p className="nota nota-avviso">
               <strong>Il cron non ha mai girato.</strong> Nessuna riga con{' '}
               <code>trigger = cron</code> in <code>sync_runs</code>.
@@ -202,7 +202,7 @@ export default async function DebugSyncPage() {
             </p>
           </div>
         ) : (
-          <p className="text-sm">
+          <p className="text-sec">
             Ultima invocazione dello scheduler: <strong>{quando(cron.started_at)}</strong>
             {dalCron !== null && ` (${dalCron})`} · {cron.status} · {cron.rows_new} righe nuove
           </p>
@@ -211,10 +211,10 @@ export default async function DebugSyncPage() {
 
       <Riquadro titolo={`Righe grezze: ${righeGrezze ?? 0}`}>
         {elencoCorse.length === 0 ? (
-          <p className="text-sm text-testo-2">Nessuna sincronizzazione eseguita.</p>
+          <p className="text-sec text-testo-2">Nessuna sincronizzazione eseguita.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-min">
               <thead className="text-testo-2">
                 <tr>
                   <th className="py-1 pr-3">avvio</th>

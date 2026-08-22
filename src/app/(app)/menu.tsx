@@ -98,7 +98,7 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
         className="tondo -mr-1"
       >
         <span className="sr-only">Apri il menu</span>
-        <span aria-hidden="true" className="text-[17px] leading-none text-testo-2">
+        <span aria-hidden="true" className="text-sez leading-none text-testo-2">
           ☰
         </span>
       </button>
@@ -107,7 +107,7 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
         <nav id="menu-principale" className="space-y-5">
           {GRUPPI.map((g) => (
             <div key={g.titolo}>
-              <p className="px-1 pb-1 text-[11px] font-medium tracking-wide text-testo-3 uppercase">
+              <p className="px-1 pb-1 text-eti font-medium tracking-wide text-testo-3 uppercase">
                 {g.titolo}
               </p>
               <ul className="scheda elenco px-3">
@@ -120,11 +120,9 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
                         aria-current={qui ? 'page' : undefined}
                         className="flex min-h-12 flex-col justify-center py-1.5"
                       >
-                        <span className={`text-[15px] ${qui ? 'font-semibold' : ''}`}>
-                          {v.nome}
-                        </span>
+                        <span className={`text-corpo ${qui ? 'font-semibold' : ''}`}>{v.nome}</span>
                         {v.nota !== undefined && (
-                          <span className="text-[12px] text-testo-3">{v.nota}</span>
+                          <span className="text-min text-testo-3">{v.nota}</span>
                         )}
                       </Link>
                     </li>
@@ -147,7 +145,7 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
               piu' visibile della schermata. Qui accanto all'indirizzo, che e'
               anche il solo posto dove serve sapere con chi si e' entrati. */}
           <div className="flex items-center justify-between gap-3 border-t border-filo pt-4">
-            <span className="min-w-0 truncate text-[12px] text-testo-3">{email ?? ''}</span>
+            <span className="min-w-0 truncate text-min text-testo-3">{email ?? ''}</span>
             <SignOutButton />
           </div>
         </nav>
@@ -186,14 +184,14 @@ function Cassetto({
          dicono solo da che parte se ne vanno. */
       testata={
         <div className="mb-4 flex items-center justify-between px-4">
-          <span className="text-[13px] font-medium text-testo-3">Gestione monetaria</span>
+          <span className="text-sec font-medium text-testo-3">Gestione monetaria</span>
           <button
             type="button"
             onClick={onChiudi}
             className="-mr-2 inline-flex size-11 items-center justify-center rounded-full text-testo-2"
           >
             <span className="sr-only">Chiudi il menu</span>
-            <span aria-hidden="true" className="text-[17px] leading-none">
+            <span aria-hidden="true" className="text-sez leading-none">
               ✕
             </span>
           </button>

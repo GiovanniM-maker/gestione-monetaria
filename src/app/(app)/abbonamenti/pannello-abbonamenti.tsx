@@ -124,7 +124,7 @@ export function PannelloAbbonamenti({
       {/* I DUE NUMERI                                                    */}
       {/* -------------------------------------------------------------- */}
       {voci.length === 0 ? (
-        <p className="scheda p-6 text-center text-[14px] text-testo-2">
+        <p className="scheda p-6 text-center text-sec text-testo-2">
           Nessuna ricorrenza rilevata. Il rilevamento si lancia dal pannello di{' '}
           <a className="underline" href="/debug/sync">
             sincronizzazione
@@ -177,7 +177,7 @@ export function PannelloAbbonamenti({
       {/* COSA RESTA FUORI                                                */}
       {/* -------------------------------------------------------------- */}
       {escluse.length > 0 && (
-        <div className="nota nota-avviso text-[13px]">
+        <div className="nota nota-avviso text-sec">
           <p className="font-medium text-attenzione">Cosa i numeri qui sopra non contano</p>
           <ul className="mt-1 space-y-0.5 text-attenzione">
             {escluse.map((e) => (
@@ -209,7 +209,7 @@ export function PannelloAbbonamenti({
       {/* -------------------------------------------------------------- */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-medium">
+          <h2 className="text-sec font-medium">
             {visibili.length} {visibili.length === 1 ? 'ricorrenza' : 'ricorrenze'}
           </h2>
           <label className={ETICHETTA_CASELLA}>
@@ -245,7 +245,7 @@ export function PannelloAbbonamenti({
         </ul>
       </div>
 
-      <div className="space-y-3 scheda p-3 text-xs text-testo-2">
+      <div className="space-y-3 scheda p-3 text-min text-testo-2">
         <p>
           <strong>Da dove viene il numero «al mese».</strong> Per un canone davvero fisso &egrave;
           il canone stesso: Netflix dice 6,99, che &egrave; la cifra che riconosci. Per tutto il
@@ -296,11 +296,11 @@ function Scheda({
         <span className={`font-medium ${disdetto ? 'line-through' : ''}`}>{a.esercente}</span>
         <span className="shrink-0 text-right tabular-nums">
           {euro(a.costo_mensile)}
-          <span className="text-xs font-normal text-testo-2">/mese</span>
+          <span className="text-min font-normal text-testo-2">/mese</span>
         </span>
       </div>
 
-      <p className="mt-0.5 text-xs text-testo-2">
+      <p className="mt-0.5 text-min text-testo-2">
         {a.tipo} · {a.categoria ?? 'senza categoria'} · {a.discrezionalita ?? 'non classificato'}
         {a.status !== 'active' && ` · ${a.status === 'lapsed' ? 'fermo' : 'disdetto'}`}
       </p>
@@ -310,7 +310,7 @@ function Scheda({
         corte, e impilarle in una sola colonna allungherebbe la scheda al punto
         da non farne stare due sullo schermo.
       */}
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-min sm:grid-cols-4">
         <Dato voce="cadenza" valore={CADENZE[a.cadence] ?? a.cadence} />
         <Dato voce="prezzo" valore={euro(a.typical_amount)} />
         <Dato
@@ -393,12 +393,12 @@ function Blocco({
     <div id={id} className="scroll-mt-4 space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{titolo}</h2>
-          <p className="text-[13px] text-testo-3">{sottotitolo}</p>
+          <h2 className="text-sez font-semibold tracking-[-0.02em]">{titolo}</h2>
+          <p className="text-sec text-testo-3">{sottotitolo}</p>
         </div>
-        <p className="numerone text-[22px] whitespace-nowrap">
+        <p className="numerone text-titolo whitespace-nowrap">
           {formattaEuro(totale)}
-          <span className="text-[12px] font-normal text-testo-3">/mese</span>
+          <span className="text-min font-normal text-testo-3">/mese</span>
         </p>
       </div>
       {/* Il pallino della classe e' lo stesso del cruscotto e della barra
@@ -407,7 +407,7 @@ function Blocco({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {voci.map((v) => (
           <div key={`${v.discrezionalita}-${v.contesto}`} className="scheda p-4">
-            <p className="flex items-center gap-1.5 text-[12px] text-testo-2">
+            <p className="flex items-center gap-1.5 text-min text-testo-2">
               <span
                 aria-hidden="true"
                 className="size-2 shrink-0 rounded-full"
@@ -415,11 +415,11 @@ function Blocco({
               />
               <span className="min-w-0 truncate">{v.classeNome}</span>
             </p>
-            <p className="text-[12px] text-testo-3">{v.contesto}</p>
-            <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
+            <p className="text-min text-testo-3">{v.contesto}</p>
+            <p className="numerone mt-1.5 text-sez whitespace-nowrap">
               {formattaEuro(v.costoMensile)}
             </p>
-            <p className="mt-0.5 text-[12px] text-testo-3">
+            <p className="mt-0.5 text-min text-testo-3">
               {v.ricorrenze} {v.ricorrenze === 1 ? 'voce' : 'voci'}
             </p>
           </div>

@@ -101,7 +101,7 @@ export function Stella({
       </span>
       <span
         aria-hidden="true"
-        className={`text-[18px] leading-none ${
+        className={`text-sez leading-none ${
           errore !== null ? 'text-allarme' : salvata ? 'text-accento' : 'text-testo-3'
         }`}
       >
@@ -129,7 +129,7 @@ export function NotaScadenza({ id, giorni }: { id: string; giorni: number }) {
   }
 
   return (
-    <p className="nota nota-avviso flex items-center gap-3 text-[13px]">
+    <p className="nota nota-avviso flex items-center gap-3 text-sec">
       <span className="min-w-0 flex-1">
         Si elimina automaticamente{' '}
         {giorni === 0 ? 'oggi' : giorni === 1 ? 'domani' : `tra ${giorni} giorni`}.
@@ -181,7 +181,7 @@ export function MenuConversazione({
     <>
       <button type="button" onClick={() => setAperto(true)} className="tondo shrink-0">
         <span className="sr-only">Gestisci la conversazione</span>
-        <span aria-hidden="true" className="text-[17px] leading-none text-testo-2">
+        <span aria-hidden="true" className="text-sez leading-none text-testo-2">
           •••
         </span>
       </button>
@@ -215,7 +215,7 @@ export function MenuConversazione({
               });
             }}
           >
-            <label className="block text-[13px] text-testo-2" htmlFor="titolo-conversazione">
+            <label className="block text-sec text-testo-2" htmlFor="titolo-conversazione">
               Titolo
             </label>
             <input
@@ -234,7 +234,7 @@ export function MenuConversazione({
           <div className="border-t border-filo pt-4">
             {daConfermare ? (
               <div className="space-y-2">
-                <p className="text-[13px] text-testo-2">
+                <p className="text-sec text-testo-2">
                   Elimino la conversazione e tutti i suoi messaggi? Non si torna indietro.
                 </p>
                 <div className="flex gap-2">
@@ -262,7 +262,7 @@ export function MenuConversazione({
             ) : (
               <button
                 type="button"
-                className="inline-flex min-h-11 items-center text-[14px] font-medium text-allarme"
+                className="inline-flex min-h-11 items-center text-sec font-medium text-allarme"
                 onClick={() => setDaConfermare(true)}
               >
                 Elimina la conversazione

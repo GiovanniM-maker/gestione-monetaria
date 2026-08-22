@@ -108,7 +108,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
   return (
     <div className="space-y-4">
       <NotaErrore errore={errore} />
-      {esito !== null && <p className="nota nota-esito text-[14px]">{esito}</p>}
+      {esito !== null && <p className="nota nota-esito text-sec">{esito}</p>}
 
       <button type="button" className={BOTTONE} onClick={() => apri(null)} disabled={inCorso}>
         + Nuova classe
@@ -125,13 +125,13 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
                   style={{ background: TAVOLOZZA_CLASSI[c.colore] ?? 'var(--neutro)' }}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px]">
+                  <span className="block truncate text-corpo">
                     {c.nome}
                     {c.is_archived && (
-                      <span className="ml-2 text-[12px] text-testo-3">archiviata</span>
+                      <span className="ml-2 text-min text-testo-3">archiviata</span>
                     )}
                   </span>
-                  <span className="block truncate text-[12px] text-testo-3">
+                  <span className="block truncate text-min text-testo-3">
                     {c.nel_ricorrente ? 'nel totale del ricorrente' : 'fuori dal totale'}
                     {c.descrizione !== null && ` · ${c.descrizione}`}
                   </span>
@@ -160,7 +160,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
       >
         <div className="space-y-4 p-4">
           <label className="block">
-            <span className="text-[12px] text-testo-2">nome</span>
+            <span className="text-min text-testo-2">nome</span>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
@@ -171,7 +171,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
           </label>
 
           <label className="block">
-            <span className="text-[12px] text-testo-2">cosa ci va dentro</span>
+            <span className="text-min text-testo-2">cosa ci va dentro</span>
             <input
               value={descrizione}
               onChange={(e) => setDescrizione(e.target.value)}
@@ -182,13 +182,13 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
             {/* Non e' decorazione: la legge il modello prima di proporre una
                 classificazione, e la Fase 4 ha misurato che quando gli manca
                 un'informazione se la inventa plausibile. */}
-            <span className="mt-1 block text-[12px] text-testo-3">
+            <span className="mt-1 block text-min text-testo-3">
               La legge anche il modello quando propone una classificazione.
             </span>
           </label>
 
           <div>
-            <span className="text-[12px] text-testo-2">colore</span>
+            <span className="text-min text-testo-2">colore</span>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {COLORI_CLASSE.map((k) => (
                 <button
@@ -219,7 +219,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
             />
             <span>
               Entra nel totale del costo ricorrente
-              <span className="mt-0.5 block text-[12px] text-testo-3">
+              <span className="mt-0.5 block text-min text-testo-3">
                 Toglilo per una spesa che si ripete ma che non vuoi togliere — risparmio, tasse, una
                 rata. Resta nella ripartizione con il suo numero, ma fuori dalla somma in cima.
               </span>
@@ -328,13 +328,13 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
         onChiudi={() => setDaEliminare(null)}
       >
         <div className="space-y-4 p-4">
-          <p className="text-[14px] text-testo-2">
+          <p className="text-sec text-testo-2">
             Movimenti, esercenti e categorie che usavano questa classe passano a quella che scegli.
             Comprese le righe corrette a mano: la classe che avevano non esisterà più.
           </p>
 
           <label className="block">
-            <span className="text-[12px] text-testo-2">spostale in</span>
+            <span className="text-min text-testo-2">spostale in</span>
             <select
               value={verso}
               onChange={(e) => setVerso(e.target.value)}
@@ -352,7 +352,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
             </select>
           </label>
 
-          <p className="text-[12px] text-testo-3">
+          <p className="text-min text-testo-3">
             Se lasci vuoto e la classe è ancora in uso, l’operazione si ferma senza toccare niente.
             Per smettere di usarla senza riscrivere nessuna riga, <strong>archiviala</strong>.
           </p>

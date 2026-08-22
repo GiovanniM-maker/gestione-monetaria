@@ -36,7 +36,7 @@ export default async function ReportPage() {
       <GeneraReport />
 
       {report.length === 0 ? (
-        <p className="scheda p-6 text-center text-[14px] text-testo-2">
+        <p className="scheda p-6 text-center text-sec text-testo-2">
           Nessun report. Il primo si genera qui sopra, o arriva da solo il primo del mese.
         </p>
       ) : (
@@ -48,10 +48,10 @@ export default async function ReportPage() {
                 className="flex min-h-14 items-center justify-between gap-3 py-2"
               >
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium">
+                  <span className="block text-sec font-medium">
                     {etichettaMese(meseDaData(r.period_start) ?? r.period_start)}
                   </span>
-                  <span className="text-xs text-testo-2">
+                  <span className="text-min text-testo-2">
                     scritto il {r.created_at.slice(0, 10)}
                     {r.model !== null && ` · ${r.model}`}
                   </span>

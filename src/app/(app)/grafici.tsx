@@ -127,7 +127,7 @@ export function Freccia({
 
   return (
     <span
-      className={`cifra whitespace-nowrap ${sotto ? 'block text-[12px]' : 'ml-2 text-xs'} ${colore}`}
+      className={`cifra whitespace-nowrap ${sotto ? 'block text-min' : 'ml-2 text-min'} ${colore}`}
       title={s.descrizione}
     >
       <span aria-hidden="true">{s.simbolo}</span> {s.testo}
@@ -205,7 +205,7 @@ export function BarraClassi({
             const peso = p.valore < 0n ? -p.valore : p.valore;
             const quota = totale === 0n ? 0 : Number((peso * 100n) / totale);
             return (
-              <li key={p.chiave} className="flex min-w-0 items-center gap-1.5 text-[11.5px]">
+              <li key={p.chiave} className="flex min-w-0 items-center gap-1.5 text-eti">
                 <span
                   aria-hidden="true"
                   className="size-[7px] shrink-0 rounded-full"
@@ -287,12 +287,12 @@ export function Ciambella({ voci, totale }: { voci: readonly FettaCategoria[]; t
           </g>
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="cifra text-sm font-semibold">{formattaEuro(totale)}</span>
-          <span className="text-[10px] text-testo-3">in categoria</span>
+          <span className="cifra text-sec font-semibold">{formattaEuro(totale)}</span>
+          <span className="text-eti text-testo-3">in categoria</span>
         </div>
       </div>
 
-      <ul className="elenco w-full min-w-0 flex-1 text-sm">
+      <ul className="elenco w-full min-w-0 flex-1 text-sec">
         {pezzi.map((p, i) => {
           const voce = voci[i];
           if (voce === undefined) return null;

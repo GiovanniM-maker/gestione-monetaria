@@ -14,12 +14,12 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Informativa privacy</h1>
-      <p className="mb-8 text-sm text-testo-2">Ultimo aggiornamento: agosto 2026</p>
+      <h1 className="mb-2 text-titolo font-semibold tracking-tight">Informativa privacy</h1>
+      <p className="mb-8 text-sec text-testo-2">Ultimo aggiornamento: agosto 2026</p>
 
-      <div className="space-y-6 text-sm leading-relaxed text-testo-2">
+      <div className="space-y-6 text-sec leading-relaxed text-testo-2">
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">Natura del servizio</h2>
+          <h2 className="mb-2 text-corpo font-semibold text-testo">Natura del servizio</h2>
           <p>
             &laquo;Gestione monetaria&raquo; e&rsquo; un&rsquo;applicazione strettamente personale,
             usata da una sola persona, che e&rsquo; anche l&rsquo;unico titolare del trattamento.
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">Dati trattati</h2>
+          <h2 className="mb-2 text-corpo font-semibold text-testo">Dati trattati</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>Credenziali di accesso all&rsquo;applicazione: indirizzo email e password.</li>
             <li>
@@ -49,7 +49,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">
+          <h2 className="mb-2 text-corpo font-semibold text-testo">
             Finalita&rsquo; e base giuridica
           </h2>
           <p>
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">Destinatari</h2>
+          <h2 className="mb-2 text-corpo font-semibold text-testo">Destinatari</h2>
           <p>I dati non sono ceduti o venduti a terzi. Sono coinvolti i seguenti fornitori:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">Conservazione</h2>
+          <h2 className="mb-2 text-corpo font-semibold text-testo">Conservazione</h2>
           <p>
             I dati restano memorizzati finche&rsquo; l&rsquo;utente mantiene attiva
             l&rsquo;applicazione. La revoca del consenso presso la banca interrompe
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">
+          <h2 className="mb-2 text-corpo font-semibold text-testo">
             Diritti dell&rsquo;interessato
           </h2>
           <p>
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold text-testo">Contatto</h2>
+          <h2 className="mb-2 text-corpo font-semibold text-testo">Contatto</h2>
           <p>
             <a
               href="mailto:giovanni.mavilla.grz@gmail.com"

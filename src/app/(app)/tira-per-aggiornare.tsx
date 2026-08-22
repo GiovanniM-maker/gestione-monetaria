@@ -189,7 +189,7 @@ export function TiraPerAggiornare() {
     >
       <div
         className="velato scheda flex items-center gap-2 rounded-full px-3.5 py-2
-                   text-[13px] shadow-[var(--ombra)]"
+                   text-sec shadow-[var(--ombra)]"
       >
         {stato.fase === 'detto' ? (
           <span>{stato.testo}</span>

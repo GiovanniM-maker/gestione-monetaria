@@ -119,9 +119,7 @@ export function SceltaTema() {
 
   return (
     <div>
-      <p className="px-1 pb-1 text-[11px] font-medium tracking-wide text-testo-3 uppercase">
-        Aspetto
-      </p>
+      <p className="px-1 pb-1 text-eti font-medium tracking-wide text-testo-3 uppercase">Aspetto</p>
       {/* Una barra segmentata e non tre bottoni: la scelta e' una fra tre, e
           tre capsule separate direbbero «puoi premerne piu' d'una». */}
       <div role="group" aria-label="Tema" className="flex gap-1 rounded-full bg-s3 p-1">
@@ -134,7 +132,7 @@ export function SceltaTema() {
               onClick={() => scegli(s.valore)}
               aria-pressed={attiva}
               className={
-                'min-h-11 flex-1 rounded-full text-[13px] font-medium transition-colors ' +
+                'min-h-11 flex-1 rounded-full text-sec font-medium transition-colors ' +
                 (attiva ? 'bg-accento text-accento-testo' : 'text-testo-2')
               }
             >

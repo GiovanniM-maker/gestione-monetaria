@@ -27,7 +27,7 @@ export function LoginForm({ ritorno }: { ritorno?: string | undefined }) {
           «ricomincia». Il valore viene validato lato server. */}
       {ritorno !== undefined && <input type="hidden" name="ritorno" value={ritorno} />}
       <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium">
+        <label htmlFor="email" className="block text-sec font-medium">
           Email
         </label>
         <input
@@ -41,7 +41,7 @@ export function LoginForm({ ritorno }: { ritorno?: string | undefined }) {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium">
+        <label htmlFor="password" className="block text-sec font-medium">
           Password
         </label>
         <input
@@ -56,7 +56,7 @@ export function LoginForm({ ritorno }: { ritorno?: string | undefined }) {
 
       <SubmitButton />
 
-      {state.status === 'error' && <p className="text-sm text-allarme">{state.message}</p>}
+      {state.status === 'error' && <p className="text-sec text-allarme">{state.message}</p>}
     </form>
   );
 }

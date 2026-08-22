@@ -71,7 +71,7 @@ export default async function CopilotaPage({
           <span className="sr-only">Tutte le conversazioni</span>
           <Icona nome="chevron" misura={18} className="rotate-180 text-testo-2" />
         </Link>
-        <h1 className="min-w-0 flex-1 truncate text-[16px] font-semibold tracking-[-0.02em]">
+        <h1 className="min-w-0 flex-1 truncate text-corpo font-semibold tracking-[-0.02em]">
           {conversazione?.titolo ?? 'Nuova conversazione'}
         </h1>
         <Stella id={richiesta} salvata={conversazione?.salvata ?? false} />
@@ -86,7 +86,7 @@ export default async function CopilotaPage({
       {scadenza !== null && <NotaScadenza id={richiesta} giorni={scadenza} />}
 
       {!aiConfigurata() && (
-        <p className="nota nota-avviso text-[14px]">
+        <p className="nota nota-avviso text-sec">
           <code>OPENROUTER_API_KEY</code> non è impostata su questo ambiente: il copilota non può
           rispondere. I numeri restano tutti visibili dal cruscotto.
         </p>
@@ -108,7 +108,7 @@ function Elenco({ conversazioni }: { conversazioni: readonly RigaConversazione[]
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.03em]">
+        <h1 className="flex items-center gap-2.5 text-titolo font-bold tracking-[-0.03em]">
           <img
             src="/illustrazioni/chiedi.webp"
             alt=""
@@ -121,7 +121,7 @@ function Elenco({ conversazioni }: { conversazioni: readonly RigaConversazione[]
       </div>
 
       {!aiConfigurata() && (
-        <p className="nota nota-avviso text-[14px]">
+        <p className="nota nota-avviso text-sec">
           <code>OPENROUTER_API_KEY</code> non è impostata su questo ambiente: il copilota non può
           rispondere. I numeri restano tutti visibili dal cruscotto.
         </p>
@@ -133,7 +133,7 @@ function Elenco({ conversazioni }: { conversazioni: readonly RigaConversazione[]
         + Nuova conversazione
       </Link>
 
-      <details className="text-[13px] text-testo-2">
+      <details className="text-sec text-testo-2">
         <summary className="inline-flex min-h-11 cursor-pointer list-none items-center font-medium text-accento">
           di che cosa si pu&ograve; fidare?
         </summary>
@@ -146,7 +146,7 @@ function Elenco({ conversazioni }: { conversazioni: readonly RigaConversazione[]
       </details>
 
       {conversazioni.length === 0 && (
-        <p className="px-1 text-[13px] text-testo-3">
+        <p className="px-1 text-sec text-testo-3">
           Nessuna conversazione, per ora. Le non salvate vivono 30 giorni dall&rsquo;ultimo
           messaggio; quelle con la stella restano per sempre.
         </p>
@@ -178,8 +178,8 @@ function Gruppo({
                 href={`/copilota?c=${c.conversazione_id}`}
                 className="flex min-h-14 min-w-0 flex-1 flex-col justify-center py-2"
               >
-                <span className="truncate text-[15px]">{c.titolo ?? 'Conversazione vuota'}</span>
-                <span className="text-[12px] text-testo-3">
+                <span className="truncate text-corpo">{c.titolo ?? 'Conversazione vuota'}</span>
+                <span className="text-min text-testo-3">
                   {quando(c.ultima_at)} · {c.messaggi} {c.messaggi === 1 ? 'messaggio' : 'messaggi'}
                 </span>
               </Link>

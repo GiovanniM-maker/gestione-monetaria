@@ -213,7 +213,7 @@ export function PannelloConferma({
     const inPari = fermi === null;
     return (
       <div className="space-y-6">
-        {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
+        {fermi !== null && <p className="nota nota-avviso text-sec">{fermi}</p>}
 
         <div className="scheda space-y-3 p-6 text-center">
           {/* La spunta verde di vetro quando e' una lode vera; il cerchio
@@ -230,22 +230,26 @@ export function PannelloConferma({
             />
           ) : (
             <p
-              className="mx-auto flex size-14 items-center justify-center rounded-full text-[26px] leading-none"
-              style={{ background: 'var(--s3)', color: 'var(--testo-3)' }}
+              // L'ultimo glifo tipografico usato come icona. Il `✓` di sistema
+              // ha un peso e uno stile decisi da chi ha disegnato il carattere,
+              // e in una schermata che dice «sei in pari» era la cosa piu'
+              // grande sullo schermo.
+              className="mx-auto flex size-14 items-center justify-center rounded-full"
+              style={{ background: 'var(--s3)', color: 'var(--conferma)' }}
               aria-hidden="true"
             >
-              ✓
+              <Icona nome="spunta" misura={26} spessore={2} />
             </p>
           )}
-          <p className="text-[17px] font-semibold">
+          <p className="text-sez font-semibold">
             {inPari ? 'Sei in pari.' : 'Niente da confermare.'}
           </p>
-          <p className="text-[13px] text-testo-2">
+          <p className="text-sec text-testo-2">
             {inPari
               ? 'Tutti i movimenti contabilizzati sono stati visti.'
               : 'Di quello che è arrivato, tutto è stato visto. Quello che non è arrivato non si può contare.'}
           </p>
-          <p className="text-[12px] text-testo-3">
+          <p className="text-min text-testo-3">
             Quelli ancora <strong>provvisori</strong> non compaiono qui: la banca non li ha
             contabilizzati, l&rsquo;importo pu&ograve; cambiare, e confermarli adesso vorrebbe dire
             riconfermarli dopo.
@@ -265,7 +269,7 @@ export function PannelloConferma({
       <NotaErrore errore={errore} />
       {/* Anche con la lista piena: quello che c'e' e' vecchio, e confermarlo
           non fa arrivare il resto. */}
-      {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}
+      {fermi !== null && <p className="nota nota-avviso text-sec">{fermi}</p>}
 
       {/* La riga di controllo: quante sono, e con che ordine.
 
@@ -273,7 +277,7 @@ export function PannelloConferma({
           filtri: e' l'unica scelta che questa schermata offre sulla lista, e
           nasconderla dietro un tocco vorrebbe dire che nessuno la trova. */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] text-testo-2">
+        <p className="text-sec text-testo-2">
           {visibili.length} {visibili.length === 1 ? 'movimento' : 'movimenti'}
         </p>
         <div className="w-[210px]">
@@ -306,8 +310,8 @@ export function PannelloConferma({
               aria-expanded={!chiuso}
               className="flex min-h-11 w-full items-center gap-2 text-left"
             >
-              <span className="text-[15px] font-semibold tracking-[-0.02em]">{g.nome}</span>
-              <span className="cifra text-[13px] text-testo-3">{g.righe.length}</span>
+              <span className="text-corpo font-semibold tracking-[-0.02em]">{g.nome}</span>
+              <span className="cifra text-sec text-testo-3">{g.righe.length}</span>
               <span className="flex-1" />
               <span
                 aria-hidden="true"
@@ -367,11 +371,11 @@ export function PannelloConferma({
       {visibili.length > 1 &&
         (tutteChieste ? (
           <div className="scheda space-y-3 p-4">
-            <p className="text-[14px]">
+            <p className="text-sec">
               Approvo la classificazione proposta per tutti e{' '}
               <strong>{righe.length} i movimenti</strong>?
             </p>
-            <p className="text-[12px] text-testo-3">
+            <p className="text-min text-testo-3">
               Restano agganciati al loro esercente: se domani ne cambi la classificazione, la
               seguono. Niente viene inciso.
             </p>
@@ -457,8 +461,8 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
     <details className="scheda p-4">
       <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-medium">Pagato oggi e ieri</span>
-          <span className="block text-[12px] text-testo-3">
+          <span className="block text-corpo font-medium">Pagato oggi e ieri</span>
+          <span className="block text-min text-testo-3">
             {righe.length > 0
               ? `${righe.length} ${righe.length === 1 ? 'pagamento' : 'pagamenti'} · ${formattaEuro(totale)}`
               : fermi === null
@@ -470,7 +474,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
       </summary>
 
       {righe.length > 0 && (
-        <ul className="elenco pt-2 text-[15px]">
+        <ul className="elenco pt-2 text-corpo">
           {righe.map((r) => (
             <li key={r.id}>
               <Link href={`/movimenti/${r.id}`} className="flex min-h-12 items-center gap-3">
@@ -485,7 +489,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{etichettaMovimento(r)}</span>
-                  <span className="block truncate text-[12px] text-testo-3">
+                  <span className="block truncate text-min text-testo-3">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}
                     {/* Le due cose che cambiano come si legge la riga: una
@@ -524,13 +528,13 @@ function Carta({
       <div className="flex items-start gap-3">
         <Avatar nome={etichettaMovimento(r)} tinta={tinta ?? 'var(--neutro)'} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[17px] font-semibold">{etichettaMovimento(r)}</span>
-          <span className="cifra text-[13px] text-testo-3">{r.booking_date}</span>
+          <span className="block truncate text-sez font-semibold">{etichettaMovimento(r)}</span>
+          <span className="cifra text-sec text-testo-3">{r.booking_date}</span>
         </span>
-        <span className="numerone shrink-0 text-[22px]">{euro(r.amount_eur ?? r.amount)}</span>
+        <span className="numerone shrink-0 text-titolo">{euro(r.amount_eur ?? r.amount)}</span>
       </div>
 
-      <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-testo-2">
+      <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sec text-testo-2">
         <span
           aria-hidden="true"
           className="size-2.5 shrink-0 rounded-full"
@@ -561,7 +565,7 @@ function Carta({
           selettore di `/movimenti` e `/esercenti`: foglio dal basso, ricerca,
           e la categoria si puo' creare da dentro se non esiste. */}
       {r.motivo === 'senza categoria' && (
-        <div className="nota nota-avviso mt-3 space-y-2 text-[13px]">
+        <div className="nota nota-avviso mt-3 space-y-2 text-sec">
           <p>
             <strong>Manca la categoria.</strong> Confermare non gliela d&agrave;: la spesa
             resterebbe nel totale ma fuori da ogni aggregato.
@@ -577,7 +581,7 @@ function Carta({
       {/* Una proposta mai confermata va detta: vale per i conteggi, ma nessuno
           l'ha ancora guardata, ed e' la prima da mettere in dubbio. */}
       {r.origine_classificazione === 'ai' && r.esercente_confermato_at === null && (
-        <p className="mt-2 text-[12px] text-attenzione">
+        <p className="mt-2 text-min text-attenzione">
           Proposta dal modello{r.motivazione !== null && `: ${r.motivazione}`}
         </p>
       )}
@@ -634,7 +638,7 @@ function Correzione({
           di tutte le occorrenze dell'esercente sta sulla sua scheda, dove la
           portata e' scritta sopra. */}
       <div className="mb-2 space-y-1">
-        <span className="text-[12px] text-testo-2">categoria</span>
+        <span className="text-min text-testo-2">categoria</span>
         <SceltaCategoria
           ambito={{ tipo: 'movimento', movimentoId: riga.id }}
           categoriaId={riga.category_id}
@@ -646,7 +650,7 @@ function Correzione({
           applica subito — i due campi sotto invece dicono «non cambiare» e
           aspettano Salva — e dove si va per cambiarla a tutte. Il resto e'
           prosa in mezzo ai controlli. */}
-      <p className="mb-3 text-[12px] text-testo-3">
+      <p className="mb-3 text-min text-testo-3">
         Si applica appena la scegli. Per <strong>tutte</strong> le spese dell&rsquo;esercente:{' '}
         <Link className="text-accento" href="/revisione">
           revisione
@@ -655,7 +659,7 @@ function Correzione({
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block">
-          <span className="text-[12px] text-testo-2">discrezionalità</span>
+          <span className="text-min text-testo-2">discrezionalità</span>
           <select
             value={discrezionalita}
             onChange={(e) => setDiscrezionalita(e.target.value)}
@@ -671,7 +675,7 @@ function Correzione({
           </select>
         </label>
         <label className="block">
-          <span className="text-[12px] text-testo-2">contesto</span>
+          <span className="text-min text-testo-2">contesto</span>
           <select
             value={contesto}
             onChange={(e) => setContesto(e.target.value)}

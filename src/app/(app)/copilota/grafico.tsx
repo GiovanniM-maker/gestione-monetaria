@@ -38,7 +38,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
   // e il modello lo ha comunque nei dati.
   if (disegno === null) {
     return (
-      <p className="rounded-lg border border-dashed border-filo p-3 text-xs text-testo-2">
+      <p className="rounded-lg border border-dashed border-filo p-3 text-min text-testo-2">
         Non ci sono abbastanza mesi per disegnare {grafico.titolo.toLowerCase()}.
       </p>
     );
@@ -49,7 +49,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
 
   return (
     <figure className="scheda p-3">
-      <figcaption className="mb-2 text-xs font-medium">{grafico.titolo}</figcaption>
+      <figcaption className="mb-2 text-min font-medium">{grafico.titolo}</figcaption>
 
       <svg
         viewBox={`0 0 ${LARGHEZZA} ${ALTEZZA}`}
@@ -149,7 +149,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
       </svg>
 
       {disegno.serie.length > 1 && (
-        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-testo-2">
+        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-min text-testo-2">
           {disegno.serie.map((s) => (
             <li key={s.nome} className="flex items-center gap-1">
               <span
@@ -166,7 +166,7 @@ export function GraficoCopilota({ grafico }: { grafico: Grafico }) {
           cambiano la forma della figura, e una figura che tace un buco è
           peggio di una che lo dichiara. */}
       {(grafico.nota !== undefined || disegno.nonLetti > 0) && (
-        <p className="mt-2 text-xs text-testo-2">
+        <p className="mt-2 text-min text-testo-2">
           {grafico.nota}
           {disegno.nonLetti > 0 &&
             ` ${disegno.nonLetti} ${disegno.nonLetti === 1 ? 'importo non è' : 'importi non sono'} leggibile e non compare.`}

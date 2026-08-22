@@ -246,7 +246,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
       <div className="flex items-baseline justify-between gap-3 px-1">
         <h2 className="eti">Inbox</h2>
         <Link
-          className="inline-flex min-h-11 items-center text-[13px] text-accento sm:min-h-0"
+          className="inline-flex min-h-11 items-center text-sec text-accento sm:min-h-0"
           href="/avvisi"
         >
           storico ›
@@ -256,7 +256,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
       {/* «Sei in pari» non e' una schermata vuota: quando l'abitudine ha
           preso, questa e' la riga che si vede piu' spesso. */}
       {vuota && (
-        <p className="px-1 text-[13px] text-testo-3">
+        <p className="px-1 text-sec text-testo-3">
           Niente che aspetti un tuo gesto. I movimenti nuovi e gli avvisi compariranno qui.
         </p>
       )}
@@ -264,18 +264,18 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
       {/* Con il conteggio e non con un pallino: un numero e' un invito, un
           pallino rosso e' un'ansia. */}
       {daConfermare > 0 && (
-        <Link href="/da-confermare" className="scheda flex items-center gap-3 p-4 text-[15px]">
+        <Link href="/da-confermare" className="scheda flex items-center gap-3 p-4 text-corpo">
           <TesseraCategoria icona="spunta" tinta="var(--accento)" />
           <span className="min-w-0 flex-1">
             <span className="block font-medium">
               {daConfermare} {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da
               confermare
             </span>
-            <span className="block text-[12px] text-testo-3">
+            <span className="block text-min text-testo-3">
               pagamenti arrivati che aspettano una conferma o una correzione
             </span>
           </span>
-          <span className="shrink-0 text-[13px] font-medium text-accento">Controlla ›</span>
+          <span className="shrink-0 text-sec font-medium text-accento">Controlla ›</span>
         </Link>
       )}
 
@@ -285,7 +285,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
       {note && rigaMese !== null && (
         <div className="scheda flex items-start gap-3 p-4">
           <TesseraCategoria icona="info" tinta="var(--neutro)" />
-          <p className="min-w-0 flex-1 text-[13px] text-testo-2">
+          <p className="min-w-0 flex-1 text-sec text-testo-2">
             {rigaMese.senza_cambio > 0 && (
               <>
                 <strong className="text-testo">{rigaMese.senza_cambio}</strong> movimenti in valuta
@@ -320,7 +320,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
           ))}
           {avvisi.length > 3 && (
             <Link
-              className="inline-flex min-h-11 items-center text-[13px] text-accento"
+              className="inline-flex min-h-11 items-center text-sec text-accento"
               href="/avvisi"
             >
               altri {avvisi.length - 3} avvisi ›
@@ -366,7 +366,7 @@ function Avviso({
   return (
     <Link
       href={href}
-      className="scheda block p-4 text-[14px]"
+      className="scheda block p-4 text-sec"
       style={{ background: `color-mix(in oklab, ${tinta} 12%, var(--s2))` }}
     >
       <span className="flex items-center gap-2 font-semibold">
@@ -434,7 +434,7 @@ async function QuantoHoSpeso({
           </p>
 
           {confronto !== null && confronto.riferimento !== null ? (
-            <p className="cifra text-[13px] text-testo-2">
+            <p className="cifra text-sec text-testo-2">
               di solito {formattaEuro(confronto.riferimento)}
               {confronto.scostamento !== null && (
                 <span className={confronto.scostamento > 0 ? 'text-attenzione' : 'text-conferma'}>
@@ -446,7 +446,7 @@ async function QuantoHoSpeso({
             </p>
           ) : (
             spiegaIlConfronto !== null && (
-              <p className="text-[13px] text-testo-2">{spiegaIlConfronto}</p>
+              <p className="text-sec text-testo-2">{spiegaIlConfronto}</p>
             )
           )}
         </div>
@@ -477,7 +477,7 @@ async function QuantoHoSpeso({
               grigio: un elemento interattivo che sembra testo non si tocca). */}
           <h2 className="eti px-1">Per classe</h2>
           {(confronto !== null || spiegaIlConfronto !== null) && (
-            <details className="px-1 text-[13px] text-testo-2">
+            <details className="px-1 text-sec text-testo-2">
               <summary className="inline-flex min-h-11 cursor-pointer list-none items-center font-medium text-accento">
                 perch&eacute; questi confronti?
               </summary>
@@ -519,7 +519,7 @@ async function QuantoHoSpeso({
       )}
 
       {incassato !== null && incassato !== 0n && (
-        <p className="px-1 text-[13px] text-testo-2">
+        <p className="px-1 text-sec text-testo-2">
           Entrate <span className="cifra font-medium text-testo">{formattaEuro(incassato)}</span> —
           la spesa ne &egrave; il {quotaPercentuale(speso, incassato).toFixed(0)}%.
         </p>
@@ -529,7 +529,7 @@ async function QuantoHoSpeso({
           freccia che manca non si nota. Una riga, non un riquadro: le cifre
           sopra restano corrette, e non e' un allarme. */}
       {variazioni.mancanti !== null && (
-        <p className="px-1 text-[13px] text-attenzione">
+        <p className="px-1 text-sec text-attenzione">
           I confronti col mese tipico non sono disponibili, quindi le frecce non compaiono.{' '}
           <strong>Le cifre qui sopra sono corrette.</strong>
         </p>
@@ -548,7 +548,7 @@ async function Ricorrente({ mese }: { mese: string }) {
     <>
       {/* Il «perche'?» sta sopra le tessere e si veste da collegamento: un
           elemento interattivo che sembra testo secondario non si tocca. */}
-      <details className="px-1 text-[13px] text-testo-2">
+      <details className="px-1 text-sec text-testo-2">
         <summary className="inline-flex min-h-11 cursor-pointer list-none items-center font-medium text-accento">
           perch&eacute; due numeri e non uno?
         </summary>
@@ -576,15 +576,11 @@ async function Ricorrente({ mese }: { mese: string }) {
             loading="lazy"
             className="absolute right-1 bottom-1"
           />
-          <p className="text-[13px] text-testo-2">Abbonamenti</p>
+          <p className="text-sec text-testo-2">Abbonamenti</p>
           {/* Diciannove e non ventisei: mezza colonna larga 141 pixel non
               tiene «−1.610,17 €» a ventisei, e l'euro andava a capo da solo. */}
-          <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">
-            {formattaEuro(abbonamenti)}
-          </p>
-          <p className="mt-1.5 pr-9 text-[12px] text-testo-3">
-            Si disdicono. Il risparmio è certo.
-          </p>
+          <p className="numerone mt-1.5 text-sez whitespace-nowrap">{formattaEuro(abbonamenti)}</p>
+          <p className="mt-1.5 pr-9 text-min text-testo-3">Si disdicono. Il risparmio è certo.</p>
         </Link>
         <Link href="/ricorrente/abitudine" className="scheda relative overflow-hidden p-4">
           <img
@@ -595,9 +591,9 @@ async function Ricorrente({ mese }: { mese: string }) {
             loading="lazy"
             className="absolute right-1 bottom-1"
           />
-          <p className="text-[13px] text-testo-2">Abitudini</p>
-          <p className="numerone mt-1.5 text-[19px] whitespace-nowrap">{formattaEuro(abitudini)}</p>
-          <p className="mt-1.5 pr-9 text-[12px] text-testo-3">
+          <p className="text-sec text-testo-2">Abitudini</p>
+          <p className="numerone mt-1.5 text-sez whitespace-nowrap">{formattaEuro(abitudini)}</p>
+          <p className="mt-1.5 pr-9 text-min text-testo-3">
             Niente da disdire: si ripete perché lo si rifà.
           </p>
         </Link>
@@ -611,7 +607,7 @@ async function Ricorrente({ mese }: { mese: string }) {
           abitudine non serve, perche' non c'e' niente da disdire ne' da
           cambiare. */}
       {fuori.costoMensile !== 0n && (
-        <p className="text-[13px] text-testo-3">
+        <p className="text-sec text-testo-3">
           Fuori dal totale:{' '}
           <span className="cifra font-medium text-testo-2">{formattaEuro(fuori.costoMensile)}</span>{' '}
           al mese su {fuori.ricorrenze} {fuori.ricorrenze === 1 ? 'voce' : 'voci'} di{' '}
@@ -675,7 +671,7 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
 
   if (!daMostrare) {
     return dove === 'cima' ? null : (
-      <p className="text-[12px] text-testo-3">
+      <p className="text-min text-testo-3">
         {riga.banca}: ultimo movimento {riga.ultimo_movimento ?? '—'}
         {giorni !== null && ` · consenso valido ancora ${giorni} giorni`}
         {riga.movimenti_provvisori > 0 &&
@@ -696,7 +692,7 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
 
   return (
     <div
-      className="scheda p-4 text-[14px]"
+      className="scheda p-4 text-sec"
       style={{ background: `color-mix(in oklab, ${tinta} 12%, var(--s2))` }}
     >
       <p className="flex items-center gap-2 font-semibold">
@@ -733,7 +729,7 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
           </>
         )}
       </p>
-      <p className="mt-1.5 text-[12px] text-testo-3">
+      <p className="mt-1.5 text-min text-testo-3">
         Ultimo movimento {riga.ultimo_movimento ?? '—'} · ultima sincronizzazione riuscita{' '}
         {riga.ultima_sync_riuscita?.slice(0, 10) ?? 'mai'}
         {riga.ultimo_errore !== null && ` · ultimo errore: ${riga.ultimo_errore}`}

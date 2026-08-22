@@ -131,15 +131,15 @@ export function Aggiornamento({ versione }: { versione: string }) {
       role="status"
     >
       <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-2">
-        <span className="min-w-0 flex-1 text-[13px]">
+        <span className="min-w-0 flex-1 text-sec">
           <span className="block font-medium">C&rsquo;&egrave; una versione nuova</span>
-          <span className="block text-[12px] text-testo-3">questa &egrave; la {versione}</span>
+          <span className="block text-min text-testo-3">questa &egrave; la {versione}</span>
         </span>
         <button
           type="button"
           onClick={() => void ricarica()}
           className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full
-                     bg-accento px-4 text-[14px] font-semibold text-accento-testo"
+                     bg-accento px-4 text-sec font-semibold text-accento-testo"
         >
           Aggiorna
         </button>
@@ -168,12 +168,12 @@ export function BottoneAggiorna({ versione }: { versione: string }) {
       className="flex min-h-12 w-full items-center gap-3 text-left"
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px]">Aggiorna l&rsquo;app</span>
-        <span className="block text-[12px] text-testo-3">
+        <span className="block text-corpo">Aggiorna l&rsquo;app</span>
+        <span className="block text-min text-testo-3">
           scarica l&rsquo;ultima versione · ora la {versione}
         </span>
       </span>
-      <span aria-hidden="true" className="shrink-0 text-[15px] text-testo-3">
+      <span aria-hidden="true" className="shrink-0 text-corpo text-testo-3">
         ⟳
       </span>
     </button>

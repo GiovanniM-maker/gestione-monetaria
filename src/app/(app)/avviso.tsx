@@ -105,7 +105,7 @@ export function Avvisi() {
     >
       <div
         key={avviso.chiave}
-        className={`galleggiante pointer-events-auto flex w-full max-w-md items-center gap-3 px-4 py-3 text-[13.5px] ${
+        className={`galleggiante pointer-events-auto flex w-full max-w-md items-center gap-3 px-4 py-3 text-sec ${
           errore ? 'nota-errore' : 'bg-s3'
         }`}
       >
@@ -113,7 +113,7 @@ export function Avvisi() {
         {avviso.annulla !== undefined && (
           <button
             type="button"
-            className="-mr-1 min-h-11 shrink-0 rounded-full px-2 text-[13.5px] font-bold text-accento sm:min-h-9"
+            className="-mr-1 min-h-11 shrink-0 rounded-full px-2 text-sec font-bold text-accento sm:min-h-9"
             onClick={() => {
               // Due tocchi rapidi su «Annulla» non devono disfare due volte.
               if (inCorso.current) return;

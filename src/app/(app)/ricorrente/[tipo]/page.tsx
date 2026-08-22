@@ -177,7 +177,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
       {/* L'eroe senza carta, come sulla home: la gerarchia la danno la taglia
           e lo spazio. */}
       <div className="space-y-3 px-1 pt-1">
-        <Link href="/" className="inline-flex min-h-11 items-center text-[13px] text-accento">
+        <Link href="/" className="inline-flex min-h-11 items-center text-sec text-accento">
           <Icona nome="chevron" misura={15} className="mr-0.5 rotate-180" />
           Oggi
         </Link>
@@ -186,7 +186,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
           <img src={def.illustrazione} alt="" width={46} height={46} className="-mt-2 shrink-0" />
         </div>
         <p className="numerone text-[40px] sm:text-[46px]">{formattaEuro(totale)}</p>
-        <p className="text-[13px] text-testo-2">{def.sotto}</p>
+        <p className="text-sec text-testo-2">{def.sotto}</p>
 
         {barra.length > 0 && dentro.length > 0 && (
           <BarraClassi
@@ -198,7 +198,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
       </div>
 
       {dentro.length === 0 ? (
-        <p className="px-1 text-sm text-testo-2">
+        <p className="px-1 text-sec text-testo-2">
           Nessuna voce di questo tipo entra nel costo ricorrente, per ora.
         </p>
       ) : (
@@ -206,7 +206,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
           <h2 className="eti px-1">Per classe</h2>
           {/* Tassi su tutto lo storico, non un mese: e' la differenza fra
               questa pagina e la home, e va detta dove si leggono i numeri. */}
-          <p className="px-1 text-[13px] text-testo-3">
+          <p className="px-1 text-sec text-testo-3">
             Costi al mese, misurati su tutto lo storico. Una classe si apre sulle sue categorie, una
             categoria sulle sue voci, una voce sui suoi addebiti.
           </p>
@@ -217,7 +217,7 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
       {/* Sotto la linea: quello che l'utente ha dichiarato di non voler
           togliere. Dirlo e' l'unica cosa che rende onesto il totale. */}
       {fuori.length > 0 && (
-        <p className="px-1 text-[13px] text-testo-3">
+        <p className="px-1 text-sec text-testo-3">
           Fuori dal totale:{' '}
           <span className="cifra font-medium text-testo-2">
             {formattaEuro(fuori.reduce((s, r) => s + centesimi(r.costo_mensile), 0n))}

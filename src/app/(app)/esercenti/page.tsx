@@ -139,7 +139,7 @@ export default async function EsercentiPage({
           <Link
             key={f.chiave}
             href={indirizzo({ filtro: f.chiave === 'tutti' ? '' : f.chiave, pagina: '' })}
-            className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-[13px] sm:min-h-9 ${
+            className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-sec sm:min-h-9 ${
               filtro === f.chiave
                 ? 'bg-accento font-medium text-accento-testo'
                 : 'bg-s2 text-testo-2'
@@ -151,7 +151,7 @@ export default async function EsercentiPage({
       </div>
 
       {righe.length === 0 ? (
-        <p className="scheda p-6 text-center text-[14px] text-testo-2">
+        <p className="scheda p-6 text-center text-sec text-testo-2">
           Nessun esercente con questi filtri.
         </p>
       ) : (
@@ -168,15 +168,15 @@ export default async function EsercentiPage({
                   }
                 />
                 <Link href={`/esercente/${e.id}`} className="min-w-0 flex-1 py-1">
-                  <span className="block truncate text-[15px]">{e.canonical_name}</span>
-                  <span className="mt-0.5 block truncate text-[12px] text-testo-3">
+                  <span className="block truncate text-corpo">{e.canonical_name}</span>
+                  <span className="mt-0.5 block truncate text-min text-testo-3">
                     {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'}
                     {e.discretion !== null && ` · ${e.discretion}`}
                     {e.is_subscription && ' · abbonamento'}
                     {e.origine === 'ai' && e.confermato_at === null && ' · proposto dal modello'}
                   </span>
                 </Link>
-                <span className="cifra shrink-0 pt-1 text-[15px]">
+                <span className="cifra shrink-0 pt-1 text-corpo">
                   {formattaEuro(centesimi(e.totale))}
                 </span>
               </div>
@@ -197,7 +197,7 @@ export default async function EsercentiPage({
       )}
 
       {ultimaPagina > 0 && (
-        <nav className="flex items-center justify-between gap-3 text-sm">
+        <nav className="flex items-center justify-between gap-3 text-sec">
           {pagina > 0 ? (
             <Link className={BOTTONE_MINORE} href={indirizzo({ pagina: String(pagina - 1) })}>
               ← precedenti
@@ -205,7 +205,7 @@ export default async function EsercentiPage({
           ) : (
             <span />
           )}
-          <span className="text-xs text-testo-2">
+          <span className="text-min text-testo-2">
             pagina {pagina + 1} di {ultimaPagina + 1}
           </span>
           {pagina < ultimaPagina ? (

@@ -127,10 +127,10 @@ export function PannelloRevisione({
   return (
     <div className="space-y-8">
       <NotaErrore errore={errore} />
-      {esito !== null && errore === null && <p className="nota nota-esito text-[14px]">{esito}</p>}
+      {esito !== null && errore === null && <p className="nota nota-esito text-sec">{esito}</p>}
 
       <section>
-        <h2 className="mb-1 text-[17px] font-semibold tracking-[-0.02em]">
+        <h2 className="mb-1 text-sez font-semibold tracking-[-0.02em]">
           Da classificare · {quanteInTutto} etichette
           {quanteInTutto > daClassificare.length && (
             <span className="font-normal text-testo-2">
@@ -139,8 +139,8 @@ export function PannelloRevisione({
             </span>
           )}
         </h2>
-        <p className="mb-2 text-[13px] text-testo-3">In ordine di quanto costa lasciarle così.</p>
-        <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-xs text-testo-2">
+        <p className="mb-2 text-sec text-testo-3">In ordine di quanto costa lasciarle così.</p>
+        <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-min text-testo-2">
           <input
             type="checkbox"
             className={CASELLA}
@@ -171,7 +171,7 @@ export function PannelloRevisione({
           ))}
         </ul>
         {visibili.length === 0 && (
-          <p className="scheda p-6 text-center text-[14px] text-testo-2">
+          <p className="scheda p-6 text-center text-sec text-testo-2">
             {daClassificare.length === 0
               ? 'Nessuna etichetta scoperta. Ogni spesa reale ha il suo esercente.'
               : 'Nessuna etichetta ricorrente da classificare: quel che resta compare una volta sola.'}
@@ -180,10 +180,10 @@ export function PannelloRevisione({
       </section>
 
       <section>
-        <h2 className="mb-1 text-[17px] font-semibold tracking-[-0.02em]">
+        <h2 className="mb-1 text-sez font-semibold tracking-[-0.02em]">
           Esercenti · {esercenti.length}
         </h2>
-        <p className="mb-3 text-[13px] text-testo-3">
+        <p className="mb-3 text-sec text-testo-3">
           Cambiare qui la discrezionalità la riscrive su tutte le transazioni dell&rsquo;esercente.
           Il totale accanto serve a sapere quanto pesa la modifica prima di farla.
         </p>
@@ -257,12 +257,12 @@ function RigaDaClassificare({
         className="flex min-h-14 w-full items-center gap-3 py-1.5 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-mono text-[14px]">{voce.etichetta}</span>
-          <span className="cifra block truncate text-[12px] text-testo-3">
+          <span className="block truncate font-mono text-sec">{voce.etichetta}</span>
+          <span className="cifra block truncate text-min text-testo-3">
             {voce.movimenti}× · {voce.prima} → {voce.ultima}
           </span>
         </span>
-        <span className="cifra shrink-0 text-[15px]">{euro(voce.totale)}</span>
+        <span className="cifra shrink-0 text-corpo">{euro(voce.totale)}</span>
         <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </button>
 
@@ -419,13 +419,13 @@ function RigaMerchant({
         className="flex min-h-14 w-full items-center gap-3 py-1.5 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px]">{merchant.canonical_name}</span>
-          <span className="block truncate text-[12px] text-testo-3">
+          <span className="block truncate text-corpo">{merchant.canonical_name}</span>
+          <span className="block truncate text-min text-testo-3">
             {merchant.discretion ?? 'senza classe'}
             {merchant.is_subscription && ' · abbonamento'}
           </span>
         </span>
-        <span className="cifra shrink-0 text-[15px]">{euro(merchant.totale)}</span>
+        <span className="cifra shrink-0 text-corpo">{euro(merchant.totale)}</span>
         <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </button>
 

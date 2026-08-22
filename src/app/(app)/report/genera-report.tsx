@@ -44,7 +44,7 @@ export function GeneraReport() {
         {inCorso ? 'Scrivo…' : 'Genera il report del mese scorso'}
       </button>
       <NotaErrore errore={errore} onRiprova={() => void genera()} />
-      {messaggio !== null && <p className="text-sm text-testo-2">{messaggio}</p>}
+      {messaggio !== null && <p className="text-sec text-testo-2">{messaggio}</p>}
     </div>
   );
 }

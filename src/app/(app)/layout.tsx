@@ -54,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="flex items-center gap-x-2 py-1">
           <Link
             href="/"
-            className="inline-flex min-h-11 flex-1 items-center text-[13px] font-medium text-testo-3"
+            className="inline-flex min-h-11 flex-1 items-center text-sec font-medium text-testo-3"
           >
             Gestione monetaria
           </Link>

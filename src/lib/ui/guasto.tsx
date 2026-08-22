@@ -43,11 +43,11 @@ export function Guasto({
     <div className={radice ? 'mx-auto max-w-md px-5 py-16' : 'py-10'}>
       <div className="space-y-4">
         <p className="eti">Guasto</p>
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">
+        <h1 className="text-titolo font-bold tracking-[-0.03em]">
           Questa schermata non si è caricata
         </h1>
 
-        <p className="text-[15px] text-testo-2">
+        <p className="text-corpo text-testo-2">
           È un errore dell&rsquo;applicazione, non dei tuoi dati.{' '}
           <strong className="text-testo">Nessun movimento è stato toccato</strong>, e i numeri che
           hai letto prima restano quelli giusti: quello che manca è solo questa pagina.
@@ -63,10 +63,10 @@ export function Guasto({
         </div>
 
         <details className="pt-2">
-          <summary className="min-h-11 cursor-pointer text-[13px] text-accento">
+          <summary className="min-h-11 cursor-pointer text-sec text-accento">
             dettagli tecnici
           </summary>
-          <div className="nota nota-errore mt-2 space-y-2 text-[13px]">
+          <div className="nota nota-errore mt-2 space-y-2 text-sec">
             <p className="break-words">{error.message}</p>
             {error.digest !== undefined && (
               <p>

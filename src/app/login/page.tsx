@@ -23,12 +23,12 @@ export default async function LoginPage({
         height={96}
         className="mb-4 drop-shadow-[0_8px_22px_rgb(90_80_224/0.3)]"
       />
-      <h1 className="mb-1 text-xl font-semibold tracking-tight">Gestione monetaria</h1>
+      <h1 className="mb-1 text-titolo font-semibold tracking-tight">Gestione monetaria</h1>
       {/* Diceva «inserisci la tua email per ricevere un link di accesso»: era
           vero fino alla Fase 0, quando il magic link e' stato sostituito dalla
           password perche' il tetto SMTP di Supabase chiudeva fuori dall'unica
           porta d'ingresso. Il testo era rimasto indietro di dieci fasi. */}
-      <p className="mb-6 text-sm text-testo-2">Accesso riservato a un solo indirizzo.</p>
+      <p className="mb-6 text-sec text-testo-2">Accesso riservato a un solo indirizzo.</p>
       <LoginForm ritorno={ritorno} />
     </div>
   );

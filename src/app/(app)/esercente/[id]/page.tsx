@@ -113,8 +113,8 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
       />
 
       {ricorrenza !== null && (
-        <section className="scheda p-3 text-sm">
-          <h2 className="mb-2 text-sm font-medium">Ricorrenza</h2>
+        <section className="scheda p-3 text-sec">
+          <h2 className="mb-2 text-sec font-medium">Ricorrenza</h2>
           <p>
             {/* Niente piu' `as {...}` a ogni campo: la lettura torna una riga
                 tipizzata, quindi il tipo lo dichiara chi legge il database e non
@@ -136,13 +136,13 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
       )}
 
       <section className="scheda space-y-3 p-4">
-        <h2 className="text-sm font-medium">Come si classificano le sue spese</h2>
+        <h2 className="text-sec font-medium">Come si classificano le sue spese</h2>
         <Interruttore id={m.id} variabile={m.classificazione_variabile} />
       </section>
 
       <section className="scheda p-3">
-        <h2 className="mb-2 text-sm font-medium">Classificazione</h2>
-        <dl className="space-y-1 text-sm">
+        <h2 className="mb-2 text-sec font-medium">Classificazione</h2>
+        <dl className="space-y-1 text-sec">
           <Voce nome="categoria" valore={categoria?.percorso ?? null} />
           <Voce nome="discrezionalità" valore={m.discretion} />
           <Voce nome="contesto" valore={m.context} />
@@ -150,10 +150,10 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
           <Voce nome="origine" valore={ORIGINI[m.origine ?? ''] ?? m.origine} />
         </dl>
         {m.motivazione !== null && (
-          <p className="mt-2 border-t border-filo pt-2 text-xs text-testo-2">{m.motivazione}</p>
+          <p className="mt-2 border-t border-filo pt-2 text-min text-testo-2">{m.motivazione}</p>
         )}
         {m.origine === 'ai' && m.confermato_at === null && (
-          <p className="mt-2 text-xs text-attenzione">
+          <p className="mt-2 text-min text-attenzione">
             Questa classificazione l&rsquo;ha proposta il modello e nessuno l&rsquo;ha ancora
             confermata. Vale per i conteggi — una classificazione probabile e visibile è più utile
             di nessuna — ma è la prima da guardare se un totale sorprende.

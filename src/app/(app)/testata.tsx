@@ -89,7 +89,7 @@ export function TestataPagina({
         {/* Col vetro nell'angolo il titolo si ferma prima: un titolo lungo
             che gli passasse sotto sembrerebbe un difetto, non una scelta. */}
         <h1
-          className={`text-[22px] font-bold tracking-[-0.03em] ${illustrazione === undefined ? '' : 'pr-16'}`}
+          className={`text-titolo font-bold tracking-[-0.03em] ${illustrazione === undefined ? '' : 'pr-16'}`}
         >
           {titolo}
         </h1>
@@ -112,7 +112,7 @@ export function TestataPagina({
             {figure.map((f) => (
               <div key={f.etichetta}>
                 <dt className="eti">{f.etichetta}</dt>
-                <dd className="cifra pt-0.5 text-[17px] font-semibold">{f.valore}</dd>
+                <dd className="cifra pt-0.5 text-sez font-semibold">{f.valore}</dd>
               </div>
             ))}
           </dl>
@@ -122,7 +122,7 @@ export function TestataPagina({
       {azioni !== undefined && <div className="flex flex-wrap gap-2">{azioni}</div>}
 
       {perche !== undefined && (
-        <details className="text-[13px] text-testo-2">
+        <details className="text-sec text-testo-2">
           <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
             perch&eacute; funziona cos&igrave;?
           </summary>

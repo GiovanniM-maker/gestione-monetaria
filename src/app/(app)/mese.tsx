@@ -78,15 +78,15 @@ export function SceltaMese({
         <button
           type="button"
           onClick={() => setAperto(true)}
-          className="capsula text-[15px] font-semibold tracking-[-0.02em]"
+          className="capsula text-corpo font-semibold tracking-[-0.02em]"
         >
           <span className="capitalize">{etichettaMese(mese)}</span>
-          <span aria-hidden="true" className="text-[13px] font-normal text-testo-3">
+          <span aria-hidden="true" className="text-sec font-normal text-testo-3">
             ⌄
           </span>
         </button>
       ) : (
-        <p className="inline-flex min-h-11 items-center px-1 text-[15px] font-semibold tracking-[-0.02em]">
+        <p className="inline-flex min-h-11 items-center px-1 text-corpo font-semibold tracking-[-0.02em]">
           <span className="capitalize">{etichettaMese(mese)}</span>
         </p>
       )}
@@ -127,7 +127,7 @@ export function SceltaMese({
           nota="Solo i mesi in cui c’è almeno un movimento."
           onChiudi={() => setAperto(false)}
         >
-          <ul className="elenco text-[15px]">
+          <ul className="elenco text-corpo">
             {elenco.map((m, i) => (
               <li key={m}>
                 {/* Un Link e non un bottone: cambiare mese e' un indirizzo, e
@@ -142,7 +142,7 @@ export function SceltaMese({
                 >
                   <span className="min-w-0 flex-1 capitalize">{etichettaMese(m)}</span>
                   {i === 0 && (
-                    <span className="shrink-0 text-[11px] text-testo-3">il più recente</span>
+                    <span className="shrink-0 text-eti text-testo-3">il più recente</span>
                   )}
                   {m === mese && (
                     <span aria-hidden="true" className="shrink-0 text-accento">

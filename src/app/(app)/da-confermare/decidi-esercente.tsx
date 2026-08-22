@@ -176,7 +176,7 @@ export function DecidiEsercente({
       <button
         type="button"
         onClick={() => setAperto(true)}
-        className="nota nota-avviso mt-3 flex min-h-11 w-full items-center gap-2 text-left text-[13px]"
+        className="nota nota-avviso mt-3 flex min-h-11 w-full items-center gap-2 text-left text-sec"
       >
         <span className="flex-1">
           <strong>Nuovo esercente.</strong> Le spese di {esercente} sono sempre dello stesso tipo?
@@ -213,7 +213,7 @@ export function DecidiEsercente({
                 value={nuova}
                 onChange={(e) => setNuova(e.target.value)}
                 placeholder="nome della categoria"
-                className="min-h-11 w-full rounded-full bg-s3 px-4 text-[15px] placeholder:text-testo-3"
+                className="min-h-11 w-full rounded-full bg-s3 px-4 text-corpo placeholder:text-testo-3"
                 disabled={inCorso}
                 // Niente `autoFocus`: dentro un foglio apre la tastiera **prima**
                 // che si sia visto cosa c'e' dentro, e su uno schermo stretto la
@@ -222,11 +222,11 @@ export function DecidiEsercente({
                 // guardare l'elenco lo vede.
               />
               <label className="block">
-                <span className="text-[12px] text-testo-2">dove</span>
+                <span className="text-min text-testo-2">dove</span>
                 <select
                   value={dentro}
                   onChange={(e) => setDentro(e.target.value)}
-                  className="min-h-11 w-full rounded-full bg-s3 px-3.5 text-[15px]"
+                  className="min-h-11 w-full rounded-full bg-s3 px-3.5 text-corpo"
                   disabled={inCorso}
                 >
                   <option value="">di primo livello</option>
@@ -237,7 +237,7 @@ export function DecidiEsercente({
                   ))}
                 </select>
               </label>
-              <p className="text-[12px] text-testo-3">
+              <p className="text-min text-testo-3">
                 Appena creata viene <strong>scelta</strong> qui. Sull&rsquo;esercente non cambia
                 ancora niente: decide una delle due risposte qui sotto. Se esiste gi&agrave; con lo
                 stesso nome nello stesso posto, si usa quella.
@@ -247,7 +247,7 @@ export function DecidiEsercente({
                   type="button"
                   onClick={() => void creaEScegli()}
                   disabled={inCorso || nuova.trim() === ''}
-                  className="min-h-11 flex-1 rounded-full bg-accento text-[15px] font-semibold text-accento-testo disabled:opacity-40"
+                  className="min-h-11 flex-1 rounded-full bg-accento text-corpo font-semibold text-accento-testo disabled:opacity-40"
                 >
                   {inCorso ? '…' : 'Crea e scegli'}
                 </button>
@@ -255,7 +255,7 @@ export function DecidiEsercente({
                   type="button"
                   onClick={() => setCreando(false)}
                   disabled={inCorso}
-                  className="min-h-11 rounded-full bg-s3 px-4 text-[13px] font-medium"
+                  className="min-h-11 rounded-full bg-s3 px-4 text-sec font-medium"
                 >
                   Annulla
                 </button>
@@ -267,11 +267,11 @@ export function DecidiEsercente({
                 value={cerca}
                 onChange={(e) => setCerca(e.target.value)}
                 placeholder="cerca una categoria"
-                className="min-h-11 w-full rounded-full bg-s3 px-4 text-[15px] placeholder:text-testo-3"
+                className="min-h-11 w-full rounded-full bg-s3 px-4 text-corpo placeholder:text-testo-3"
                 disabled={inCorso}
               />
 
-              <ul className="elenco max-h-[38vh] overflow-y-auto text-[15px]">
+              <ul className="elenco max-h-[38vh] overflow-y-auto text-corpo">
                 {/* In cima e non in fondo: il posto in cui ci si accorge che una
                 categoria manca e' mentre la si cerca, non dopo aver scorso
                 tutte le altre. Diventa «Crea "pizzeria"» se si e' gia' scritto
@@ -323,11 +323,11 @@ export function DecidiEsercente({
               type="button"
               onClick={() => void decidi(false)}
               disabled={inCorso}
-              className="min-h-12 w-full rounded-full bg-accento px-4 text-[15px] font-semibold text-accento-testo disabled:opacity-40"
+              className="min-h-12 w-full rounded-full bg-accento px-4 text-corpo font-semibold text-accento-testo disabled:opacity-40"
             >
               {inCorso ? '…' : 'Sempre così'}
             </button>
-            <p className="px-1 text-[12px] text-testo-3">
+            <p className="px-1 text-min text-testo-3">
               {nome === null
                 ? `Tutte le spese di ${esercente} restano senza categoria, e non te lo chiedo più.`
                 : `Tutte le spese di ${esercente} vanno in ${nome}, anche quelle già registrate.`}
@@ -337,11 +337,11 @@ export function DecidiEsercente({
               type="button"
               onClick={() => void decidi(true)}
               disabled={inCorso}
-              className="min-h-12 w-full rounded-full bg-s3 px-4 text-[15px] font-medium disabled:opacity-40"
+              className="min-h-12 w-full rounded-full bg-s3 px-4 text-corpo font-medium disabled:opacity-40"
             >
               {inCorso ? '…' : 'Cambiano, chiedimelo ogni volta'}
             </button>
-            <p className="px-1 text-[12px] text-testo-3">
+            <p className="px-1 text-min text-testo-3">
               {nome === null
                 ? 'Ogni sua spesa resta da classificare una per una.'
                 : `${nome} è il punto di partenza, ma ogni spesa resta da confermare.`}

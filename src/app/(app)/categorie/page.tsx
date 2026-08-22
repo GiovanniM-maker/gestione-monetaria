@@ -49,7 +49,7 @@ export default async function CategoriePage() {
         }
       />
       {senzaConteggi && (
-        <p className="nota nota-avviso text-[13px]">
+        <p className="nota nota-avviso text-sec">
           Non riesco a leggere <code>v_categorie_uso</code>, quindi accanto a ogni categoria trovi
           un trattino invece di quanti esercenti e movimenti contiene.{' '}
           <strong>Zero sarebbe una risposta</strong>, e sarebbe falsa proprio accanto al bottone che
