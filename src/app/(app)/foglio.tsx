@@ -47,14 +47,31 @@ const SOGLIA = 0.25;
 const STRAPPO = 550;
 
 /**
- * Quanto dura l'entrata e l'uscita del pannello.
+ * Quanto dura l'entrata e l'uscita del pannello, per verso.
  *
  * Trecento millisecondi con la curva del sistema: sotto i duecento il movimento
  * non si legge come un movimento ma come uno sfarfallio, sopra i quattrocento
  * si aspetta. E' la durata dei fogli di sistema, e non e' un caso — e' quella a
  * cui la mano e' abituata.
+ *
+ * **Il cassetto pero' non e' un foglio ruotato, e trattarlo come tale si
+ * vedeva.** Due ragioni per cui la stessa durata non va bene ai due:
+ *
+ * 1. **Percorre piu' strada.** Il foglio sale per la sua altezza, che si ferma
+ *    all'85% dello schermo e di solito e' molto meno; il cassetto attraversa
+ *    l'80% della larghezza, tutta, sempre. Stessa durata su un tragitto piu'
+ *    lungo significa piu' velocita' al centro e una coda piu' lunga: e'
+ *    esattamente la sensazione di «lento e molliccio».
+ * 2. **La curva `0.32, 0.72, 0, 1` e' quella dei fogli di sistema**, che
+ *    frenano tardi e a lungo perche' devono sembrare pesanti. Un cassetto
+ *    laterale e' un pannello che scivola, non una massa che si solleva: la
+ *    decelerazione standard, che finisce prima, e' quella giusta.
  */
-const USCITA_MS = 300;
+const DURATA_MS: Record<Verso, number> = { basso: 300, destra: 240 };
+const CURVA: Record<Verso, string> = {
+  basso: 'cubic-bezier(0.32, 0.72, 0, 1)',
+  destra: 'cubic-bezier(0.2, 0, 0, 1)',
+};
 
 /**
  * Dove sta il pannello, adesso.
@@ -183,7 +200,7 @@ export function Dialogo({
 
     if (!d.open) return;
     // Chi ha chiesto meno movimento non aspetta: la chiusura e' immediata.
-    const attesa = riduciMovimento() ? 0 : USCITA_MS;
+    const attesa = riduciMovimento() ? 0 : DURATA_MS[verso];
     // Un fotogramma prima di far scendere il pannello: e' anche il modo di non
     // cambiare stato dentro il corpo dell'effetto, che React 19 non ammette.
     const r = requestAnimationFrame(() => setDentro(false));
@@ -197,7 +214,7 @@ export function Dialogo({
       cancelAnimationFrame(r);
       clearTimeout(t);
     };
-  }, [aperto]);
+  }, [aperto, verso]);
 
   /**
    * Il pannello segue la tastiera.
@@ -387,21 +404,35 @@ export function Dialogo({
       // di numeri e' la cosa che si nota di piu' e che si spiega di meno.
       // La regola sta in `globals.css`, agganciata a questo attributo.
       data-dentro={dentro ? '' : undefined}
-      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0
-                 backdrop:bg-black/40 backdrop:backdrop-blur-[2px]"
+      // `overflow-hidden`: mentre entra e mentre lo si trascina il pannello sta
+      // per meta' fuori dal riquadro, e senza clip quel fuori diventa un'area
+      // scorrevole dentro il dialogo. Il velo e le ombre restano dentro il
+      // riquadro, quindi non c'e' niente che venga tagliato per sbaglio.
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none overflow-hidden
+                 bg-transparent p-0 backdrop:bg-black/40 backdrop:backdrop-blur-[2px]"
     >
       <div
         className={`flex h-full ${verso === 'basso' ? 'items-end justify-center' : 'justify-end'}`}
       >
         <div
           ref={pannello}
+          // Chi ha chiesto meno movimento non lo riceve, e la regola sta in CSS
+          // e non qui: una lettura in JavaScript sarebbe ferma al montaggio,
+          // mentre la preferenza si puo' cambiare a finestra aperta.
+          data-pannello=""
           style={{
             transform: trasformazione,
             // Durante il gesto il pannello segue il dito senza ritardo; al
             // rilascio la molla lo riporta a posto, e all'apertura sale.
-            transition: trascinando
-              ? 'none'
-              : `transform ${USCITA_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+            transition: trascinando ? 'none' : `transform ${DURATA_MS[verso]}ms ${CURVA[verso]}`,
+            // Il pannello ha un'ombra da 40 px e si porta dietro delle schede
+            // che ne hanno tre ciascuna. Senza un livello suo, ogni fotogramma
+            // dello scivolamento le **ridisegna**: e' quello, e non la durata,
+            // il motivo per cui il cassetto scattava mentre il foglio no — il
+            // cassetto attraversa lo schermo, il foglio sale di poco.
+            // `will-change` costa memoria finche' resta acceso, e qui non e' un
+            // problema: il pannello esiste solo mentre il pannello e' aperto.
+            willChange: 'transform',
             ...(verso === 'basso'
               ? {
                   // `--altezza-utile` la scrive `seguiTastiera` dal

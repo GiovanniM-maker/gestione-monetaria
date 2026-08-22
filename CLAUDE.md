@@ -564,6 +564,54 @@ si pagherebbe una chiamata al modello ogni volta che si ordina da Deliveroo. È 
 cui il modello restituisce un **frammento** (`canva` per `Canva* I04731-63857386`): la banca cambia
 il codice a ogni addebito, e un alias sull'etichetta intera non riconoscerebbe mai il prossimo.
 
+### La cascata viveva in TypeScript, e le scritture manuali non la vedevano — la 0058
+
+Trovato usando l'applicazione, il 22 agosto: su `/dove` c'erano movimenti sotto
+«Non classificato» che erano chiaramente **ristoranti, bar e persone**. Non se ne andavano, e
+nessun giro notturno li avrebbe mai sistemati.
+
+La cascata sopra sta in `lib/tassonomia/applica.ts`, in una riga:
+
+```ts
+discretion: m.discretion ?? categoria?.default_discretion ?? null;
+```
+
+Ma quello e' il percorso **automatico**. I tre percorsi **manuali** —
+`categorizza_movimento`, `sposta_movimento`, `correggi_movimento` — scrivevano il valore che
+avevano in mano e basta, senza il ripiego. E siccome tutti e tre marcano
+`manually_categorized`, il giro automatico che avrebbe rimediato l'indomani veniva **escluso per
+sempre**.
+
+Il caso piu' facile da riprodurre e' anche quello che l'utente ha visto: si apre un movimento, si
+sceglie «Ristoranti» dal foglio, `categorizza_movimento` riceve la sola categoria, e
+`discretion = coalesce(null, discretion)` la lascia a `null` mentre `manually_categorized` diventa
+vero. Da li' in poi il movimento e' «Ristoranti» **e** «Non classificato», per sempre.
+
+**Il flag proteggeva l'assenza di una decisione invece di una decisione.** E' la forma generale del
+difetto, e vale la pena riconoscerla: `manually_categorized` e' un patto — _le correzioni manuali
+dell'utente sono sacre_ — e un patto che si applica a un valore mai scelto non protegge nessuno,
+blocca e basta.
+
+Tre lezioni, tutte generali:
+
+1. **Una regola scritta in TypeScript non vale per chi scrive in SQL.** Il ripiego ora e'
+   `classe_ereditata(merchant_id, categoria_id)`, e le tre funzioni la chiamano. E' la stessa
+   ragione della colonna `nella_metrica` in Fase 5 e di `cerca_movimenti` in 6-bis: una regola
+   scritta in piu' posti diverge, e la divergenza non da' errore — da' un risultato plausibile.
+2. **Una nota non e' una classificazione.** `correggi_movimento` alzava il flag anche quando
+   l'unica cosa scritta era una nota, e il chiamante considera «correzione» pure quel caso: bastava
+   annotare un movimento per congelarlo com'era. Ora il flag si alza solo se e' arrivata una classe
+   o un contesto, e non si abbassa mai da solo.
+3. **Un ripiego che manca fallisce in silenzio e nel verso peggiore.** Non c'era nessun errore da
+   nessuna parte: solo una riga in meno in una ripartizione, cioe' spesa vera che si sposta sotto
+   «Non classificato» — la stessa categoria di guasto dei conti sdoppiati, dove i giroconti erano
+   saliti dal 24% al 59% senza una riga di log.
+
+La riparazione dello storico sta nella migration stessa, in due passaggi: prima la classe a chi puo'
+ereditarla (mai sovrascrivendone una gia' scritta — quello sarebbe rompere il patto per ripararne
+una violazione), poi lo **scongelamento** di chi resta senza classe, senza contesto e senza
+categoria, perche' quella riga non sta proteggendo niente.
+
 ### Le tre lezioni della Fase 4
 
 **La normalizzazione delle stringhe non serve quasi a niente.** Misurata sui 60 esercenti veri: da

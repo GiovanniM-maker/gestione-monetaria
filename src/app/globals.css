@@ -97,7 +97,13 @@
      la stessa tinta puo' fare da pallino *e* da testo senza una seconda
      tavolozza. Le scure restano com'erano: erano gia' a norma. */
   --classe-blu: #0063d8;
-  --classe-ambra: #9a6200;
+  /* L'ambra sul chiaro era `#9a6200`: tinta 38°, cioe' un **arancio bruno**,
+     non un giallo. La luminosita' era giusta, la tonalita' no. Portata a 47°
+     resta un oro — perche' oltre non si puo' andare: un giallo vivo sta a
+     1,4:1 sul bianco, quindi un pallino giallo su una scheda chiara sparisce,
+     ed e' esattamente il difetto che l'audit aveva misurato e chiuso. Sul
+     **nero** il vincolo non esiste e il giallo e' giallo davvero (12:1). */
+  --classe-ambra: #9c7a00;
   --classe-rosa: #d4003c;
   --classe-verde: #0f7a34;
   --classe-viola: #8f31c7;
@@ -108,10 +114,14 @@
   /* Il rosso e l'ambra quando dicono «guarda qui», non «questa spesa e'
      voluttuaria». Stesso pigmento, mestiere diverso — e chiamarli col loro
      mestiere e' cio' che permette a una classe di cambiare colore senza
-     ridipingere gli errori. */
-  --allarme: var(--classe-rosa);
-  --attenzione: var(--classe-ambra);
-  --conferma: var(--classe-verde);
+     ridipingere gli errori.
+     Erano `var(--classe-rosa)` e compagnia, che e' la stessa bugia scritta in
+     un altro modo: finche' sono alias, ricolorare una classe ridipinge gli
+     errori — ed e' successo appena l'ambra e' diventata gialla. Ora portano il
+     loro valore, e i due mestieri si muovono indipendenti. */
+  --allarme: #d4003c;
+  --attenzione: #9a6200;
+  --conferma: #0f7a34;
 
   --r-scheda: 22px;
   --r-controllo: 14px;
@@ -178,13 +188,21 @@
   --accento-testo: #0b0b12;
 
   --classe-blu: #409cff;
-  --classe-ambra: #ffb340;
+  --classe-ambra: #ffd60a;
   --classe-rosa: #ff6482;
   --classe-verde: #3ddc6a;
   --classe-viola: #da8fff;
   --classe-ciano: #70d7ff;
   --classe-bruno: #b59469;
   --neutro: #98989f;
+
+  /* I tre mestieri semantici, sul nero. Prima arrivavano gratis, perche'
+     erano alias delle classi e le classi qui sono ridefinite. Ora che portano
+     un valore proprio vanno riscritti, o il tema scuro erediterebbe i toni
+     scuri del chiaro — che sul nero sono illeggibili. */
+  --allarme: #ff6482;
+  --attenzione: #ffb340;
+  --conferma: #3ddc6a;
 
   /* Sul nero la pendenza si vede, ed e' lei a dare corpo alla scheda:
      tre punti percentuali dall'alto in basso, non un faro. */
@@ -595,6 +613,23 @@ dialog::backdrop {
 }
 dialog[data-dentro]::backdrop {
   opacity: 1;
+}
+
+/**
+ * Chi ha chiesto meno movimento non riceve lo scivolamento.
+ * --------------------------------------------------------------------------
+ * La chiusura gia' non aspettava — `Dialogo` legge `prefers-reduced-motion` e
+ * porta l'attesa a zero — ma l'**entrata** scivolava lo stesso, perche' la
+ * transizione era scritta nello stile in linea e li' la preferenza non
+ * arrivava. Sta qui e non in JavaScript per un motivo che si vede solo
+ * provandolo: una lettura in JavaScript resta ferma al montaggio, e la
+ * preferenza si puo' cambiare a pannello aperto.
+ */
+@media (prefers-reduced-motion: reduce) {
+  dialog::backdrop,
+  [data-pannello] {
+    transition: none;
+  }
 }
 
 /**

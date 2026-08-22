@@ -562,3 +562,79 @@ Formato: **oggi → problema → riferimento → comportamento proposto.**
 12. `aria-disabled` al posto di `disabled` durante l'attesa. _(A.12)_
 13. I filtri di `/movimenti` come isola client. _(A.13)_
 14. Un contenitore `aria-live` per gli esiti. _(A.14)_
+
+---
+
+## Terzo passaggio — 22 agosto, dai difetti trovati usando l'app
+
+Tre segnalazioni dall'uso, non dalla revisione. Due erano difetti veri e uno
+era un vincolo che non era stato scritto da nessuna parte.
+
+### L'ambra non era gialla, ed era colpa del secondo passaggio
+
+Il secondo passaggio ha abbassato le sette tinte finche' passavano **4,5:1**
+sulle superfici chiare, e ha fatto bene: erano a 2,06 e il colore _e'_ la
+codifica della classe. Ma l'ha fatto abbassando la **luminosita'** senza
+guardare la **tonalita'**, e per l'ambra le due cose non sono separabili:
+`#9a6200` sta a 38°, cioe' e' un **arancio bruno**. Il numero era giusto, il
+colore no.
+
+Ora `#9c7a00`, 47°: un oro. Piu' giallo di prima, e piu' in la' non si va —
+**un giallo vivo sta a 1,4:1 sul bianco**, quindi un pallino giallo su una
+scheda chiara semplicemente non c'e'. Sul **nero** il vincolo non esiste e il
+giallo e' giallo davvero: `#ffd60a`, 12:1.
+
+Questo e' il limite, e vale la pena scriverlo perche' tornera': **il giallo e'
+l'unica tinta la cui identita' sta nella luminosita'.** Il blu scuro resta blu,
+il verde scuro resta verde; il giallo scuro e' oro, poi ocra, poi oliva. Su un
+fondo chiaro non esiste un giallo leggibile — esiste un oro.
+
+**Piu' due cose che il colore da solo non copriva.**
+
+`--allarme`, `--attenzione` e `--conferma` erano `var(--classe-rosa)` e
+compagnia. La 0043 li aveva creati **proprio** per separare i due mestieri, e
+l'alias rimetteva insieme quello che aveva separato: ingiallire l'ambra
+ingialliva anche le note d'avviso. Ora portano un valore proprio, in tutti e due
+i temi.
+
+E `tests/tinte-contrasto.test.ts` legge i token da `globals.css` e misura. Non
+e' zelo: il difetto di partenza era **una misura che nessuno rifa'** mentre
+sceglie un colore, e l'ha appena rifatto ricomparire. Sette tinte × due temi,
+piu' il neutro, piu' i tre mestieri semantici a 4,5:1 perche' sono testo.
+Rimettendo il vecchio `#ffb340` la prova dice `ambra = #ffb340 contro #f4f4f7:
+1.62:1`.
+
+### Il cassetto laterale non era un foglio ruotato
+
+`Dialogo` serve i due pannelli con una durata e una curva sole. Sbagliato per
+due ragioni misurabili:
+
+- **il tragitto e' diverso.** Il foglio sale per la propria altezza; il cassetto
+  attraversa l'80% della larghezza, tutto, sempre. Stessa durata su piu' strada
+  = coda piu' lunga, cioe' «lento e molliccio»;
+- **la curva `0.32, 0.72, 0, 1` e' quella dei fogli di sistema**, che frenano
+  tardi perche' devono sembrare pesanti. Un cassetto scivola.
+
+Ora 240 ms con `0.2, 0, 0, 1` contro i 300 del foglio.
+
+Ma la ragione per cui **scattava** era un'altra, e non e' la durata: il pannello
+ha un'ombra da 40 px e si porta dietro delle schede che ne hanno tre ciascuna, e
+senza un livello suo ogni fotogramma le ridisegna. `will-change: transform` lo
+promuove, e il costo di memoria non e' un problema perche' il pannello esiste
+solo mentre e' aperto. Piu' `overflow-hidden` sul `<dialog>`: durante l'entrata
+e il trascinamento il pannello sta per meta' fuori, e senza clip quel fuori
+diventa un'area scorrevole dentro il dialogo.
+
+Nella stessa passata, un difetto d'accessibilita' che era li' dall'inizio:
+**chi chiede meno movimento riceveva lo scivolamento lo stesso.** La chiusura
+gia' non aspettava — `Dialogo` legge `prefers-reduced-motion` — ma l'entrata
+era una transizione nello stile in linea, dove la preferenza non arrivava. Ora
+la regola sta in `globals.css` su `[data-pannello]`, e sta li' e non in
+JavaScript per una ragione che si vede solo provandola: **una lettura in
+JavaScript resta ferma al montaggio**, e la preferenza si puo' cambiare a
+pannello aperto.
+
+### Il difetto che non era di aspetto
+
+«Ci sono dei movimenti in NON classificato, di ristoranti e bar, e persone.»
+Non era la UI: erano tre funzioni SQL. Sta in `CLAUDE.md` e nella **0058**.
