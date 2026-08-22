@@ -72,6 +72,19 @@ SQL **prima** che `normalizzaTutto` possa guardare una finestra, o la finestra r
 ed e' gia' successo di vederli salire dal 24% al 59% per un motivo diverso, con meta' della spesa
 reale sparita in silenzio.
 
+**L'interfaccia e' stata sottoposta a un audit, e i difetti sono quattro.** `docs/audit-ui.md`
+(22 agosto 2026) misura invece di opinare: **`--testo-3` non e' leggibile** — 2,28:1 sul chiaro,
+sotto perfino il 3:1 degli elementi grafici — ed e' il colore di `.eti`, cioe' della micro-etichetta
+sopra **ogni** numero grande; **le sette tinte spariscono sul tema chiaro** (ambra 2,06, verde 2,02,
+ciano 1,72) e il colore **e'** la codifica della classe; **niente reagisce al mouse** (un solo
+`hover:` in tutto il codice) e l'anello del fuoco e' quello del browser; **non esiste un annulla**,
+e ogni gesto fa `router.refresh()`. Piu' un `error.tsx` di radice che manca, quindi un guasto mostra
+la pagina di Next in inglese. Il documento porta le tinte corrette gia' calcolate, la scala
+tipografica ridotta da 26 misure a 7, e l'elenco di cosa **non** va fatto — barra laterale, swipe
+per confermare, un colore per categoria — con la ragione di ognuno. Le prime cinque voci valgono sei
+ore e chiudono tutti e tre i difetti critici. Va letto prima di toccare `globals.css` o
+`lib/ui/controlli.ts`.
+
 **L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
 2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
 icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere
