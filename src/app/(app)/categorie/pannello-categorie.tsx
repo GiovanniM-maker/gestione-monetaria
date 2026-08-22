@@ -10,6 +10,7 @@ import type { NodoAlbero } from '@/lib/tassonomia/categorie';
 import { Foglio } from '../foglio';
 import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
+import { allInvio } from '@/lib/ui/invio';
 
 /**
  * L'albero delle categorie: aggiungere e togliere.
@@ -357,6 +358,24 @@ function Creazione({
   const [discrezionalita, setDiscrezionalita] = useState('');
   const padre = stato?.padre ?? null;
 
+  // Una funzione sola per il bottone e per l'Invio: due copie della stessa
+  // creazione divergono, e quella che resta indietro e' sempre la strada meno
+  // usata — cioe' quella che nessuno prova.
+  const pronto = !occupato && nome.trim() !== '';
+  function crea() {
+    const n = nome.trim();
+    onCrea(
+      {
+        nome: n,
+        padreId: padre?.id ?? null,
+        discrezionalita: discrezionalita === '' ? null : discrezionalita,
+      },
+      n,
+    );
+    setNome('');
+    setDiscrezionalita('');
+  }
+
   return (
     <Foglio
       aperto={stato !== null}
@@ -376,6 +395,7 @@ function Creazione({
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
+          onKeyDown={allInvio(crea, pronto)}
           placeholder="nome della categoria"
           className={CAMPO_PIENO}
           disabled={occupato}
@@ -401,24 +421,7 @@ function Creazione({
           La discrezionalità predefinita si applica agli esercenti che finiranno qui e non hanno una
           scelta propria. Si può lasciare vuota e decidere caso per caso.
         </p>
-        <button
-          type="button"
-          className={`${BOTTONE} w-full`}
-          disabled={occupato || nome.trim() === ''}
-          onClick={() => {
-            const n = nome.trim();
-            onCrea(
-              {
-                nome: n,
-                padreId: padre?.id ?? null,
-                discrezionalita: discrezionalita === '' ? null : discrezionalita,
-              },
-              n,
-            );
-            setNome('');
-            setDiscrezionalita('');
-          }}
-        >
+        <button type="button" className={`${BOTTONE} w-full`} disabled={!pronto} onClick={crea}>
           Crea
         </button>
       </div>

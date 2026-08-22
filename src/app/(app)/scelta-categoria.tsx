@@ -6,6 +6,7 @@ import { Foglio } from './foglio';
 import { spiegaEccezione, spiegaRisposta, spiegaTesto, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
 import { Icona } from '@/lib/ui/icone';
+import { allInvio } from '@/lib/ui/invio';
 
 /**
  * Il selettore di categoria dentro una riga di elenco.
@@ -264,6 +265,7 @@ export function SceltaCategoria({
             <input
               value={nuova}
               onChange={(e) => setNuova(e.target.value)}
+              onKeyDown={allInvio(() => void creaEAssegna(), !inCorso && nuova.trim() !== '')}
               placeholder="nome della categoria"
               className="min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-corpo placeholder:text-testo-3"
               disabled={inCorso}

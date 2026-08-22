@@ -6,6 +6,7 @@ import { Foglio } from '../foglio';
 import { spiegaEccezione, spiegaRisposta, spiegaTesto, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
 import { Icona } from '@/lib/ui/icone';
+import { allInvio } from '@/lib/ui/invio';
 
 /**
  * La domanda che si fa **una volta sola**, quando un nome nuovo compare.
@@ -212,6 +213,7 @@ export function DecidiEsercente({
               <input
                 value={nuova}
                 onChange={(e) => setNuova(e.target.value)}
+                onKeyDown={allInvio(() => void creaEScegli(), !inCorso && nuova.trim() !== '')}
                 placeholder="nome della categoria"
                 className="min-h-11 w-full rounded-full bg-s3 px-4 text-corpo placeholder:text-testo-3"
                 disabled={inCorso}

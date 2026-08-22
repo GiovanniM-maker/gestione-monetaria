@@ -334,12 +334,94 @@ Premuto quello, la scrittura parte.
 
 ---
 
+## Terzo passaggio — l'uso caotico (fase 22)
+
+Nessun copione: 140 azioni per seme, mescolate da un generatore deterministico —
+navigare, cliccare un elemento a caso, ESC, indietro, avanti, ricaricare,
+ridimensionare fra 320 e 1280, doppio clic, scorrere. Dopo **ogni** azione il
+banco verifica tre invarianti: mai due pannelli aperti insieme, mai
+sbordamento, e mai il **corpo bloccato senza nessun pannello aperto** — che
+sarebbe lo stato sporco che rende la pagina non scorrevole senza che si capisca
+perché.
+
+| seme | guai  | console | eccezioni |
+| ---- | ----- | ------- | --------- |
+| 1    | **0** | 0       | 0         |
+| 7    | **0** | 0       | 0         |
+| 42   | **0** | 0       | 0         |
+| 99   | **0** | 0       | 0         |
+
+**560 azioni casuali, nessun difetto.** In più: l'occupazione di memoria cresce
+da 5 a 24 MB in quaranta azioni — la cache del router di Next, non una perdita —
+e il numero di nodi resta stabile fra 268 e 506, quindi il DOM non accumula.
+
+### Un difetto trovato, e uno solo
+
+**QA-009 · P4 · L'Invio non crea niente.** Nel foglio «Nuova categoria» si
+scrive un nome valido, si preme **Invio** sulla tastiera, e non succede nulla:
+misurato, con un nome valido l'unica chiamata partita era la sincronizzazione di
+fondo. I fogli che creano qualcosa non sono dentro un `<form>` — sono pannelli,
+e il salvataggio passa da `fetch`.
+
+Su un telefono pesa più che su una scrivania: la tastiera copre il fondo del
+pannello, il tasto di conferma sta **sotto il pollice**, e «Crea» può essere
+proprio dietro i tasti. È attrito in un flusso costruito apposta per toglierlo —
+il «+ Nuova categoria» esiste perché uscire e tornare era il passaggio da
+evitare.
+
+`allInvio()` sta in un modulo solo e controlla `isComposing`: con una tastiera a
+composizione l'Invio **chiude la composizione**, non conferma, e senza quel
+controllo si salverebbe a metà parola.
+
+Collegato ai tre percorsi di creazione di una categoria (`/categorie`, il foglio
+di scelta, `/da-confermare`). **Non** a `/classi` e `/obiettivi`: sono moduli a
+più campi dove l'Invio è ambiguo, e forzarlo sarebbe indovinare.
+
+**Verifica** — Invio a campo vuoto: 0 creazioni. Bottone «Crea»: 1. Invio dal
+foglio di scelta: 1.
+
+### Sei difetti che non esistevano
+
+È il risultato più utile della fase, e riguarda il **banco** più dell'app. Il
+finto server ignorava gli argomenti delle query, e questo fabbricava difetti
+molto convincenti:
+
+| sintomo                           | verità                                                          |
+| --------------------------------- | --------------------------------------------------------------- |
+| «undefined · personale» a schermo | la vista vera ha `classe_nome`, mancava alla fixture            |
+| la pagina crolla al doppio clic   | la home riceveva **dodici mesi insieme** — 83 righe invece di 6 |
+| eccezione `appendChild` su null   | lo script del banco che nascondeva il pannello di sviluppo      |
+| morte deterministica al passo 39  | **tre Chromium** in contesa: da solo, lo stesso seme è pulito   |
+| la home è alta 5.978 px           | stessa causa dei dodici mesi: con i filtri è **1.570**          |
+| doppio tocco = due viaggi         | misurato: **un** viaggio, e il ramo torna chiuso                |
+
+Il banco ora rispetta `eq`, `is`, `gte`, `lte` e `limit`, e `ripartizione_dove`
+riceve i suoi argomenti — senza, «Ristorazione» conteneva sé stessa e l'albero
+era infinito.
+
+**La regola che ne esce**, pagata sei volte in una sera: _una misura che accusa
+il codice va rifatta in un altro modo prima di crederle._ Vale soprattutto
+quando il difetto è spettacolare — un crash convince molto più di un bottone
+storto, e proprio per questo merita più diffidenza.
+
+### Due limiti dichiarati
+
+- I bottoni **distruttivi** sono esclusi dal caos (Esci, Elimina, Genera, Avvia,
+  Sequenza): non deve cancellare dati né chiamare la banca. Quei percorsi
+  restano provati solo di proposito.
+- Il caos **non scrive nei campi**. I moduli sono stati provati a parte: 300
+  caratteri (niente sbordamento, «Crea» resta visibile), caratteri ostili
+  (`<script>`, virgolette, emoji, `../../etc/passwd` — valore intatto, niente
+  eseguito), Esc a modulo pieno, Invio a campo vuoto.
+
+---
+
 ## Ancora aperto
 
-- L'uso **caotico** fuori dai flussi previsti (fase 22). Il secondo passaggio è
-  fatto e mirato alle tre modifiche a largo raggio; quello che manca è il giro
-  senza copione, che è il modo in cui si trovano i difetti che una lista non
-  prevede.
+- L'Invio su `/classi` e `/obiettivi`, lasciato fuori di proposito: moduli a più
+  campi dove il tasto non ha un significato ovvio.
+- I percorsi **distruttivi** (elimina categoria, elimina classe) sono provati
+  solo di proposito, mai sotto stress.
 - I bersagli piccoli che restano sono **collegamenti dentro la prosa** (14–15
   px) e le caselle di spunta (16 px, con l'etichetta alta 44 che le commuta):
   entrambi voluti e documentati.
