@@ -3,20 +3,24 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE } from '@/lib/ui/controlli';
+import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 export function GeneraReport() {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
   const [messaggio, setMessaggio] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   async function genera() {
     setInCorso(true);
     setMessaggio(null);
+    setErrore(null);
     try {
       const risposta = await fetch('/api/admin/report', { method: 'POST' });
       const corpo = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setMessaggio(String(corpo['error'] ?? risposta.status));
+        setErrore(spiegaErrore(risposta.status, corpo));
         return;
       }
       const anonimizzati = Number(corpo['anonimizzati'] ?? 0);
@@ -28,7 +32,7 @@ export function GeneraReport() {
       );
       router.refresh();
     } catch (e) {
-      setMessaggio(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -39,6 +43,7 @@ export function GeneraReport() {
       <button type="button" onClick={genera} disabled={inCorso} className={BOTTONE}>
         {inCorso ? 'Scrivo…' : 'Genera il report del mese scorso'}
       </button>
+      <NotaErrore errore={errore} onRiprova={() => void genera()} />
       {messaggio !== null && <p className="text-sm text-testo-2">{messaggio}</p>}
     </div>
   );

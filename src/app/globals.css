@@ -36,9 +36,15 @@
   --s2: #ffffff;
   --s3: #f4f4f7;
 
+  /* I tre toni, con i rapporti misurati sul fondo peggiore dei tre (docs/audit-ui.md §4.2).
+     `--testo-2` era a 0.56, cioe' esattamente sulla linea dei 4,5:1: alzarlo di
+     quattro centesimi costa niente e da' margine. `--testo-3` era a 0.34, cioe'
+     **2,28:1** — sotto perfino il 3:1 degli elementi grafici — ed era il colore
+     di `.eti`, la micro-etichetta sopra ogni numero grande.
+     Ora vale 3:1 ed e' vincolato: mai sotto i 16 px, mai per un'informazione. */
   --testo: #05070a;
-  --testo-2: rgb(5 7 10 / 0.56);
-  --testo-3: rgb(5 7 10 / 0.34);
+  --testo-2: rgb(5 7 10 / 0.6);
+  --testo-3: rgb(5 7 10 / 0.44);
   --filo: rgb(5 7 10 / 0.09);
   --velo: rgb(255 255 255 / 0.72);
 
@@ -83,14 +89,21 @@
    * due tinte adiacenti si somigliano, e un colore che non distingue e' un
    * colore che non informa.
    */
-  --classe-blu: #0a84ff;
-  --classe-ambra: #ff9f0a;
-  --classe-rosa: #ff375f;
-  --classe-verde: #30d158;
-  --classe-viola: #bf5af2;
-  --classe-ciano: #64d2ff;
-  --classe-bruno: #ac8e68;
-  --neutro: #8e8e93;
+  /* Sul chiaro erano la tavolozza di iOS **scura**, usata identica: ambra 2,06,
+     verde 2,02, ciano 1,72 contro le superfici chiare. Il colore *e'* la
+     codifica della classe di spesa, quindi sotto 3:1 la dimensione principale
+     dell'applicazione spariva. Stessa famiglia cromatica, luminosita' abbassata
+     finche' passano **4,5:1** — non solo il 3:1 dei soli elementi grafici, cosi'
+     la stessa tinta puo' fare da pallino *e* da testo senza una seconda
+     tavolozza. Le scure restano com'erano: erano gia' a norma. */
+  --classe-blu: #0063d8;
+  --classe-ambra: #9a6200;
+  --classe-rosa: #d4003c;
+  --classe-verde: #0f7a34;
+  --classe-viola: #8f31c7;
+  --classe-ciano: #00688f;
+  --classe-bruno: #7d6144;
+  --neutro: #6c6c74;
 
   /* Il rosso e l'ambra quando dicono «guarda qui», non «questa spesa e'
      voluttuaria». Stesso pigmento, mestiere diverso — e chiamarli col loro
@@ -328,7 +341,10 @@ body {
   letter-spacing: 0.13em;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--testo-3);
+  /* Era `--testo-3`. A 10,5 px quel tono dava 2,28:1: il testo piu' piccolo
+     dell'applicazione era anche il meno leggibile, e i due difetti si
+     moltiplicavano invece di compensarsi. */
+  color: var(--testo-2);
 }
 
 .pastiglia {
@@ -533,6 +549,80 @@ body {
 @supports not (backdrop-filter: blur(1px)) {
   .velato {
     background: var(--s1);
+  }
+}
+
+/**
+ * Il velo dei pannelli modali.
+ * --------------------------------------------------------------------------
+ * `showModal()` inserisce l'elemento nel livello superiore **gia' visibile**,
+ * quindi non c'e' uno stato di partenza da cui muoversi: il velo compariva di
+ * scatto. L'attributo lo mette `Dialogo` un fotogramma dopo l'apertura, ed e'
+ * quel fotogramma a dare alla transizione qualcosa da cui partire.
+ *
+ * Duecentoventi millisecondi contro i trecento del pannello, di proposito: il
+ * fondo si scurisce mentre il foglio sta ancora salendo, cosi' il movimento del
+ * foglio arriva su uno sfondo gia' calmo invece di gareggiarci.
+ */
+dialog::backdrop {
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+dialog[data-dentro]::backdrop {
+  opacity: 1;
+}
+
+/**
+ * Il fuoco, e il passaggio del mouse.
+ * --------------------------------------------------------------------------
+ * Fino al 22 agosto l'applicazione aveva **un solo** `hover:` in tutto il
+ * codice e nessun `focus-visible`: l'anello del fuoco era quello dell'agente
+ * utente, che sui fondi scuri spesso non si vede e cambia da browser a browser.
+ * WCAG 2.2 (SC 2.4.13) chiede un perimetro di 2 px e 3:1 fra lo stato con e
+ * senza fuoco: non e' una cosa che si possa garantire se l'anello non e' nostro.
+ *
+ * `:focus-visible` e non `:focus`: l'anello compare col **Tab**, non al clic
+ * del mouse. `:where()` tiene la specificita' a zero, cosi' un componente che
+ * abbia bisogno di un anello diverso lo puo' ancora dichiarare.
+ *
+ * `outline` e non `box-shadow`: segue il `border-radius` dell'elemento da solo,
+ * e sopravvive alla modalita' a contrasto elevato, dove le ombre spariscono.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accento);
+  outline-offset: 2px;
+}
+
+/**
+ * Il passaggio del mouse esiste **solo dove c'e' un puntatore vero**.
+ * Su un telefono `:hover` resta appiccicato dopo il tocco: la riga toccata
+ * resterebbe accesa finche' non se ne tocca un'altra, che si legge come
+ * «selezionata» ed e' falso. `@media (hover: hover)` lo esclude.
+ *
+ * La velatura e' dell'**accento** al 10%, non un grigio: il grigio dice
+ * «disabilitato» e questo dice «si puo' toccare».
+ *
+ * Il margine negativo piu' il rientro uguale lascia il contenuto **dov'era** e
+ * allarga solo lo sfondo: senza, la velatura si fermerebbe al rientro della
+ * scheda e sembrerebbe tagliata.
+ */
+@media (hover: hover) {
+  .elenco > :where(a, button):hover,
+  .elenco > * > :where(a, button):hover {
+    background: color-mix(in oklab, var(--accento) 10%, transparent);
+    border-radius: 10px;
+    margin-inline: -8px;
+    padding-inline: 8px;
+  }
+
+  .capsula:hover,
+  .tondo:hover {
+    background: var(--s3);
+  }
+
+  .segm-voce:not([aria-current]):not([aria-pressed='true']):hover,
+  .barra-voce:not([aria-current]):hover {
+    color: var(--testo);
   }
 }
 

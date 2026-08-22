@@ -4,6 +4,8 @@ import { useClassiSceglibili } from './classi-note';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * La correzione, dove si guarda il numero.
@@ -39,7 +41,7 @@ const CONTESTI = ['personale', 'business'] as const;
 function useScrittura(chiudi: () => void) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   async function scrivi(url: string, metodo: string, corpo: unknown): Promise<void> {
     setInCorso(true);
@@ -50,15 +52,14 @@ function useScrittura(chiudi: () => void) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       chiudi();
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -81,7 +82,7 @@ function Pannello({
   aperto: boolean;
   apri: () => void;
   chiudi: () => void;
-  errore: string | null;
+  errore: Spiegazione | null;
   children: React.ReactNode;
 }) {
   if (!aperto) {
@@ -97,7 +98,7 @@ function Pannello({
       <h2 className="text-sm font-medium">{titolo}</h2>
       <p className="text-xs text-testo-2">{portata}</p>
       {children}
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
       <button type="button" className={BOTTONE_MINORE} onClick={chiudi}>
         Annulla
       </button>

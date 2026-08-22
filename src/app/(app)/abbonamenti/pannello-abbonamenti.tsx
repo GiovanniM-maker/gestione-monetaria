@@ -17,6 +17,8 @@ import type {
 } from '@/lib/abbonamenti/formato';
 import { BOTTONE_MINORE, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
 import type { Tinte } from '../grafici';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 const GIUDIZI = [
   { valore: 'usato', etichetta: 'Lo uso' },
@@ -80,7 +82,7 @@ export function PannelloAbbonamenti({
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [mostraTutti, setMostraTutti] = useState(false);
 
   const voci = ordinaPerPeso(metrica);
@@ -102,14 +104,13 @@ export function PannelloAbbonamenti({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, ...corpo }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(null);
     }
@@ -117,7 +118,7 @@ export function PannelloAbbonamenti({
 
   return (
     <div className="space-y-8">
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
 
       {/* -------------------------------------------------------------- */}
       {/* I DUE NUMERI                                                    */}

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Foglio } from '../foglio';
+import { spiegaEccezione, spiegaRisposta, spiegaTesto, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * La domanda che si fa **una volta sola**, quando un nome nuovo compare.
@@ -52,7 +54,7 @@ export function DecidiEsercente({
   const [cerca, setCerca] = useState('');
   const [scelto, setScelto] = useState<string>(categoriaId ?? '');
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   const [creando, setCreando] = useState(false);
   const [nuova, setNuova] = useState('');
@@ -92,9 +94,8 @@ export function DecidiEsercente({
           variabile,
         }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       setAperto(false);
@@ -102,7 +103,7 @@ export function DecidiEsercente({
       // si sta guardando e' di un istante fa.
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -132,14 +133,19 @@ export function DecidiEsercente({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ nome: battuto, padreId: dentro === '' ? null : dentro }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
+      const esito = (await risposta.json()) as Record<string, unknown>;
       const id = typeof esito['id'] === 'string' ? esito['id'] : null;
       if (id === null) {
-        setErrore('La categoria è stata creata ma non so quale sia.');
+        setErrore(
+          spiegaTesto(
+            'La categoria è stata creata ma non so quale sia.',
+            'Chiudi e riaprilo: la troverai nell’elenco.',
+          ),
+        );
         return;
       }
 
@@ -158,7 +164,7 @@ export function DecidiEsercente({
       setDentro('');
       setCerca('');
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -196,7 +202,7 @@ export function DecidiEsercente({
         }}
       >
         <div className="space-y-3">
-          {errore !== null && <p className="nota nota-errore text-[13px]">{errore}</p>}
+          <NotaErrore errore={errore} />
 
           {creando ? (
             /* Il modulo prende il posto dell'elenco invece di aprirsi sotto: su

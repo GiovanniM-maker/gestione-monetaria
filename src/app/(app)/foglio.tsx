@@ -39,12 +39,65 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *    l'elenco sotto, e si chiudeva il foglio ritrovandosi altrove.
  */
 
-type Verso = 'basso' | 'destra';
+export type Verso = 'basso' | 'destra';
 
 /** Quanto si deve trascinare, in frazione della misura del pannello. */
 const SOGLIA = 0.25;
 /** Uno strappo veloce chiude comunque: px al secondo. */
 const STRAPPO = 550;
+
+/**
+ * Quanto dura l'entrata e l'uscita del pannello.
+ *
+ * Trecento millisecondi con la curva del sistema: sotto i duecento il movimento
+ * non si legge come un movimento ma come uno sfarfallio, sopra i quattrocento
+ * si aspetta. E' la durata dei fogli di sistema, e non e' un caso — e' quella a
+ * cui la mano e' abituata.
+ */
+const USCITA_MS = 300;
+
+/**
+ * Dove sta il pannello, adesso.
+ *
+ * ---------------------------------------------------------------------------
+ * Una sola trasformazione per due lavori, e l'ordine conta
+ * ---------------------------------------------------------------------------
+ * Mentre si trascina comanda il **dito**: qualunque altra cosa la sovrascriva
+ * fa perdere il contatto fra il pannello e il polpastrello, che e' l'unica cosa
+ * che rende quel gesto credibile. Quando non si trascina comanda lo **stato**:
+ * fuori dallo schermo se sta entrando o uscendo, a riposo se e' arrivato.
+ *
+ * Sono due `transform` sullo stesso elemento, e in CSS la seconda vince sempre:
+ * separarle in due proprieta' o in due classi era il modo di scoprire fra un
+ * mese che il trascinamento aveva smesso di funzionare. Qui c'e' una sola
+ * decisione, ed e' provata.
+ */
+export function trasformaPannello({
+  verso,
+  dentro,
+  scostamento,
+}: {
+  verso: Verso;
+  /** Il pannello e' arrivato: non sta ne' entrando ne' uscendo. */
+  dentro: boolean;
+  /** Quanto l'ha spostato il dito, in pixel. Zero quando non si trascina. */
+  scostamento: number;
+}): string | undefined {
+  if (scostamento !== 0) {
+    return verso === 'basso' ? `translateY(${scostamento}px)` : `translateX(${scostamento}px)`;
+  }
+  if (dentro) return undefined;
+  // 101 e non 100: un pixel di margine, o su uno schermo a densita' frazionaria
+  // resta a schermo una riga chiara del bordo del pannello.
+  return verso === 'basso' ? 'translateY(101%)' : 'translateX(101%)';
+}
+
+/** Chi ha chiesto meno movimento non aspetta un'animazione che non vedra'. */
+function riduciMovimento(): boolean {
+  return (
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
 
 /**
  * Il blocco dello scorrimento si conta, perche' i pannelli si annidano.
@@ -80,16 +133,70 @@ export function Dialogo({
   const pannello = useRef<HTMLDivElement>(null);
   const partitoFuori = useRef(false);
   const gesto = useRef<{ da: number; quando: number } | null>(null);
+  const annullaSecondo = useRef<number | null>(null);
   const [scostamento, setScostamento] = useState(0);
   const [trascinando, setTrascinando] = useState(false);
+  /**
+   * Il pannello e' **arrivato**, cioe' non sta ne' entrando ne' uscendo.
+   *
+   * ---------------------------------------------------------------------------
+   * Perche' serve uno stato, e non basta una transizione
+   * ---------------------------------------------------------------------------
+   * Fino al 22 agosto il foglio **compariva**: la transizione c'era ma solo sul
+   * trascinamento, e all'apertura il pannello era gia' alla posizione di riposo.
+   * E' l'unico punto dell'applicazione in cui il movimento e' obbligatorio — un
+   * pannello che appare senza salire non dice da dove viene, e chiudendo
+   * sparisce senza dire dove va. Tutto il resto e' giustamente immobile, e
+   * questo lo rendeva piu' evidente, non meno.
+   *
+   * Non si puo' fare con la sola CSS: `showModal()` inserisce l'elemento nel
+   * livello superiore **gia' visibile**, quindi la transizione non ha uno stato
+   * di partenza da cui muoversi. Serve un fotogramma in mezzo — ed e' proprio
+   * quello che fa il doppio `requestAnimationFrame` qui sotto.
+   *
+   * In uscita il problema e' l'opposto: `close()` e' immediato e toglierebbe il
+   * pannello prima che abbia il tempo di scendere. Quindi si toglie prima lo
+   * stato, si aspetta la durata dell'animazione, e solo allora si chiude.
+   */
+  const [dentro, setDentro] = useState(false);
 
   useEffect(() => {
     const d = dialogo.current;
     if (d === null) return;
-    // `open` da solo non basta: senza `showModal()` non c'e' ne' la trappola
-    // del fuoco ne' Esc, e sarebbe un riquadro qualsiasi.
-    if (aperto && !d.open) d.showModal();
-    if (!aperto && d.open) d.close();
+
+    if (aperto) {
+      // `open` da solo non basta: senza `showModal()` non c'e' ne' la trappola
+      // del fuoco ne' Esc, e sarebbe un riquadro qualsiasi.
+      if (!d.open) d.showModal();
+      // Due fotogrammi: il primo mette l'elemento a schermo, il secondo lascia
+      // al browser il tempo di calcolare lo stato iniziale da cui partire. Con
+      // uno solo, in Safari, la transizione a volte non parte affatto.
+      const r1 = requestAnimationFrame(() => {
+        const r2 = requestAnimationFrame(() => setDentro(true));
+        annullaSecondo.current = r2;
+      });
+      return () => {
+        cancelAnimationFrame(r1);
+        if (annullaSecondo.current !== null) cancelAnimationFrame(annullaSecondo.current);
+      };
+    }
+
+    if (!d.open) return;
+    // Chi ha chiesto meno movimento non aspetta: la chiusura e' immediata.
+    const attesa = riduciMovimento() ? 0 : USCITA_MS;
+    // Un fotogramma prima di far scendere il pannello: e' anche il modo di non
+    // cambiare stato dentro il corpo dell'effetto, che React 19 non ammette.
+    const r = requestAnimationFrame(() => setDentro(false));
+    const t = setTimeout(() => {
+      if (d.open) d.close();
+      // Lo scostamento torna a zero **dopo** la chiusura, non prima: azzerarlo
+      // subito farebbe risalire il pannello di scatto mentre sta uscendo.
+      setScostamento(0);
+    }, attesa);
+    return () => {
+      cancelAnimationFrame(r);
+      clearTimeout(t);
+    };
   }, [aperto]);
 
   /**
@@ -215,12 +322,7 @@ export function Dialogo({
     };
   }, [trascinando, verso, punto, onChiudi]);
 
-  const trasformazione =
-    scostamento === 0
-      ? undefined
-      : verso === 'basso'
-        ? `translateY(${scostamento}px)`
-        : `translateX(${scostamento}px)`;
+  const trasformazione = trasformaPannello({ verso, dentro, scostamento });
 
   return (
     <dialog
@@ -250,6 +352,10 @@ export function Dialogo({
         if (fuori) onChiudi();
       }}
       aria-label={etichetta}
+      // Il velo sfuma insieme al pannello: comparire di scatto su una schermata
+      // di numeri e' la cosa che si nota di piu' e che si spiega di meno.
+      // La regola sta in `globals.css`, agganciata a questo attributo.
+      data-dentro={dentro ? '' : undefined}
       className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0
                  backdrop:bg-black/40 backdrop:backdrop-blur-[2px]"
     >
@@ -261,8 +367,10 @@ export function Dialogo({
           style={{
             transform: trasformazione,
             // Durante il gesto il pannello segue il dito senza ritardo; al
-            // rilascio la molla lo riporta a posto.
-            transition: trascinando ? 'none' : 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)',
+            // rilascio la molla lo riporta a posto, e all'apertura sale.
+            transition: trascinando
+              ? 'none'
+              : `transform ${USCITA_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`,
             ...(verso === 'basso'
               ? { maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }
               : {}),

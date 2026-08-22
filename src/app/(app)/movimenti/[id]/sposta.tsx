@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import type { EsercenteMinimo } from '@/lib/movimenti/sposta';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * Spostare questo movimento su un altro esercente.
@@ -41,7 +43,7 @@ export function SpostaMovimento({
   const [aperto, setAperto] = useState(false);
   const [modo, setModo] = useState<'cerca' | 'nuovo'>('cerca');
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   const [ricerca, setRicerca] = useState('');
   const [trovati, setTrovati] = useState<readonly EsercenteMinimo[]>([]);
@@ -78,15 +80,14 @@ export function SpostaMovimento({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, ...corpo }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       setAperto(false);
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -239,7 +240,7 @@ export function SpostaMovimento({
         </div>
       )}
 
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
 
       <button type="button" className={BOTTONE_MINORE} onClick={() => setAperto(false)}>
         Annulla

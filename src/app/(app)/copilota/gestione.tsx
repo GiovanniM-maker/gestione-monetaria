@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { Foglio } from '../foglio';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * La gestione di una conversazione: la stella, il titolo, l'eliminazione.
@@ -26,17 +28,16 @@ import { Foglio } from '../foglio';
  * accanto (`NotaScadenza`).
  */
 
-async function azione(corpo: Record<string, unknown>): Promise<string | null> {
+async function azione(corpo: Record<string, unknown>): Promise<Spiegazione | null> {
   try {
     const risposta = await fetch('/api/admin/copilota', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(corpo),
     });
-    const esito = (await risposta.json()) as Record<string, unknown>;
-    return risposta.ok ? null : String(esito['error'] ?? risposta.status);
+    return risposta.ok ? null : await spiegaRisposta(risposta);
   } catch (e) {
-    return e instanceof Error ? e.message : String(e);
+    return spiegaEccezione(e);
   }
 }
 
@@ -53,7 +54,7 @@ export function Stella({
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   async function commuta() {
     if (inCorso) return;
@@ -70,10 +71,21 @@ export function Stella({
       onClick={() => void commuta()}
       aria-pressed={salvata}
       disabled={inCorso}
-      // Il perche' del fallimento nel `title` e il punto esclamativo al posto
-      // della stella: un bottone che fallisce in silenzio e' un bottone che
-      // «non funziona», e si preme dieci volte.
-      title={errore ?? undefined}
+      // Il punto esclamativo al posto della stella: un bottone che fallisce in
+      // silenzio e' un bottone che «non funziona», e si preme dieci volte.
+      //
+      // Il perche' sta nel `title` **e** nel nome accessibile, non solo nel
+      // primo: `title` non compare mai su un telefono, ed e' proprio li' che
+      // questa applicazione si usa. Qui basta — la stella e' reversibile con un
+      // secondo tocco — mentre dove l'azione conta il motivo va in una nota.
+      title={errore?.titolo}
+      aria-label={
+        errore !== null
+          ? `Non riuscito: ${errore.titolo}`
+          : salvata
+            ? 'Non salvare piu’ questa conversazione'
+            : 'Salva questa conversazione'
+      }
       className={
         compatta
           ? 'inline-flex size-11 shrink-0 items-center justify-center rounded-full'
@@ -151,7 +163,7 @@ export function MenuConversazione({
   const [nome, setNome] = useState(titolo ?? '');
   const [daConfermare, setDaConfermare] = useState(false);
   const [inCorso, setInCorso] = useState<string | null>(null);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   async function esegui(nomeAzione: string, corpo: Record<string, unknown>) {
     setInCorso(nomeAzione);
@@ -258,7 +270,7 @@ export function MenuConversazione({
             )}
           </div>
 
-          {errore !== null && <p className="nota nota-errore text-[13px]">{errore}</p>}
+          <NotaErrore errore={errore} />
         </div>
       </Foglio>
     </>

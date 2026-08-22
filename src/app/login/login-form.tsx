@@ -19,11 +19,16 @@ function SubmitButton() {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ ritorno }: { ritorno?: string | undefined }) {
   const [state, formAction] = useActionState(signIn, initialState);
 
   return (
     <form action={formAction} className="space-y-4">
+      {/* Dove tornare dopo l'accesso. Lo mette `NotaErrore` quando la sessione
+          scade a meta' di un gesto: rientrare e ritrovarsi sul cruscotto invece
+          che sulla schermata da cui si veniva e' la differenza fra «rientra» e
+          «ricomincia». Il valore viene validato lato server. */}
+      {ritorno !== undefined && <input type="hidden" name="ritorno" value={ritorno} />}
       <div className="space-y-1">
         <label htmlFor="email" className="block text-sm font-medium">
           Email

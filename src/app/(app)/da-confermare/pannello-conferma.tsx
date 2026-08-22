@@ -20,6 +20,8 @@ import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { Foglio } from '../foglio';
 import { SceltaCategoria } from '../scelta-categoria';
 import { DecidiEsercente } from './decidi-esercente';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -71,7 +73,7 @@ export function PannelloConferma({
 }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [tutteChieste, setTutteChieste] = useState(false);
   const [ordinamento, setOrdinamento] = useState<Ordinamento>('data');
@@ -95,16 +97,15 @@ export function PannelloConferma({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       setAperta(null);
       setTutteChieste(false);
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(null);
     }
@@ -173,7 +174,7 @@ export function PannelloConferma({
 
   return (
     <div className="space-y-4">
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
       {/* Anche con la lista piena: quello che c'e' e' vecchio, e confermarlo
           non fa arrivare il resto. */}
       {fermi !== null && <p className="nota nota-avviso text-[13px]">{fermi}</p>}

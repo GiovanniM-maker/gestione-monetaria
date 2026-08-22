@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * I due flag dell'esercente: **fisso** o **variabile**.
@@ -28,7 +30,7 @@ export function Interruttore({
   const router = useRouter();
   const [valore, setValore] = useState(variabile);
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   async function scegli(nuovo: boolean) {
     if (nuovo === valore || inCorso) return;
@@ -43,15 +45,14 @@ export function Interruttore({
         body: JSON.stringify({ id, variabile: nuovo }),
       });
       if (!risposta.ok) {
-        const esito = (await risposta.json()) as Record<string, unknown>;
         setValore(prima); // torna indietro: non deve restare a schermo un valore che il database non ha
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       router.refresh();
     } catch (e) {
       setValore(prima);
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -96,7 +97,7 @@ export function Interruttore({
           )}
         </p>
       )}
-      {errore !== null && <p className="nota nota-errore text-[13px]">{errore}</p>}
+      <NotaErrore errore={errore} />
     </div>
   );
 }

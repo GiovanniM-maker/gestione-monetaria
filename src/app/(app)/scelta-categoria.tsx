@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Foglio } from './foglio';
+import { spiegaEccezione, spiegaRisposta, spiegaTesto, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * Il selettore di categoria dentro una riga di elenco.
@@ -86,7 +88,7 @@ export function SceltaCategoria({
   const [aperto, setAperto] = useState(false);
   const [cerca, setCerca] = useState('');
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   /** Quando si sta scrivendo il nome di una categoria che non esiste ancora. */
   const [creando, setCreando] = useState(false);
   const [nuova, setNuova] = useState('');
@@ -122,14 +124,19 @@ export function SceltaCategoria({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ nome, padreId: dentro === '' ? null : dentro }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
+      const esito = (await risposta.json()) as Record<string, unknown>;
       const id = typeof esito['id'] === 'string' ? esito['id'] : null;
       if (id === null) {
-        setErrore('La categoria e\u2019 stata creata ma non so quale sia.');
+        setErrore(
+          spiegaTesto(
+            'La categoria è stata creata ma non so quale sia.',
+            'Chiudi il foglio e riaprilo: la troverai nell’elenco.',
+          ),
+        );
         return;
       }
       setCreando(false);
@@ -140,7 +147,7 @@ export function SceltaCategoria({
       // categoria e' un atto suo, e resta fatto anche se poi si annulla.
       setScelto(id);
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -174,18 +181,17 @@ export function SceltaCategoria({
         body: JSON.stringify(corpo),
       });
       if (!risposta.ok) {
-        const esito = (await risposta.json()) as Record<string, unknown>;
         // Si torna al valore di prima: a schermo non deve restare una scelta
         // che il database non ha.
         setValore(prima);
         setScelto(prima);
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       router.refresh();
     } catch (e) {
       setValore(prima);
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -224,7 +230,7 @@ export function SceltaCategoria({
         )}
       </div>
 
-      {errore !== null && <p className="nota nota-errore mt-1 text-[11px]">{errore}</p>}
+      <NotaErrore errore={errore} />
 
       <Foglio
         aperto={aperto}
@@ -379,7 +385,7 @@ export function SceltaCategoria({
           </>
         )}
 
-        {errore !== null && <p className="nota nota-errore mt-2 text-[13px]">{errore}</p>}
+        <NotaErrore errore={errore} />
       </Foglio>
     </div>
   );

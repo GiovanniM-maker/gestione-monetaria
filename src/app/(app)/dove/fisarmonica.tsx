@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { comeIcona, Icona } from '@/lib/ui/icone';
 import { Freccia } from '../grafici';
+import { spiegaErrore } from '@/lib/ui/errori';
 import {
   categorieComeNodi,
   movimentiComeNodi,
@@ -388,7 +389,9 @@ async function chiediFigli(mese: string, a: Apertura): Promise<readonly Nodo[]> 
 
   const risposta = await fetch(`/api/admin/dove?${q.toString()}`);
   const dati = (await risposta.json()) as Record<string, unknown>;
-  if (!risposta.ok) throw new Error(String(dati['error'] ?? risposta.status));
+  // Non il testo del server: la fisarmonica mostra questo messaggio dentro il
+  // ramo che non si e' aperto, e «unauthorized» li' non direbbe niente a nessuno.
+  if (!risposta.ok) throw new Error(spiegaErrore(risposta.status, dati).titolo);
 
   if (dati['tipo'] === 'movimenti') {
     return movimentiComeNodi((dati['righe'] as RigaMovimentoDove[] | undefined) ?? [], a.categoria);

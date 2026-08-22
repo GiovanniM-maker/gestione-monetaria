@@ -7,6 +7,8 @@ import type { CategoryRow } from '@/lib/db/types';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { BOTTONE, CAMPO_PIENO, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
 import { Foglio } from '../foglio';
+import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * Il pannello di revisione.
@@ -70,7 +72,7 @@ export function PannelloRevisione({
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
   const [esito, setEsito] = useState<string | null>(null);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   /**
    * Predefinito acceso, e non e' una scorciatoia per far sembrare corta la
    * lista. La metrica per cui l'app esiste e' il costo **ricorrente**: un
@@ -103,7 +105,7 @@ export function PannelloRevisione({
       });
       const dati = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(dati['error'] ?? risposta.status));
+        setErrore(spiegaErrore(risposta.status, dati));
         return;
       }
       const totale = Number(String(dati['speseTotale'] ?? '0'));
@@ -114,7 +116,7 @@ export function PannelloRevisione({
       );
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(null);
     }
@@ -122,7 +124,7 @@ export function PannelloRevisione({
 
   return (
     <div className="space-y-8">
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
       {esito !== null && errore === null && <p className="nota nota-esito text-[14px]">{esito}</p>}
 
       <section>

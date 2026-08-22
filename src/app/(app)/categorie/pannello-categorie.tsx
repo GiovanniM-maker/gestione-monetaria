@@ -8,6 +8,8 @@ import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { comeIcona, Icona, ICONE_CATEGORIA } from '@/lib/ui/icone';
 import type { NodoAlbero } from '@/lib/tassonomia/categorie';
 import { Foglio } from '../foglio';
+import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * L'albero delle categorie: aggiungere e togliere.
@@ -49,7 +51,7 @@ type DaCreare = { padre: NodoAlbero | null } | null;
 export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [esito, setEsito] = useState<string | null>(null);
 
   const [daCreare, setDaCreare] = useState<DaCreare>(null);
@@ -69,13 +71,13 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
       });
       const risultato = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(risultato['error'] ?? risposta.status));
+        setErrore(spiegaErrore(risposta.status, risultato));
         return;
       }
       dopo();
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -107,7 +109,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
 
   return (
     <div className="space-y-4">
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
       {esito !== null && <p className="nota nota-esito text-[14px]">{esito}</p>}
 
       <button

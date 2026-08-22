@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { isAllowedEmail, isPlausibleEmail, normalizeEmail } from '@/lib/auth/allowlist';
+import { ritornoSicuro } from '@/lib/auth/ritorno';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export type LoginState = { status: 'idle' } | { status: 'error'; message: string };
@@ -51,7 +52,10 @@ export async function signIn(_prevState: LoginState, formData: FormData): Promis
     return { status: 'error', message: CREDENZIALI_NON_VALIDE };
   }
 
-  redirect('/');
+  // Si torna dov'eravamo. Il percorso arriva da un campo nascosto, cioe' da
+  // qualcosa che chiunque puo' scrivere: `ritornoSicuro` lo riporta a casa se
+  // non e' un indirizzo interno. Vedi `lib/auth/ritorno.ts`.
+  redirect(ritornoSicuro(formData.get('ritorno')));
 }
 
 export async function signOut(): Promise<void> {

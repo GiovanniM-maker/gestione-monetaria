@@ -6,6 +6,8 @@ import { analizza, pezzi } from '@/lib/report/testo';
 import type { MessaggioSalvato, PropostaSalvata } from '@/lib/copilota/messaggi';
 import { GraficoCopilota } from './grafico';
 import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * La conversazione.
@@ -46,7 +48,7 @@ export function PannelloCopilota({
   const [righe, setRighe] = useState<readonly Riga[]>(iniziali);
   const [domanda, setDomanda] = useState('');
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   const fondo = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,15 +83,14 @@ export function PannelloCopilota({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ azione: 'chiedi', conversazioneId, domanda: pulita }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
-
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
+      const esito = (await risposta.json()) as Record<string, unknown>;
       setRighe((precedenti) => [...precedenti, esito['messaggio'] as MessaggioSalvato]);
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -104,9 +105,8 @@ export function PannelloCopilota({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ azione: 'applica', messaggioId, indice }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       setRighe((precedenti) =>
@@ -124,7 +124,7 @@ export function PannelloCopilota({
       // Gli aggregati sono cambiati: le altre schermate vanno rilette.
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -161,7 +161,7 @@ export function PannelloCopilota({
         <div ref={fondo} />
       </div>
 
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
 
       {/* La riga di scrittura resta in fondo alla pagina e non fissata allo
           schermo: su un telefono una barra fissa finisce sotto la tastiera, e

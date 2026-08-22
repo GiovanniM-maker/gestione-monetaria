@@ -7,6 +7,8 @@ import type { DiscretionClassRow } from '@/lib/db/types';
 import { descriviObiettivo, descriviScadenza } from '@/lib/copilota/obiettivi-frasi';
 import type { RigaObiettivo, TipoObiettivo } from '@/lib/copilota/obiettivi';
 import { Foglio } from '../foglio';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * Gli obiettivi: crearli, rinnovarli, dimenticarli.
@@ -80,7 +82,7 @@ export function PannelloObiettivi({
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
   const [inCorso, setInCorso] = useState<string | null>(null);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   const [tipo, setTipo] = useState<TipoObiettivo>('tetto_di_spesa');
   const [valore, setValore] = useState('');
@@ -97,16 +99,15 @@ export function PannelloObiettivi({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       setAperto(false);
       azzera();
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(null);
     }
@@ -128,7 +129,7 @@ export function PannelloObiettivi({
 
   return (
     <div className="space-y-4">
-      {errore !== null && <p className="nota nota-errore text-[13px]">{errore}</p>}
+      <NotaErrore errore={errore} />
 
       <button type="button" onClick={() => setAperto(true)} className={BOTTONE}>
         + Nuovo obiettivo

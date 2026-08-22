@@ -12,6 +12,8 @@ import {
 import { COLORI_CLASSE, type DiscretionClassRow } from '@/lib/db/types';
 import { TAVOLOZZA_CLASSI } from '../grafici';
 import { Foglio } from '../foglio';
+import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 /**
  * Le classi di discrezionalita': crearle, correggerle, eliminarle.
@@ -57,7 +59,7 @@ type Modulo = { slug: string | null } | null;
 export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow[] }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [esito, setEsito] = useState<string | null>(null);
 
   const [modulo, setModulo] = useState<Modulo>(null);
@@ -81,13 +83,13 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
       });
       const risultato = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(risultato['error'] ?? risposta.status));
+        setErrore(spiegaErrore(risposta.status, risultato));
         return;
       }
       dopo();
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(false);
     }
@@ -105,7 +107,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
 
   return (
     <div className="space-y-4">
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
       {esito !== null && <p className="nota nota-esito text-[14px]">{esito}</p>}
 
       <button type="button" className={BOTTONE} onClick={() => apri(null)} disabled={inCorso}>

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { RigaAvviso } from '@/lib/avvisi/leggi';
 import { BOTTONE_MINORE, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/controlli';
+import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
+import { NotaErrore } from '@/lib/ui/nota-errore';
 
 const COLORI: Record<string, string> = {
   critical: 'nota-errore',
@@ -28,7 +30,7 @@ function destinazione(a: RigaAvviso): { href: string; testo: string } | null {
 export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
   const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
-  const [errore, setErrore] = useState<string | null>(null);
+  const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [mostraChiusi, setMostraChiusi] = useState(false);
 
   const visibili = mostraChiusi ? avvisi : avvisi.filter((a) => a.status === 'new');
@@ -43,14 +45,13 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, stato }),
       });
-      const esito = (await risposta.json()) as Record<string, unknown>;
       if (!risposta.ok) {
-        setErrore(String(esito['error'] ?? risposta.status));
+        setErrore(await spiegaRisposta(risposta));
         return;
       }
       router.refresh();
     } catch (e) {
-      setErrore(e instanceof Error ? e.message : String(e));
+      setErrore(spiegaEccezione(e));
     } finally {
       setInCorso(null);
     }
@@ -58,7 +59,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
 
   return (
     <div className="space-y-3">
-      {errore !== null && <p className="nota nota-errore text-[14px]">{errore}</p>}
+      <NotaErrore errore={errore} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-testo-2">
