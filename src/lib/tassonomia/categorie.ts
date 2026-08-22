@@ -2,6 +2,7 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { comeIcona } from '@/lib/ui/icone';
+import { messaggioUtente } from '@/lib/db/messaggio';
 
 /**
  * Correggere una categoria: nome, discrezionalita' predefinita, genitore.
@@ -59,7 +60,10 @@ export async function aggiornaCategoria(a: AggiornamentoCategoria): Promise<void
   // Tutto cio' che la funzione rifiuta e' un problema dell'input — un ciclo,
   // una discrezionalita' inventata — e il suo messaggio e' gia' scritto per
   // essere letto. Riscriverlo qui vorrebbe dire tenerne due versioni.
-  if (error !== null) throw new CategoriaNonValida(error.message);
+  if (error !== null)
+    throw new CategoriaNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questa categoria.'),
+    );
   if (data !== true) throw new CategoriaNonValida('Questa categoria non esiste più.');
 }
 
@@ -116,7 +120,10 @@ export async function creaCategoria(
     p_padre_id: padreId,
     p_discrezionalita: discrezionalita,
   });
-  if (error !== null) throw new CategoriaNonValida(error.message);
+  if (error !== null)
+    throw new CategoriaNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questa categoria.'),
+    );
   return String(data);
 }
 
@@ -137,7 +144,10 @@ export async function eliminaCategoria(id: string, spostaSu: string | null): Pro
     p_id: id,
     p_sposta_su: spostaSu,
   });
-  if (error !== null) throw new CategoriaNonValida(error.message);
+  if (error !== null)
+    throw new CategoriaNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questa categoria.'),
+    );
   if (data !== true) throw new CategoriaNonValida('Questa categoria non esiste più.');
 }
 

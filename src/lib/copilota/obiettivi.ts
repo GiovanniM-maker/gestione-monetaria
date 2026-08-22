@@ -1,6 +1,7 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { messaggioUtente } from '@/lib/db/messaggio';
 
 /**
  * Gli obiettivi: cosa l'utente **vuole**, non cosa **e' vero**.
@@ -109,7 +110,10 @@ export async function creaObiettivo(o: NuovoObiettivo): Promise<string> {
   // che e' anche l'unico posto che la conosce: ripeterla qui vorrebbe dire due
   // elenchi della stessa regola, e quello in TypeScript sarebbe scavalcabile
   // chiamando la tabella per un'altra strada.
-  if (error !== null) throw new ObiettivoNonValido(error.message);
+  if (error !== null)
+    throw new ObiettivoNonValido(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questo obiettivo.'),
+    );
   return data.id;
 }
 
@@ -125,14 +129,20 @@ export async function rinnovaObiettivo(id: string, mesi = 6): Promise<boolean> {
     .eq('id', id)
     .select('id');
 
-  if (error !== null) throw new ObiettivoNonValido(error.message);
+  if (error !== null)
+    throw new ObiettivoNonValido(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questo obiettivo.'),
+    );
   return comeArray<{ id: string }>(data).length > 0;
 }
 
 export async function eliminaObiettivo(id: string): Promise<boolean> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from('obiettivi').delete().eq('id', id).select('id');
-  if (error !== null) throw new ObiettivoNonValido(error.message);
+  if (error !== null)
+    throw new ObiettivoNonValido(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questo obiettivo.'),
+    );
   return comeArray<{ id: string }>(data).length > 0;
 }
 

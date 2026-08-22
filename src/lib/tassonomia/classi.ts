@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { inCache } from '@/lib/supabase/cache';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { COLORI_CLASSE, type DiscretionClassRow } from '@/lib/db/types';
+import { messaggioUtente } from '@/lib/db/messaggio';
 
 /**
  * Le classi di discrezionalita': leggerle, crearle, correggerle, eliminarle.
@@ -104,7 +105,10 @@ export async function creaClasse(n: NuovaClasse): Promise<string> {
     p_nel_ricorrente: n.nelRicorrente ?? true,
   });
 
-  if (error !== null) throw new ClasseNonValida(error.message);
+  if (error !== null)
+    throw new ClasseNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questa classe.'),
+    );
   return String(data);
 }
 
@@ -152,7 +156,10 @@ export async function aggiornaClasse(c: CorrezioneClasse): Promise<void> {
     p_archiviata: c.archiviata ?? null,
   });
 
-  if (error !== null) throw new ClasseNonValida(error.message);
+  if (error !== null)
+    throw new ClasseNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questa classe.'),
+    );
 }
 
 export type EsitoEliminazione = {
@@ -191,6 +198,9 @@ export async function eliminaClasse(
     p_verso: verso,
   });
 
-  if (error !== null) throw new ClasseNonValida(error.message);
+  if (error !== null)
+    throw new ClasseNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questa classe.'),
+    );
   return data as EsitoEliminazione;
 }

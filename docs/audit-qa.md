@@ -165,6 +165,70 @@ installa, ed è la stessa classe di difetto della `0023`.
 **Correzione** — le due frasi in prosa (`/da-confermare` e la home) trattano il
 caso «mai» separatamente, perché non è lo stesso caso con un valore diverso.
 
+### QA-006 · P2 · Un errore interno di Postgres arriva intero sullo schermo
+
+**Riproduzione** — far fallire una scrittura (qui: il selettore di classe su
+`/movimenti`). A schermo compariva, in inglese:
+
+> duplicate key value violates unique constraint
+> "merchant_aliases_pattern_match_type_key"
+
+**Causa** — tredici funzioni di scrittura facevano `throw new
+XNonValida(error.message)`, e da lì il messaggio diventa un **400** con il testo
+dentro, che l'interfaccia mostra come prosa. `lib/ui/errori.ts` esiste
+esattamente per impedire che «nessun gettone tecnico raggiunga una schermata» —
+ma per un 4xx **con** un messaggio si fida del messaggio, e la falla entrava da
+lì.
+
+**Perché non bastava bloccarli tutti** — alcuni messaggi del database sono
+scritti _per_ l'utente: `valida_classe` risponde «Discrezionalità non ammessa:
+X. Valori validi: …» ed elenca le classi di **adesso**, che è la ragione per cui
+quella validazione vive in SQL (0046). Zittirla sarebbe stato un difetto al
+posto di un altro.
+
+**Come si distinguono, senza indovinare** — non serve una regola sulla forma del
+testo: la differenza sta nei dati. Un `raise exception` nostro, senza `using
+errcode`, produce lo SQLSTATE **`P0001`**. Tutto il resto — `23505` chiave
+duplicata, `23514` vincolo, `22P02` sintassi, `42501` permesso, i `PGRST…` di
+PostgREST — viene dal motore.
+
+`messaggioUtente()` sta in un modulo solo e **fallisce chiusa**: un codice mai
+visto, o assente, resta fuori.
+
+**Verifica** — in entrambi i versi, nel browser: con un `23505` compare «Non è
+stato possibile classificare questo movimento»; con un `P0001` passa ancora
+«Discrezionalità non ammessa: pippo. Valori validi: …». Più nove asserzioni su
+sette SQLSTATE reali.
+
+### QA-007 · P4 · 56 collegamenti col cursore a mano, 81 bottoni con la freccia
+
+**Misurato** su `/movimenti` a 1280 px con un mouse vero: `a` → `pointer` (56),
+`summary` → `pointer` (1), `button` → `default` (81). Sulla stessa schermata,
+due controlli che si somigliano fino all'ultimo pixel rispondono in due modi
+diversi, e l'unica differenza è quale tag li disegna — cosa che chi guarda non
+può sapere.
+
+Nella stessa regola, l'altra metà dello stesso difetto: un bottone spento e uno
+acceso erano indistinguibili col puntatore sopra. Ora `:disabled` prende
+`not-allowed`.
+
+Tutto dentro `@media (hover: hover)`, e con `:where()` a specificità zero, così
+`cursor-grab` sulla presa del foglio continua a vincere senza `!important`.
+
+**Nota sul metodo** — la prima misura _dopo_ la correzione diceva «invariato», e
+sembrava un fix che non funziona. Era il banco: il contesto emulava un
+dispositivo **touch**, quindi `@media (hover: hover)` giustamente non si
+applicava. È la seconda volta in questo audit che una misura accusa il codice a
+torto.
+
+### QA-008 · P4 · Le etichette della barra in basso si selezionano
+
+Quattro parole che sono **bersagli**, non testo: su un telefono un tocco appena
+lungo su «Dove» apre la lente di selezione invece di navigare, ed è il gesto più
+facile da fare per sbaglio tenendo il telefono con una mano sola.
+`user-select: none` sulle sole etichette di navigazione — il contenuto resta
+selezionabile, che un importo si copia eccome.
+
 ---
 
 ## Cosa è stato provato e ha retto
@@ -180,6 +244,22 @@ Vale la pena scriverlo: sono i posti in cui **non** c'è un difetto, misurati.
   niente). Nessun salto, nessuno scheletro di misura diversa dal contenuto.
 - **Il cassetto e il foglio** superano il torture test per intero, prima e dopo
   la modifica al componente condiviso.
+- **Nessuna race condition sulle pastiglie di classe.** Rallentando il server a
+  1,5 s e toccando due classi a 120 ms di distanza: parte **una sola**
+  scrittura, il secondo bottone è già disabilitato al primo tocco, e la risposta
+  vecchia non sovrascrive niente. Il riscontro è comunque immediato, perché la
+  pastiglia si accende prima della richiesta.
+- **Gli errori di scrittura non sono silenziosi** e non lasciano uno stato
+  falso: con un 500 la pastiglia torna indietro e compare una nota.
+- **Parametri assurdi nell'indirizzo** — `?mese=9999-99`, `?mese=abc`,
+  `?pagina=-5`, `?pagina=99999`, `?classe=inesistente`, `?da=non-una-data` —
+  rispondono tutti **200**, senza eccezioni e senza console sporca.
+- **Indietro e avanti del browser** conservano indirizzo, filtri e posizione
+  dello scorrimento.
+- **Un nome di esercente ostile** (`<script>alert(1)</script>` più cento
+  caratteri senza spazi) a 320 px: non esegue niente, non sborda, si tronca con
+  i puntini.
+- **L'anello del fuoco** tabulando: 2 px, colore dell'accento, 2 px di scarto.
 - **Il ripristino dello scorrimento funziona**, ed è stato sul punto di essere
   segnalato come rotto: la prima misura diceva «964 prima, 4 dopo». Era il banco
   — Playwright fa scorrere la pagina in cima per cliccare un bottone che sta

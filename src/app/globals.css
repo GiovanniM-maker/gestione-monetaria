@@ -625,6 +625,51 @@ dialog[data-dentro]::backdrop {
  * provandolo: una lettura in JavaScript resta ferma al montaggio, e la
  * preferenza si puo' cambiare a pannello aperto.
  */
+/**
+ * Il cursore, e cosa dice quando non si puo' toccare.
+ * --------------------------------------------------------------------------
+ * Misurato durante l'audit di qualita' su `/movimenti` a 1280 px: **56
+ * collegamenti col cursore a mano e 81 bottoni con la freccia**, sulla stessa
+ * schermata. Non e' una preferenza estetica: due controlli che si somigliano
+ * fino all'ultimo pixel rispondono in due modi diversi al mouse, e il motivo e'
+ * solo quale tag li disegna — cosa che chi guarda non puo' sapere.
+ *
+ * `:disabled` prende `not-allowed`, e chiude l'altra meta' dello stesso
+ * difetto: senza, un bottone spento e uno acceso sono indistinguibili col
+ * puntatore sopra, e si tocca due volte prima di capire.
+ *
+ * Tutto dentro `@media (hover: hover)`: su un telefono un cursore non esiste, e
+ * queste righe non devono nemmeno essere valutate. `:where()` tiene la
+ * specificita' a zero, cosi' `cursor-grab` sulla presa del foglio continua a
+ * vincere senza `!important`.
+ */
+@media (hover: hover) {
+  :where(button, summary, [role='button'], label:has(input[type='checkbox'])):not(:disabled) {
+    cursor: pointer;
+  }
+
+  :where(button, [role='button']):disabled,
+  :where([aria-disabled='true']) {
+    cursor: not-allowed;
+  }
+}
+
+/**
+ * Le etichette della barra in basso non si selezionano.
+ * --------------------------------------------------------------------------
+ * Sono quattro parole che sono **bersagli**, non testo: su un telefono un tocco
+ * appena lungo su «Dove» apre la lente di selezione invece di navigare, ed e'
+ * il gesto piu' facile da fare per sbaglio mentre si tiene il telefono con una
+ * mano sola. Vale per le etichette, non per il contenuto: quello si seleziona
+ * eccome — un importo si copia.
+ */
+nav a,
+[role='navigation'] a {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   dialog::backdrop,
   [data-pannello] {
@@ -740,6 +785,51 @@ dialog[data-dentro]::backdrop {
   }
 }
 
+/**
+ * Il cursore, e cosa dice quando non si puo' toccare.
+ * --------------------------------------------------------------------------
+ * Misurato durante l'audit di qualita' su `/movimenti` a 1280 px: **56
+ * collegamenti col cursore a mano e 81 bottoni con la freccia**, sulla stessa
+ * schermata. Non e' una preferenza estetica: due controlli che si somigliano
+ * fino all'ultimo pixel rispondono in due modi diversi al mouse, e il motivo e'
+ * solo quale tag li disegna — cosa che chi guarda non puo' sapere.
+ *
+ * `:disabled` prende `not-allowed`, e chiude l'altra meta' dello stesso
+ * difetto: senza, un bottone spento e uno acceso sono indistinguibili col
+ * puntatore sopra, e si tocca due volte prima di capire.
+ *
+ * Tutto dentro `@media (hover: hover)`: su un telefono un cursore non esiste, e
+ * queste righe non devono nemmeno essere valutate. `:where()` tiene la
+ * specificita' a zero, cosi' `cursor-grab` sulla presa del foglio continua a
+ * vincere senza `!important`.
+ */
+@media (hover: hover) {
+  :where(button, summary, [role='button'], label:has(input[type='checkbox'])):not(:disabled) {
+    cursor: pointer;
+  }
+
+  :where(button, [role='button']):disabled,
+  :where([aria-disabled='true']) {
+    cursor: not-allowed;
+  }
+}
+
+/**
+ * Le etichette della barra in basso non si selezionano.
+ * --------------------------------------------------------------------------
+ * Sono quattro parole che sono **bersagli**, non testo: su un telefono un tocco
+ * appena lungo su «Dove» apre la lente di selezione invece di navigare, ed e'
+ * il gesto piu' facile da fare per sbaglio mentre si tiene il telefono con una
+ * mano sola. Vale per le etichette, non per il contenuto: quello si seleziona
+ * eccome — un importo si copia.
+ */
+nav a,
+[role='navigation'] a {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -758,6 +848,51 @@ dialog[data-dentro]::backdrop {
   to {
     transform: rotate(360deg);
   }
+}
+
+/**
+ * Il cursore, e cosa dice quando non si puo' toccare.
+ * --------------------------------------------------------------------------
+ * Misurato durante l'audit di qualita' su `/movimenti` a 1280 px: **56
+ * collegamenti col cursore a mano e 81 bottoni con la freccia**, sulla stessa
+ * schermata. Non e' una preferenza estetica: due controlli che si somigliano
+ * fino all'ultimo pixel rispondono in due modi diversi al mouse, e il motivo e'
+ * solo quale tag li disegna — cosa che chi guarda non puo' sapere.
+ *
+ * `:disabled` prende `not-allowed`, e chiude l'altra meta' dello stesso
+ * difetto: senza, un bottone spento e uno acceso sono indistinguibili col
+ * puntatore sopra, e si tocca due volte prima di capire.
+ *
+ * Tutto dentro `@media (hover: hover)`: su un telefono un cursore non esiste, e
+ * queste righe non devono nemmeno essere valutate. `:where()` tiene la
+ * specificita' a zero, cosi' `cursor-grab` sulla presa del foglio continua a
+ * vincere senza `!important`.
+ */
+@media (hover: hover) {
+  :where(button, summary, [role='button'], label:has(input[type='checkbox'])):not(:disabled) {
+    cursor: pointer;
+  }
+
+  :where(button, [role='button']):disabled,
+  :where([aria-disabled='true']) {
+    cursor: not-allowed;
+  }
+}
+
+/**
+ * Le etichette della barra in basso non si selezionano.
+ * --------------------------------------------------------------------------
+ * Sono quattro parole che sono **bersagli**, non testo: su un telefono un tocco
+ * appena lungo su «Dove» apre la lente di selezione invece di navigare, ed e'
+ * il gesto piu' facile da fare per sbaglio mentre si tiene il telefono con una
+ * mano sola. Vale per le etichette, non per il contenuto: quello si seleziona
+ * eccome — un importo si copia.
+ */
+nav a,
+[role='navigation'] a {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

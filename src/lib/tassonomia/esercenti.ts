@@ -2,6 +2,7 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { applicaTassonomia } from './applica';
+import { messaggioUtente } from '@/lib/db/messaggio';
 
 /**
  * L'elenco degli esercenti, e la dichiarazione che li divide in due.
@@ -104,7 +105,10 @@ export async function impostaVariabile(id: string, variabile: boolean): Promise<
     p_merchant_id: id,
     p_variabile: variabile === true,
   });
-  if (error !== null) throw new EsercenteNonValido(error.message);
+  if (error !== null)
+    throw new EsercenteNonValido(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questo esercente.'),
+    );
 }
 
 /**
@@ -170,7 +174,10 @@ export async function decidiEsercente(d: DecisioneEsercente): Promise<void> {
     .eq('id', d.id)
     .select('id');
 
-  if (error !== null) throw new EsercenteNonValido(error.message);
+  if (error !== null)
+    throw new EsercenteNonValido(
+      messaggioUtente(error, 'Non e’ stato possibile salvare questo esercente.'),
+    );
   // `false` significa «quell'esercente non esiste piu'», che chi chiama deve
   // poter distinguere da «fatto»: senza, la schermata direbbe di aver deciso
   // qualcosa su niente.

@@ -1,5 +1,6 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { messaggioUtente } from '@/lib/db/messaggio';
 
 /**
  * La classificazione di **una** riga: categoria, discrezionalita', contesto.
@@ -42,7 +43,10 @@ export async function classificaMovimento(c: Classificazione): Promise<void> {
   // I valori ammessi li controlla la funzione SQL, che e' anche quella che li
   // conosce: due elenchi della stessa cosa divergono, e quello in TypeScript
   // sarebbe scavalcabile da chiunque chiami la RPC per un'altra strada.
-  if (error !== null) throw new ClassificazioneNonValida(error.message);
+  if (error !== null)
+    throw new ClassificazioneNonValida(
+      messaggioUtente(error, 'Non e’ stato possibile classificare questo movimento.'),
+    );
   if (data !== true) throw new ClassificazioneNonValida('Questo movimento non esiste più.');
 }
 

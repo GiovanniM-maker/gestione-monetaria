@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { applicaTassonomia } from '@/lib/tassonomia/applica';
 import type { Context, Discretion } from '@/lib/db/types';
+import { messaggioUtente } from '@/lib/db/messaggio';
 
 /**
  * Spostare una singola transazione su un altro esercente.
@@ -55,7 +56,10 @@ export async function creaEsercente(nuovo: NuovoEsercente): Promise<string> {
     p_abbonamento: nuovo.abbonamento ?? false,
   });
 
-  if (error !== null) throw new SpostamentoNonValido(error.message);
+  if (error !== null)
+    throw new SpostamentoNonValido(
+      messaggioUtente(error, 'Non e’ stato possibile spostare questo movimento.'),
+    );
   if (typeof data !== 'string') throw new Error('Creazione esercente senza identificativo.');
   return data;
 }
