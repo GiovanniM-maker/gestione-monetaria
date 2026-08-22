@@ -1,6 +1,9 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { cache } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { inCache } from '@/lib/supabase/cache';
 
 /**
  * La conferma di fine giornata.
@@ -54,15 +57,19 @@ export type RigaDaConfermare = {
   motivo?: string | null;
 };
 
-export async function leggiDaConfermare(): Promise<readonly RigaDaConfermare[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('v_da_confermare')
-    .select('*')
-    .order('booking_date', { ascending: false })
-    .limit(100);
-  return comeArray<RigaDaConfermare>(data);
-}
+export const leggiDaConfermare = cache(
+  inCache(
+    'da-confermare',
+    async (supabase: SupabaseClient): Promise<readonly RigaDaConfermare[]> => {
+      const { data } = await supabase
+        .from('v_da_confermare')
+        .select('*')
+        .order('booking_date', { ascending: false })
+        .limit(100);
+      return comeArray<RigaDaConfermare>(data);
+    },
+  ),
+);
 
 /**
  * I pagamenti delle ultime ventiquattro ore, confermati o no.
@@ -89,8 +96,22 @@ export async function leggiDaConfermare(): Promise<readonly RigaDaConfermare[]> 
 /** Come una riga da confermare, piu' il fatto che possa esserlo gia'. */
 export type RigaRecente = RigaDaConfermare & { confermato_at: string | null };
 
-export async function leggiUltime24Ore(): Promise<readonly RigaRecente[]> {
-  const supabase = await createSupabaseServerClient();
+const finestraDiOggi = inCache(
+  'ultimi-movimenti',
+  async (supabase: SupabaseClient, ieri: string, oggi: string): Promise<readonly RigaRecente[]> => {
+    const { data } = await supabase
+      .from('v_ultimi_movimenti')
+      .select('*')
+      .gte('booking_date', ieri)
+      .lte('booking_date', oggi)
+      .order('booking_date', { ascending: false })
+      .limit(100);
+
+    return comeArray<RigaRecente>(data);
+  },
+);
+
+export const leggiUltime24Ore = cache(async (): Promise<readonly RigaRecente[]> => {
   // Il giorno civile di Roma, non quello del server: il fuso applicativo e'
   // `Europe/Rome`, e su una macchina in UTC dopo le 23 «oggi» sarebbe domani.
   const oggi = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
@@ -98,25 +119,23 @@ export async function leggiUltime24Ore(): Promise<readonly RigaRecente[]> {
     timeZone: 'Europe/Rome',
   });
 
-  const { data } = await supabase
-    .from('v_ultimi_movimenti')
-    .select('*')
-    .gte('booking_date', ieri)
-    .lte('booking_date', oggi)
-    .order('booking_date', { ascending: false })
-    .limit(100);
-
-  return comeArray<RigaRecente>(data);
-}
+  // I due giorni si calcolano **fuori** e viaggiano come argomenti, quindi
+  // finiscono nella chiave. Calcolati dentro, a mezzanotte la cache
+  // continuerebbe a servire la finestra di ieri sotto l'intestazione di oggi
+  // per un minuto: e' esattamente il modo di far comparire i dati di luglio
+  // sotto l'intestazione di agosto, in piccolo.
+  return finestraDiOggi(ieri, oggi);
+});
 
 /** Quante ne restano da confermare. Serve al conteggio sul cruscotto. */
-export async function quanteDaConfermare(): Promise<number> {
-  const supabase = await createSupabaseServerClient();
-  const { count } = await supabase
-    .from('v_da_confermare')
-    .select('id', { count: 'exact', head: true });
-  return count ?? 0;
-}
+export const quanteDaConfermare = cache(
+  inCache('da-confermare-quante', async (supabase: SupabaseClient): Promise<number> => {
+    const { count } = await supabase
+      .from('v_da_confermare')
+      .select('id', { count: 'exact', head: true });
+    return count ?? 0;
+  }),
+);
 
 export class ConfermaNonValida extends Error {}
 

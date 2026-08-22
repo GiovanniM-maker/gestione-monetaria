@@ -16,9 +16,38 @@
 | 2 · consegna in una chiamata                 | **fatto**                   |
 | 3 · finestra sul registro grezzo             | **fatto**                   |
 | 4 · invalidazione condizionale               | **fatto**                   |
-| 5 · cache sulle letture di pagina            | da fare                     |
-| 6 · `loading.tsx` sulle tre pagine           | da fare                     |
-| 7 · misurare in produzione, poi la geografia | da fare                     |
+| 5 · cache sulle letture di pagina            | **fatto**, meno due         |
+| 6 · `loading.tsx` sulle tre pagine           | **fatto**                   |
+| 7 · misurare in produzione, poi la geografia | metà fatto                  |
+
+**Passo 5, cosa è entrato in cache e cosa no.** `movimenti/cerca.ts` (ricerca, scheda del singolo
+movimento, stato del sistema), `conferma/leggi.ts` (da confermare, ultime 24 ore, conteggio) e
+`avvisi/leggi.ts` (elenco e conteggio). Le scritture restano fuori.
+
+Un dettaglio che vale come regola: **`leggiUltime24Ore` calcolava i due giorni dentro la funzione**,
+e messa in cache così avrebbe continuato a servire la finestra di ieri dopo mezzanotte, per un
+minuto, sotto l'intestazione di oggi. Ora i due giorni si calcolano fuori e viaggiano come
+argomenti, quindi finiscono nella chiave. È la versione piccola di «i dati di luglio sotto
+l'intestazione di agosto», ed è il modo in cui una cache sbaglia: non lentamente, ma con un numero
+plausibile.
+
+Restano fuori `/categoria/[id]` e `/esercente/[id]`, e non per dimenticanza: le loro letture stanno
+**dentro le pagine**, non in un modulo. Metterle in cache vuol dire prima estrarle in funzioni
+nominate — che è lavoro dovuto comunque, perché una lettura dentro un componente per il copilota non
+esiste (regola della Fase 0). Sono quattro letture ciascuna e già in parallelo, quindi il guadagno è
+piccolo: vale la pena farlo insieme all'estrazione, non prima.
+
+**Passo 7, metà.** Il proxy ora emette `Server-Timing: auth;dur=NN`: quanto è costata la verifica
+della sessione, che è il primo pezzo del tempo fra il tocco e la schermata e che finora era una
+**stima** (~60 ms nella stessa regione, ~200 fra due continenti). Si legge negli strumenti per
+sviluppatori accanto al TTFB, senza dipendenze e senza mandare niente a un servizio terzo — che su
+un'applicazione di dati bancari è la ragione principale per non installare un pannello di analytics.
+
+Resta **una decisione, non un lavoro**: `@vercel/speed-insights` darebbe TTFB e LCP reali dal
+telefono vero, al prezzo di una dipendenza e di dati che escono. Lo stack dice «nessuna libreria
+oltre a quelle strettamente necessarie», quindi non l'ho aggiunta: è una scelta da prendere, non da
+subire. La geografia si decide **dopo** quei numeri, leggendo il §12 del secondo passaggio e non il
+§4.4 del primo.
 
 Tre cose sono state fatte **in più** rispetto al piano, e vanno sapute:
 

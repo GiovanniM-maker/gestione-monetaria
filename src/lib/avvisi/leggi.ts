@@ -1,6 +1,9 @@
 import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
+import { cache } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { inCache } from '@/lib/supabase/cache';
 
 /**
  * Gli avvisi.
@@ -36,29 +39,34 @@ export type RigaAvviso = {
  */
 export const GIA_SUL_CRUSCOTTO = ['session_expiring', 'sync_failed'];
 
-export async function leggiAvvisi(soloNuovi = false): Promise<readonly RigaAvviso[]> {
-  const supabase = await createSupabaseServerClient();
-  let query = supabase
-    .from('v_avvisi')
-    .select('*')
-    .order('peso', { ascending: true })
-    .order('created_at', { ascending: false })
-    .limit(100);
+export const leggiAvvisi = cache(
+  inCache(
+    'avvisi',
+    async (supabase: SupabaseClient, soloNuovi = false): Promise<readonly RigaAvviso[]> => {
+      let query = supabase
+        .from('v_avvisi')
+        .select('*')
+        .order('peso', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-  if (soloNuovi) query = query.eq('status', 'new');
-  const { data } = await query;
-  return comeArray<RigaAvviso>(data);
-}
+      if (soloNuovi) query = query.eq('status', 'new');
+      const { data } = await query;
+      return comeArray<RigaAvviso>(data);
+    },
+  ),
+);
 
 /** Quanti avvisi aspettano di essere letti. Serve al conteggio in navigazione. */
-export async function quantiAvvisi(): Promise<number> {
-  const supabase = await createSupabaseServerClient();
-  const { count } = await supabase
-    .from('alerts')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'new');
-  return count ?? 0;
-}
+export const quantiAvvisi = cache(
+  inCache('avvisi-quanti', async (supabase: SupabaseClient): Promise<number> => {
+    const { count } = await supabase
+      .from('alerts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'new');
+    return count ?? 0;
+  }),
+);
 
 export class AvvisoNonValido extends Error {}
 

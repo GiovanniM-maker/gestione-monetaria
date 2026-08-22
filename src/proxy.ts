@@ -29,6 +29,32 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
+/**
+ * Quanto e' costata la verifica della sessione, in millisecondi, come
+ * `Server-Timing`.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' misurare proprio questo
+ * ---------------------------------------------------------------------------
+ * `updateSession` fa `getUser()`, che e' una **chiamata di rete** al server di
+ * auth Supabase, e succede **prima** che parta la prima query sui dati. Ogni
+ * richiesta la paga: e' il primo pezzo del tempo che passa fra il tocco e la
+ * schermata.
+ *
+ * `docs/prestazioni.md` la stima in ~60 ms nella stessa regione e ~200 ms fra
+ * due continenti, e la parola che conta e' **stima**: nessuno l'ha mai
+ * misurata dall'interno. Un header la rende un numero, visibile negli strumenti
+ * per sviluppatori accanto al TTFB, senza aggiungere nessuna dipendenza e senza
+ * mandare niente a un servizio terzo — che su un'applicazione di dati bancari e'
+ * il motivo principale per non installare un pannello di analytics.
+ *
+ * Non e' un segreto: dice quanto ha impiegato una chiamata, non chi l'ha fatta.
+ */
+function conTempo(risposta: NextResponse, avvio: number): NextResponse {
+  risposta.headers.set('Server-Timing', `auth;dur=${Math.round(performance.now() - avvio)}`);
+  return risposta;
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
@@ -36,6 +62,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
+  const avvio = performance.now();
   const { response, user, supabase } = await updateSession(request);
   const isApiRoute = pathname.startsWith('/api/');
 
@@ -44,23 +71,26 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (user !== null && !isAllowedEmail(user.email)) {
     await supabase.auth.signOut();
     if (isApiRoute) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      return conTempo(NextResponse.json({ error: 'forbidden' }, { status: 403 }), avvio);
     }
-    return redirectPreservingCookies(request, '/auth/error', response, { reason: 'not_allowed' });
+    return conTempo(
+      redirectPreservingCookies(request, '/auth/error', response, { reason: 'not_allowed' }),
+      avvio,
+    );
   }
 
   if (user === null && !isPublicPath(pathname)) {
     if (isApiRoute) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      return conTempo(NextResponse.json({ error: 'unauthorized' }, { status: 401 }), avvio);
     }
-    return redirectPreservingCookies(request, '/login', response);
+    return conTempo(redirectPreservingCookies(request, '/login', response), avvio);
   }
 
   if (user !== null && pathname === '/login') {
-    return redirectPreservingCookies(request, '/', response);
+    return conTempo(redirectPreservingCookies(request, '/', response), avvio);
   }
 
-  return response;
+  return conTempo(response, avvio);
 }
 
 export const config = {
