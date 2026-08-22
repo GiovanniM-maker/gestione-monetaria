@@ -16,7 +16,7 @@
 | 2 · consegna in una chiamata                 | **fatto**                   |
 | 3 · finestra sul registro grezzo             | **fatto**                   |
 | 4 · invalidazione condizionale               | **fatto**                   |
-| 5 · cache sulle letture di pagina            | **fatto**, meno due         |
+| 5 · cache sulle letture di pagina            | **fatto**                   |
 | 6 · `loading.tsx` sulle tre pagine           | **fatto**                   |
 | 7 · misurare in produzione, poi la geografia | metà fatto                  |
 
@@ -31,11 +31,18 @@ argomenti, quindi finiscono nella chiave. È la versione piccola di «i dati di 
 l'intestazione di agosto», ed è il modo in cui una cache sbaglia: non lentamente, ma con un numero
 plausibile.
 
-Restano fuori `/categoria/[id]` e `/esercente/[id]`, e non per dimenticanza: le loro letture stanno
-**dentro le pagine**, non in un modulo. Metterle in cache vuol dire prima estrarle in funzioni
-nominate — che è lavoro dovuto comunque, perché una lettura dentro un componente per il copilota non
-esiste (regola della Fase 0). Sono quattro letture ciascuna e già in parallelo, quindi il guadagno è
-piccolo: vale la pena farlo insieme all'estrazione, non prima.
+`/categoria/[id]` e `/esercente/[id]` sono arrivate dopo, e sono costate l'estrazione che
+richiedevano: le loro otto letture stavano **dentro le pagine** e ora vivono in
+`lib/dove/schede.ts`. Il guadagno in prestazioni è il minore dei due — erano già in parallelo — e
+quello vero è l'altro: **per il copilota quelle letture non esistevano**, che è precisamente ciò che
+la regola della Fase 0 vieta, e la Fase 10 ha già pagato il conto una volta.
+
+Nel farlo è emerso un difetto che questa estrazione rende possibile e che vale come avvertimento:
+scrivendo il tipo della riga ho dichiarato `merchant_id: string`, mentre il tipo che stava nella
+pagina lo ammetteva nullo. Con il tipo sbagliato il controllo `merchant_id === null` che la pagina
+già faceva diventa **codice morto per il compilatore**, e il collegamento sarebbe uscito come
+`/esercente/null`. Spostare una query fuori da un componente significa scriverne il tipo a mano: è
+il momento in cui si può restringere qualcosa che il database non restringe.
 
 **Passo 7, metà.** Il proxy ora emette `Server-Timing: auth;dur=NN`: quanto è costata la verifica
 della sessione, che è il primo pezzo del tempo fra il tocco e la schermata e che finora era una

@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { comeArray } from '@/lib/enablebanking/redact';
+import {
+  alberoCompleto,
+  leggiEsercente,
+  ricorrenzaDiEsercente,
+  serieEsercente,
+} from '@/lib/dove/schede';
 import { centesimiDi, formattaEuro } from '@/lib/abbonamenti/formato';
 import { meseDaData } from '@/lib/cruscotto/mesi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
@@ -37,22 +41,6 @@ export const metadata: Metadata = { title: 'Esercente' };
 
 type Mensile = { mese: string; spesa: string; movimenti: number };
 
-type Esercente = {
-  id: string;
-  canonical_name: string;
-  category_id: string | null;
-  discretion: string | null;
-  context: string | null;
-  is_subscription: boolean;
-  classificazione_variabile: boolean;
-  origine: string | null;
-  confermato_at: string | null;
-  motivazione: string | null;
-  movimenti: number;
-  totale: string;
-  ultima: string | null;
-};
-
 const ORIGINI: Record<string, string> = {
   alias: 'da un alias deterministico',
   ai: 'proposta dal modello, non ancora confermata',
@@ -61,53 +49,28 @@ const ORIGINI: Record<string, string> = {
 
 export default async function EsercentePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createSupabaseServerClient();
 
-  const [{ data: riga }, { data: mensili }, { data: categorie }, { data: ricorrenza }, classi] =
-    await Promise.all([
-      supabase
-        .from('v_merchant_totals')
-        .select(
-          'id, canonical_name, category_id, discretion, context, is_subscription, origine, ' +
-            'confermato_at, motivazione, movimenti, totale::text, ultima, ' +
-            'classificazione_variabile',
-        )
-        .eq('id', id)
-        .maybeSingle(),
-      supabase
-        .from('v_monthly_by_merchant')
-        .select('mese, spesa::text, movimenti')
-        .eq('merchant_id', id)
-        .order('mese', { ascending: false })
-        .limit(18),
-      supabase
-        .from('v_categorie_albero')
-        .select('id, nome, percorso, archiviata')
-        .order('percorso'),
-      supabase
-        .from('v_subscriptions')
-        .select('id, tipo, cadence, costo_mensile::text, nella_metrica, status')
-        .eq('merchant_id', id)
-        .maybeSingle(),
-      leggiClassi(),
-    ]);
+  // Le quattro letture partono insieme e stanno in `lib/dove/schede.ts`: fuori
+  // dal componente perche' una lettura dentro un render non ha argomenti, e
+  // senza argomenti non c'e' una chiave con cui metterla in cache — ne' un nome
+  // con cui il copilota possa chiamarla.
+  const [m, mensili, albero, ricorrenza, classi] = await Promise.all([
+    leggiEsercente(id),
+    serieEsercente(id),
+    alberoCompleto(),
+    ricorrenzaDiEsercente(id),
+    leggiClassi(),
+  ]);
 
-  const m = riga as Esercente | null;
   if (m === null) notFound();
 
   const tinte = tinteDelleClassi(classi);
 
-  const mesi = comeArray<Mensile>(mensili).map((r) => ({
+  const mesi: Mensile[] = mensili.map((r) => ({
     ...r,
     mese: meseDaData(r.mese) ?? r.mese,
   }));
 
-  const albero = comeArray<{
-    id: string;
-    nome: string;
-    percorso: string;
-    archiviata: boolean;
-  }>(categorie);
   const categoria = albero.find((c) => c.id === m.category_id) ?? null;
   const sceglibili = albero
     .filter((c) => !c.archiviata)
@@ -153,13 +116,16 @@ export default async function EsercentePage({ params }: { params: Promise<{ id: 
         <section className="scheda p-3 text-sm">
           <h2 className="mb-2 text-sm font-medium">Ricorrenza</h2>
           <p>
-            Rilevata come <strong>{(ricorrenza as { tipo: string }).tipo}</strong>, cadenza{' '}
-            {(ricorrenza as { cadence: string }).cadence}, costo mensile{' '}
+            {/* Niente piu' `as {...}` a ogni campo: la lettura torna una riga
+                tipizzata, quindi il tipo lo dichiara chi legge il database e non
+                chi disegna. */}
+            Rilevata come <strong>{ricorrenza.tipo}</strong>, cadenza {ricorrenza.cadence}, costo
+            mensile{' '}
             <strong className="tabular-nums">
-              {formattaEuro(centesimiDi((ricorrenza as { costo_mensile: string }).costo_mensile))}
+              {formattaEuro(centesimiDi(ricorrenza.costo_mensile ?? '0'))}
             </strong>
             .{' '}
-            {(ricorrenza as { nella_metrica: boolean }).nella_metrica
+            {ricorrenza.nella_metrica
               ? 'Entra nel costo ricorrente.'
               : 'Non entra nel costo ricorrente.'}
           </p>

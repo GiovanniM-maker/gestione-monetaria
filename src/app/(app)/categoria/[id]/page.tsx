@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { comeArray } from '@/lib/enablebanking/redact';
+import {
+  esercentiDiCategoria,
+  figliDiCategoria,
+  leggiCategoria,
+  serieCategoria,
+} from '@/lib/dove/schede';
 import { centesimiDi } from '@/lib/abbonamenti/formato';
 import { etichettaMese, meseDaData, meseValido } from '@/lib/cruscotto/mesi';
 import { estremiDelMese } from '@/lib/movimenti/filtri';
@@ -40,23 +44,6 @@ export const metadata: Metadata = { title: 'Categoria' };
 /** Quanti esercenti si mostrano su una scheda di categoria. */
 const ESERCENTI_MOSTRATI = 30;
 
-type RigaCat = {
-  category_id: string;
-  categoria: string;
-  parent_id: string | null;
-  mese: string;
-  spesa: string;
-  movimenti: number;
-  spesa_diretta: string;
-};
-
-type RigaMerc = {
-  merchant_id: string | null;
-  esercente: string;
-  spesa: string;
-  movimenti: number;
-};
-
 export default async function CategoriaPage({
   params,
   searchParams,
@@ -70,58 +57,31 @@ export default async function CategoriaPage({
     Array.isArray(parametri['mese']) ? parametri['mese'][0] : parametri['mese'],
   );
 
-  const supabase = await createSupabaseServerClient();
-
-  const [{ data: categoria }, { data: serie }, classi] = await Promise.all([
-    supabase
-      .from('categories')
-      .select('id, name, parent_id, default_discretion')
-      .eq('id', id)
-      .maybeSingle(),
-    supabase
-      .from('v_monthly_by_category')
-      .select(
-        'category_id, categoria, parent_id, mese, spesa::text, movimenti, spesa_diretta::text',
-      )
-      .eq('category_id', id)
-      .order('mese', { ascending: false })
-      .limit(18),
+  // Le letture stanno in `lib/dove/schede.ts` e non qui: una query dentro il
+  // render non ha argomenti, e senza argomenti non c'e' una chiave con cui
+  // metterla in cache — ne' un nome con cui il copilota possa chiamarla.
+  const [cat, serie, classi] = await Promise.all([
+    leggiCategoria(id),
+    serieCategoria(id),
     leggiClassi(),
   ]);
 
-  const cat = categoria as {
-    id: string;
-    name: string;
-    parent_id: string | null;
-    default_discretion: string | null;
-  } | null;
   if (cat === null) notFound();
 
   const tinte = tinteDelleClassi(classi);
-  const mesi = comeArray<RigaCat>(serie).map((r) => ({ ...r, mese: meseDaData(r.mese) ?? r.mese }));
+  const mesi = serie.map((r) => ({ ...r, mese: meseDaData(r.mese) ?? r.mese }));
   const mese = meseChiesto ?? mesi[0]?.mese ?? null;
   const delMese = mesi.find((r) => r.mese === mese) ?? null;
 
-  // Figli diretti e esercenti appesi a questo nodo, nel mese scelto.
-  const [{ data: figli }, { data: esercenti }] =
+  // Figli diretti ed esercenti appesi a questo nodo, nel mese scelto. Il mese
+  // e' un argomento e finisce quindi nella chiave della cache: se restasse
+  // implicito, cambiare mese mostrerebbe i numeri del mese precedente.
+  const [figli, esercenti] =
     mese === null
-      ? [{ data: null }, { data: null }]
+      ? [[], []]
       : await Promise.all([
-          supabase
-            .from('v_monthly_by_category')
-            .select(
-              'category_id, categoria, parent_id, mese, spesa::text, movimenti, spesa_diretta::text',
-            )
-            .eq('mese', `${mese}-01`)
-            .eq('parent_id', id)
-            .order('spesa', { ascending: true }),
-          supabase
-            .from('v_monthly_by_merchant')
-            .select('merchant_id, esercente, spesa::text, movimenti')
-            .eq('mese', `${mese}-01`)
-            .eq('category_id', id)
-            .order('spesa', { ascending: true })
-            .limit(ESERCENTI_MOSTRATI),
+          figliDiCategoria(id, mese),
+          esercentiDiCategoria(id, mese, ESERCENTI_MOSTRATI),
         ]);
 
   // Le variazioni arrivano con la **stessa finestra** del cruscotto: scendere
@@ -170,7 +130,7 @@ export default async function CategoriaPage({
 
       <Ripartizione
         titolo="Sottocategorie"
-        voci={comeArray<RigaCat>(figli).map((f) => ({
+        voci={figli.map((f) => ({
           chiave: f.category_id,
           etichetta: f.categoria,
           dettaglio: `${f.movimenti} ${f.movimenti === 1 ? 'movimento' : 'movimenti'}`,
@@ -188,7 +148,7 @@ export default async function CategoriaPage({
             sottocategorie stanno nelle rispettive schede, e il totale in cima li comprende tutti.
           </>
         }
-        voci={comeArray<RigaMerc>(esercenti).map((e, i) => ({
+        voci={esercenti.map((e, i) => ({
           chiave: `${e.merchant_id ?? 'x'}-${i}`,
           etichetta: e.esercente,
           dettaglio: `${e.movimenti} ${e.movimenti === 1 ? 'movimento' : 'movimenti'}`,
