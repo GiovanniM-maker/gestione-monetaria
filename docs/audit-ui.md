@@ -275,3 +275,274 @@ non finita.
 - [Copilot Money](https://envelopebudgeting.com/articles/copilot-money-review) per la coda di
   revisione che **finisce**: conferma che «Conferma» va tenuta una lista che si svuota, non un
   contatore permanente.
+
+---
+
+---
+
+# Secondo passaggio — i dettagli, 22 agosto 2026
+
+> Il primo passaggio ha trovato quattro difetti di **sistema**. Questo cerca le trenta o cinquanta
+> decisioni piccole che, sommate, fanno la differenza fra un prodotto curato e uno finito.
+>
+> Una premessa che cambia il tono: **cercando difetti ho trovato soprattutto risposte già scritte**.
+> Il campo importo ha già `inputMode="decimal"` e ripulisce l'input. I 22 `key={i}` sono tutti in
+> liste statiche, non in liste che si riordinano. `interruttore.tsx` è già ottimistico, con
+> ripristino sull'errore e guardia sul doppio tocco. Il problema quasi mai è che una cosa manchi:
+> è che **esiste in un posto solo**.
+
+---
+
+## A. Micro findings
+
+### A.1 Il difetto peggiore: l'utente può leggere «unauthorized»
+
+**22 route** sotto `/api/admin/` rispondono `{ error: 'unauthorized' }` con stato 401.
+**13 componenti client** rendono quella stringa alla lettera:
+
+```ts
+setErrore(String(esito['error'] ?? risposta.status));
+```
+
+Il gettone di sessione dura circa un'ora. Quando scade mentre l'applicazione è aperta — cioè il
+caso normale, visto che questa app resta aggiunta alla schermata iniziale per giorni — il primo
+tocco su «Va bene» produce un riquadro rosso contenente **una parola inglese**: `unauthorized`.
+Nessun percorso client porta al login su un 401: `grep` su `src/app` per `401` insieme a
+`login`/`redirect` non trova niente.
+
+Ed è peggio di «Something went wrong», perché il ripiego è `risposta.status`: dove la route non
+mette un messaggio, l'utente legge **`500`**.
+
+### A.2 Il bottone che lavora non lo dice, lo tace
+
+`{inCorso === r.id ? '…' : 'Va bene'}` — la scritta viene **sostituita** da un'ellissi.
+
+**Una cosa che avevo scritto qui era sbagliata, e l'ho verificata prima di lasciarla**: pensavo che
+il bottone si restringesse, spostando «Correggi» accanto. Non succede: entrambi sono `flex-1`,
+quindi la misura è decisa dalla riga e non dal contenuto. Il difetto non è geometrico.
+
+Quello che resta, ed è vero:
+
+- **un lettore di schermo annuncia «puntini di sospensione»**, non «sto confermando». Non ci sono
+  né `aria-busy` né `aria-live`;
+- `disabled` **toglie il bottone dall'ordine di tabulazione**, quindi chi naviga con la tastiera
+  perde il punto in cui era e riparte da capo;
+- visivamente «Va bene» che diventa `…` si legge come un bottone **svuotato**, non come un bottone
+  che sta lavorando: non c'è nessun movimento, e l'ellissi è ferma.
+
+### A.3 Confermare una riga blocca le altre sei
+
+In `pannello-conferma.tsx` c'è un solo `occupato = inCorso !== null`, e **tutti** i bottoni della
+schermata prendono `disabled={occupato}`. Su una coda di sette movimenti, ogni conferma congela la
+lista per la durata di un viaggio di rete. È lo stesso `disabled` che toglie il bottone dall'ordine
+di tabulazione: chi sta usando la tastiera perde anche il punto in cui era.
+
+### A.4 La tastiera del telefono copre il bottone «Salva»
+
+Il foglio è `max-height: 85dvh` dentro un `<dialog>`, e mentre è aperto il corpo è **fissato**
+(`position: fixed`). Su iOS la tastiera ridimensiona solo il _visual viewport_: gli elementi fissi
+restano dove sono e finiscono sotto la tastiera. Il `viewport` dell'applicazione non dichiara
+`interactiveWidget`, quindi nemmeno Chrome su Android rimpicciolisce il contenuto.
+
+Dove si vede: creare una categoria dal foglio (c'è pure un `autoFocus` che apre la tastiera
+**subito**), e scrivere una nota su un movimento.
+
+### A.5 La distinzione più pericolosa dell'app è dentro un `title=`
+
+`SceltaCategoria` mostra accanto al controllo due parole — «tutte le sue» / «solo questa» — e la
+frase intera sta in `title={PORTATA[ambito.tipo].intera}`. **Su un telefono `title` non compare
+mai.** È la stessa differenza che il commento del componente descrive come _«la cosa più pericolosa
+dell'applicazione»_: cambiare una riga o cambiarne trecento.
+
+### A.6 Quindici chevron sono un carattere tipografico
+
+`›` compare come freccia di riga in **quindici punti** (`page.tsx`, `livello.tsx`, `mese.tsx`,
+`fisarmonica.tsx`, `revisione`, `da-confermare`, `dove`…). `icone.tsx` contiene un tracciato
+`chevron` vero. È esattamente il difetto che `aspetto.md` §1 ha individuato per la barra in basso e
+corretto lì: peso e stile decisi da chi ha disegnato il carattere, non da noi, e nessun controllo su
+`stroke-width`. Idem `✓` in tre punti e `·` come separatore.
+
+### A.7 Gli stati vuoti dicono cosa manca, non perché
+
+| Dove             | Oggi                                 |
+| ---------------- | ------------------------------------ |
+| `/movimenti`     | «Nessun movimento in questo mese.»   |
+| `/esercenti`     | «Nessun esercente con questo nome.»  |
+| foglio categorie | «Niente con questo nome.»            |
+| `/debug/eb`      | «Nessun conto registrato.»           |
+| `/debug/sync`    | «Nessuna sincronizzazione eseguita.» |
+
+Cinque su cinque dicono **cosa non c'è**. Nessuno dice perché, e nessuno offre l'uscita. L'unico
+scritto bene è «Sei in pari», e non è un caso: è l'unico nato da una decisione esplicita.
+
+### A.8 `aria-pressed` manca dove lo stato **è** il contenuto
+
+`interruttore.tsx` disegna due bottoni, «fisso» e «variabile», e colora quello attivo. Non c'è
+`aria-pressed` né `role="radiogroup"`: un lettore di schermo annuncia due bottoni indistinguibili.
+Lo stesso vale per i due modi di `/dove` quando sono resi come bottoni.
+
+### A.9 Il testo spento è il testo che non si legge
+
+`text-testo-3` (2,28:1, vedi primo passaggio) è usato su **elementi interattivi**: la scritta
+«senza categoria» dentro il selettore, l'etichetta del bottone non attivo dell'interruttore, i
+chevron. Non è solo un problema di leggibilità: un controllo il cui testo è più spento del testo
+secondario si legge come disattivato.
+
+### A.10 Sei altezze per i bersagli
+
+`min-h-11` (44) ×54 · `min-h-12` (48) ×19 · `min-h-14` (56) ×5 · `min-h-10` ×3 · `min-h-9` ×4 ·
+`min-h-7` ×1. Le ultime tre sono varianti `sm:` da tastiera e vanno bene. Le prime tre no: 44, 48 e
+56 si usano indifferentemente per la stessa cosa — una riga di elenco — e il sistema non ha un nome
+per distinguere «controllo» da «riga» da «riga con due piani».
+
+### A.11 Un `<select>` nativo dentro il foglio che esiste per eliminare i `<select>`
+
+Nel modulo di creazione categoria, il campo «dove» è un `<select>` con tutte le categorie —
+**dentro** il foglio nato per sostituire proprio quel controllo. È l'unica incoerenza interna al
+componente migliore dell'applicazione.
+
+### A.12 `disabled` dove servirebbe `aria-disabled`
+
+Un bottone `disabled` esce dall'ordine di tabulazione e perde il fuoco. Mentre un'azione è in corso
+il bottone dovrebbe restare raggiungibile e annunciare che sta lavorando (`aria-disabled="true"` +
+`aria-busy`), non sparire dalla navigazione da tastiera.
+
+### A.13 I filtri di `/movimenti` chiedono un invio
+
+Sono un `form method="get"` — decisione documentata e giusta nel suo scopo: **la pagina resta un
+componente server**. Ma il commento dice «nessun JavaScript», e quel motivo non è più vero: il
+resto dell'applicazione non funziona senza. Il vantaggio da difendere è il primo, non il secondo, e
+si può tenere sostituendo i cinque `<select>` con un'isola client — la pagina resta server.
+
+### A.14 Nessun contenitore riferisce cosa è cambiato
+
+Un solo `aria-live` in tutta l'applicazione. Ogni esito — «7 confermati», «categoria creata»,
+l'errore — compare visivamente e basta.
+
+### A.15 Le note d'errore restano dove nessuno le guarda
+
+`{errore !== null && <p className="nota nota-errore mt-1 text-[11px]">{errore}</p>}` dentro
+`SceltaCategoria`: 11 px, sotto un controllo che sta in una riga di elenco lunga. Se il foglio si è
+chiuso, l'errore compare in un punto della pagina che potrebbe essere fuori schermo.
+
+---
+
+## B. Component improvements
+
+Formato: **oggi → problema → riferimento → comportamento proposto.**
+
+### B.1 Bottone che lavora
+
+- **Oggi** — la scritta diventa `…` e tutti gli altri bottoni della schermata si disattivano.
+- **Problema** — l'ellissi è ferma e non dice niente; il lettore di schermo annuncia «puntini di
+  sospensione»; `disabled` toglie il fuoco dall'ordine di tabulazione. La larghezza invece **non**
+  si muove, ed è merito del `flex-1` che c'è già: quella parte del pattern è giusta.
+- **Riferimento** — [Primer · Loading](https://primer.style/product/ui-patterns/loading/) tiene
+  l'etichetta e affianca l'indicatore; [Bekk · accessible loading button](https://www.bekk.christmas/post/2023/24/accessible-loading-button)
+  spiega perché `aria-disabled` batte `disabled` durante l'attesa. La tecnica a griglia sovrapposta
+  evita il restringimento perché la misura la decide il figlio più largo.
+- **Proposto** — l'etichetta **resta**; l'indicatore entra a sinistra dentro la stessa cella di
+  griglia; il bottone tiene la sua larghezza; `aria-disabled` e `aria-busy` invece di `disabled`;
+  **sotto i 200 ms non compare niente**. Solo il bottone premuto cambia stato: gli altri restano vivi.
+
+### B.2 Coda di conferma
+
+- **Oggi** — `POST`, attesa, `router.refresh()`, e nel frattempo tutta la schermata è ferma.
+- **Problema** — sette conferme sono sette render completi del server, ognuno a cache appena buttata.
+- **Riferimento** — Linear e Superhuman rimuovono la riga all'istante e offrono l'annulla;
+  [Material 3 · Snackbar](https://m3.material.io/components/snackbar/guidelines) dà la forma: una
+  riga, **una sola** azione, in basso, che scompare da sola e non blocca. Il pattern esiste già in
+  casa, in `interruttore.tsx`.
+- **Proposto** — la riga esce subito con l'animazione di uscita; l'avviso passeggero dice cosa è
+  successo e offre **Annulla** per 6 secondi; se il server rifiuta, la riga **rientra al suo posto**
+  (indice conservato) e l'avviso diventa rosso con «Riprova». Nessun `refresh`.
+
+### B.3 Foglio con un modulo dentro
+
+- **Oggi** — `85dvh`, corpo fissato, `autoFocus` sul campo, nessuna gestione della tastiera.
+- **Problema** — su iOS gli elementi fissi non si spostano quando sale la tastiera: il bottone
+  «Crea e scegli» finisce sotto.
+- **Riferimento** — [HTMHell · interactive-widget](https://www.htmhell.dev/adventcalendar/2024/4/)
+  e l'[explainer di Bram.us](https://github.com/bramus/viewport-resize-behavior/blob/main/explainer.md):
+  `interactive-widget=resizes-content` fa rimpicciolire anche il _layout viewport_ su Chromium;
+  `dvh` da solo non basta perché non tocca il `position: fixed` di iOS.
+- **Proposto** — `interactiveWidget: 'resizes-content'` nel `viewport` di Next; il foglio ascolta
+  `visualViewport` e riduce la propria altezza massima; le azioni stanno in un piede **appiccicato**
+  che resta sopra la tastiera; l'`autoFocus` si toglie su schermo stretto — la tastiera la apre
+  l'utente quando è pronto.
+
+### B.4 Selettore di categoria
+
+- **Oggi** — la portata è due parole più un `title=`; il campo «dove» è un `<select>`; il chevron è
+  `›`; «senza categoria» è in `--testo-3`.
+- **Problema** — la distinzione fra «una riga» e «trecento righe» non è leggibile su un telefono.
+- **Riferimento** — Stripe e Linear scrivono la portata di un'azione **nel bottone stesso**
+  («Applica a tutti gli addebiti futuri»), non in un suggerimento al passaggio del mouse.
+- **Proposto** — la portata diventa una **pastiglia sempre visibile** sotto il controllo, con la
+  frase intera; il `title=` sparisce; il campo «dove» diventa un secondo foglio o un elenco
+  gerarchico dentro il primo; il chevron diventa l'icona; «senza categoria» passa a `--testo-2`.
+
+### B.5 Errore di rete e di sessione
+
+- **Oggi** — il testo del server, o il numero di stato, in un riquadro rosso.
+- **Problema** — l'utente può leggere `unauthorized` o `500`.
+- **Riferimento** — Stripe Dashboard e Vercel distinguono quattro casi (validazione, sessione, rete,
+  guasto) e per ognuno dicono **cosa fare**; nessuno mostra il codice di stato come messaggio.
+- **Proposto** — una funzione di traduzione unica: `401 → «La sessione è scaduta»` con un bottone
+  **Rientra** che porta al login conservando l'indirizzo; `403 → «Questo account non è ammesso»`;
+  `5xx / rete → «Non riesco a raggiungere il server»` con **Riprova**, e il dato che si stava per
+  scrivere **resta nel campo**. Il testo grezzo del server sopravvive solo in un `<details>`
+  «dettagli tecnici», per la diagnostica.
+
+### B.6 Stati vuoti
+
+- **Riferimento** — l'unico buono ce l'abbiamo già in casa: «Sei in pari» dice cosa vuol dire, perché
+  è così e cosa si può guardare invece.
+- **Proposto** — tre righe sempre. Esempio per `/movimenti`:
+  > **Nessun movimento con questi filtri.**
+  > Il mese è luglio e il tipo è «spese reali», che esclude i giroconti.
+  > [Togli i filtri] · [Guarda tutto luglio]
+
+---
+
+## C. Interaction specification
+
+| Elemento              | Regola                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Foglio**            | Entra in 300 ms `cubic-bezier(.32,.72,0,1)`, velo 220 ms. Esce con la stessa curva. Presa trascinabile; oltre ¼ dell'altezza o 550 px/s se ne va. Esc, fondo, X. Il fuoco entra sul primo elemento, torna a chi ha aperto (lo fa `<dialog>`). Piede appiccicato sopra la tastiera. Con modifiche non salvate: chiedere **solo** se qualcosa è stato scritto. |
+| **Cassetto**          | Come il foglio, da destra. Su schermo ≥ 768 px resta un cassetto: non diventa una barra laterale fissa.                                                                                                                                                                                                                                                      |
+| **Avviso passeggero** | Uno alla volta, in basso sopra la barra, 6 s con azione, 2,5 s senza. Una sola azione. Non blocca. Si può scorrere via. Sparisce se si naviga.                                                                                                                                                                                                               |
+| **Bottone**           | L'etichetta non cambia mai durante l'attesa. `aria-disabled` + `aria-busy`, non `disabled`. Indicatore dopo 200 ms. Un'azione primaria per schermata.                                                                                                                                                                                                        |
+| **Riga**              | Hover = velatura accento 10% dietro `@media (hover: hover)`. Premuta = stessa velatura, **senza scala**. Fuoco = anello accento 2 px. Uscita animata solo quando la riga esce per un motivo.                                                                                                                                                                 |
+| **Campo**             | Etichetta visibile, non solo segnaposto. `inputMode` corretto. Validazione all'uscita dal campo. Errore sotto, con `aria-describedby` e `aria-invalid`. Il testo scritto **non si perde mai** su errore.                                                                                                                                                     |
+| **Selezione**         | Spento ≠ disattivato ≠ non disponibile. Spento è pieno e leggibile; disattivato è opaco e dice perché; non disponibile non c'è. `aria-pressed` o `radiogroup` sempre.                                                                                                                                                                                        |
+| **Attesa**            | Sotto 200 ms niente. Contenuto già a schermo **non sparisce**: si mostra vecchio con un indicatore. Scheletro solo al primo caricamento di un blocco.                                                                                                                                                                                                        |
+| **Errore**            | Quattro famiglie: validazione (nel campo), sessione (con «Rientra»), rete (con «Riprova»), guasto (con `error.tsx`). Mai un numero di stato come messaggio.                                                                                                                                                                                                  |
+
+---
+
+## D. Polish backlog
+
+### Must fix
+
+1. **Il 401 non deve mai essere un testo.** Traduzione degli errori + rientro al login. _(A.1, B.5)_
+2. **Tastiera che copre le azioni.** `interactiveWidget` + piede appiccicato + via l'`autoFocus` su
+   schermo stretto. _(A.4, B.3)_
+3. **La portata del cambio categoria fuori dal `title=`.** _(A.5, B.4)_
+4. **`aria-pressed` sui gruppi a due scelte.** _(A.8)_
+
+### High impact
+
+5. Bottone che non si restringe, e che disattiva **solo sé stesso**. _(A.2, A.3, B.1)_
+6. Aggiornamento ottimistico + annulla sulla coda. _(B.2)_
+7. I quindici `›` diventano l'icona che esiste già. _(A.6)_
+8. Gli stati vuoti riscritti in tre righe. _(A.7, B.6)_
+9. Il testo spento fuori dai controlli. _(A.9)_
+
+### Nice polish
+
+10. Tre nomi per le altezze di riga invece di tre numeri usati a caso. _(A.10)_
+11. Il `<select>` «dove» dentro il foglio. _(A.11)_
+12. `aria-disabled` al posto di `disabled` durante l'attesa. _(A.12)_
+13. I filtri di `/movimenti` come isola client. _(A.13)_
+14. Un contenitore `aria-live` per gli esiti. _(A.14)_
