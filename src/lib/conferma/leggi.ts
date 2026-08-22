@@ -198,6 +198,46 @@ export async function confermaMovimento(richiesta: RichiestaConferma): Promise<v
  * esercente. Approvare in blocco non e' una scorciatoia per fare eccezioni in
  * blocco: quelle restano una riga per volta.
  */
+/**
+ * Disfare una conferma.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' esiste, e perche' NON copre la correzione
+ * ---------------------------------------------------------------------------
+ * «Va bene» e' un gesto solo che tocca un campo solo: `confermato_at`. Disfarlo
+ * e' rimetterlo a `null`, e non c'e' nient'altro da ricostruire — per questo un
+ * annulla qui e' onesto.
+ *
+ * **La correzione no.** Quella marca `manually_categorized`, che e' la cosa piu'
+ * vicina a un'incisione che ci sia nello schema: disfarla vorrebbe dire
+ * indovinare cosa c'era prima fra discrezionalita', contesto e note, e
+ * rimettere a `false` un flag che l'utente ha alzato riempiendo un modulo. Una
+ * correzione si disfa correggendo di nuovo, e va bene cosi': e' un atto
+ * deliberato, non un tocco.
+ *
+ * Non passa da una funzione SQL perche' non ce n'e' bisogno — la policy di
+ * `transactions` ammette gia' l'update per l'utente autenticato — ma resta
+ * un'**operazione nominata**, come vuole la regola della Fase 0: il copilota
+ * puo' chiamarla, un `onClick` no.
+ */
+export async function disconfermaMovimenti(ids: readonly string[]): Promise<number> {
+  const puliti = ids.filter((i) => typeof i === 'string' && i.trim() !== '');
+  if (puliti.length === 0) throw new ConfermaNonValida('Nessun movimento indicato.');
+  if (puliti.length > 100) throw new ConfermaNonValida(`Troppi movimenti: ${puliti.length}`);
+
+  const supabase = await createSupabaseServerClient();
+  const { error, count } = await supabase
+    .from('transactions')
+    .update({ confermato_at: null }, { count: 'exact' })
+    .in('id', puliti)
+    // Solo quelle che sono davvero confermate: senza, un annulla arrivato due
+    // volte direbbe di aver disfatto righe che non aveva confermato lui.
+    .not('confermato_at', 'is', null);
+
+  if (error !== null) throw new Error(`Annullamento fallito: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function confermaMovimenti(ids: readonly string[]): Promise<number> {
   const puliti = ids.filter((i) => typeof i === 'string' && i.trim() !== '');
   if (puliti.length === 0) throw new ConfermaNonValida('Nessun movimento indicato.');

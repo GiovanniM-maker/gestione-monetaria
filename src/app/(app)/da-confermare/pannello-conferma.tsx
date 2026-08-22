@@ -2,7 +2,6 @@
 
 import { useClassi, useClassiSceglibili } from '../classi-note';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formattaEuro, sommaCosti } from '@/lib/abbonamenti/formato';
 import type { RigaDaConfermare, RigaRecente } from '@/lib/conferma/leggi';
@@ -18,6 +17,7 @@ import {
 import { Segmentato } from '../segmentato';
 import { etichettaMovimento } from '@/lib/movimenti/etichetta';
 import { Foglio } from '../foglio';
+import { avvisa } from '../avviso';
 import { SceltaCategoria } from '../scelta-categoria';
 import { DecidiEsercente } from './decidi-esercente';
 import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
@@ -72,7 +72,6 @@ export function PannelloConferma({
   /** Il giorno di oggi in `Europe/Rome`, calcolato dal server. */
   oggi: string;
 }) {
-  const router = useRouter();
   const [inCorso, setInCorso] = useState<string | null>(null);
   const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
@@ -89,6 +88,92 @@ export function PannelloConferma({
    */
   const [chiusi, setChiusi] = useState<ReadonlySet<ChiaveGruppo>>(new Set(['prima']));
 
+  /**
+   * Le righe gia' sparite dallo schermo ma non ancora confermate dal server.
+   *
+   * ---------------------------------------------------------------------------
+   * Un insieme di identificativi, non una copia della lista
+   * ---------------------------------------------------------------------------
+   * Copiare `righe` in uno stato locale significherebbe avere due verita' — i
+   * dati del server e la copia — e doverle risincronizzare a ogni arrivo di
+   * props nuove. Qui la verita' resta una, e questo insieme dice solo **cosa
+   * nascondere**: se il server rifiuta, si toglie l'identificativo e la riga
+   * torna esattamente dov'era, nel suo gruppo e nel suo ordine.
+   */
+  const [nascoste, setNascoste] = useState<ReadonlySet<string>>(new Set());
+
+  const mostra = (ids: readonly string[]) =>
+    setNascoste((prima) => {
+      const dopo = new Set(prima);
+      for (const id of ids) dopo.delete(id);
+      return dopo;
+    });
+
+  /**
+   * Conferma **ottimistica**: la riga esce subito, il viaggio parte dopo.
+   *
+   * Prima era `POST` e poi `router.refresh()`, cioe' un render completo del
+   * server a cache appena invalidata — su sette movimenti, sette. E finche' il
+   * viaggio non tornava, un solo `occupato` spegneva **tutti** i bottoni della
+   * schermata: confermare la prima riga congelava le altre sei.
+   *
+   * Ora il tocco ha una conseguenza immediata, e cio' che puo' andare storto
+   * ha una via d'uscita: se il server rifiuta la riga rientra e l'avviso lo
+   * dice; se e' andata, l'avviso offre di disfarla per sei secondi.
+   */
+  async function conferma(ids: readonly string[], quante: number) {
+    setErrore(null);
+    setNascoste((prima) => new Set([...prima, ...ids]));
+    setAperta(null);
+    setTutteChieste(false);
+
+    try {
+      const risposta = await fetch('/api/admin/conferma', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(ids.length === 1 ? { id: ids[0] } : { ids }),
+      });
+      if (!risposta.ok) {
+        mostra(ids);
+        const spiegazione = await spiegaRisposta(risposta);
+        setErrore(spiegazione);
+        avvisa({ testo: spiegazione.titolo, tono: 'errore' });
+        return;
+      }
+      avvisa({
+        testo: quante === 1 ? 'Confermato' : `${quante} movimenti confermati`,
+        annulla: async () => {
+          // Disfare e' rimettere `confermato_at` a null: un campo solo, ed e'
+          // il motivo per cui l'annulla qui e' onesto e sulla correzione no.
+          try {
+            await fetch('/api/admin/conferma', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ disconferma: ids }),
+            });
+          } finally {
+            // La riga torna comunque: se l'annulla e' fallito, vederla di nuovo
+            // in lista e' meno sbagliato che crederla disfatta.
+            mostra(ids);
+          }
+        },
+      });
+    } catch (e) {
+      mostra(ids);
+      const spiegazione = spiegaEccezione(e);
+      setErrore(spiegazione);
+      avvisa({ testo: spiegazione.titolo, tono: 'errore' });
+    }
+  }
+
+  /**
+   * La correzione: qui il viaggio si aspetta.
+   *
+   * Non e' un tocco, e' un modulo riempito: marca `manually_categorized`, che
+   * blocca per sempre ogni automatismo su quella riga. Farla sparire prima di
+   * sapere che e' andata vorrebbe dire mostrare come inciso qualcosa che il
+   * database potrebbe non avere.
+   */
   async function scrivi(corpo: Record<string, unknown>, chiave: string) {
     setInCorso(chiave);
     setErrore(null);
@@ -103,8 +188,8 @@ export function PannelloConferma({
         return;
       }
       setAperta(null);
-      setTutteChieste(false);
-      router.refresh();
+      setNascoste((prima) => new Set([...prima, String(corpo['id'] ?? '')]));
+      avvisa({ testo: 'Corretto' });
     } catch (e) {
       setErrore(spiegaEccezione(e));
     } finally {
@@ -119,7 +204,9 @@ export function PannelloConferma({
    * che si vede piu' spesso quando l'abitudine ha preso, e vale la pena che
    * dica una cosa buona invece di sembrare rotta.
    */
-  if (righe.length === 0) {
+  const visibili = righe.filter((r) => !nascoste.has(r.id));
+
+  if (visibili.length === 0) {
     /* Con i dati fermi «sei in pari» e' una bugia detta con un segno di spunta
        verde: non c'e' niente da confermare perche' non e' arrivato niente. Il
        segno resta — la lista e' davvero vuota — ma smette di essere una lode. */
@@ -171,7 +258,7 @@ export function PannelloConferma({
   }
 
   const occupato = inCorso !== null;
-  const gruppi = raggruppaPerTempo(righe, oggi, ordinamento, (r) => r.amount_eur ?? r.amount);
+  const gruppi = raggruppaPerTempo(visibili, oggi, ordinamento, (r) => r.amount_eur ?? r.amount);
 
   return (
     <div className="space-y-4">
@@ -187,7 +274,7 @@ export function PannelloConferma({
           nasconderla dietro un tocco vorrebbe dire che nessuno la trova. */}
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] text-testo-2">
-          {righe.length} {righe.length === 1 ? 'movimento' : 'movimenti'}
+          {visibili.length} {visibili.length === 1 ? 'movimento' : 'movimenti'}
         </p>
         <div className="w-[210px]">
           <Segmentato
@@ -241,10 +328,10 @@ export function PannelloConferma({
                       <button
                         type="button"
                         disabled={occupato}
-                        onClick={() => void scrivi({ id: r.id }, r.id)}
+                        onClick={() => void conferma([r.id], 1)}
                         className={`${BOTTONE} flex-1`}
                       >
-                        {inCorso === r.id ? '…' : 'Va bene'}
+                        Va bene
                       </button>
                       <button
                         type="button"
@@ -277,7 +364,7 @@ export function PannelloConferma({
 
       {/* In fondo e non in cima: si preme dopo aver letto, non al posto di
           leggere. */}
-      {righe.length > 1 &&
+      {visibili.length > 1 &&
         (tutteChieste ? (
           <div className="scheda space-y-3 p-4">
             <p className="text-[14px]">
@@ -293,9 +380,14 @@ export function PannelloConferma({
                 type="button"
                 disabled={occupato}
                 className={`${BOTTONE} flex-1`}
-                onClick={() => void scrivi({ ids: righe.map((r) => r.id) }, 'tutte')}
+                onClick={() =>
+                  void conferma(
+                    visibili.map((r) => r.id),
+                    visibili.length,
+                  )
+                }
               >
-                {inCorso === 'tutte' ? '…' : `Sì, approva le ${righe.length}`}
+                {`Sì, approva le ${visibili.length}`}
               </button>
               <button
                 type="button"

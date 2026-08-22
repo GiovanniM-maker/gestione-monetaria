@@ -7,6 +7,7 @@ import { Menu } from './menu';
 import { Barra } from './barra';
 import { Aggiornamento } from './aggiornamento';
 import { Sincronizza } from './sincronizza';
+import { Avvisi } from './avviso';
 import { TiraPerAggiornare } from './tira-per-aggiornare';
 import { VERSIONE } from '@/lib/versione';
 
@@ -75,6 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TiraPerAggiornare />
       <Aggiornamento versione={VERSIONE} />
       <Barra />
+      <Avvisi />
     </div>
   );
 }
