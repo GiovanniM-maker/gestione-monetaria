@@ -72,7 +72,17 @@ export function PannelloConferma({
   /** Il giorno di oggi in `Europe/Rome`, calcolato dal server. */
   oggi: string;
 }) {
-  const [inCorso, setInCorso] = useState<string | null>(null);
+  /**
+   * Quali righe stanno scrivendo, non «se qualcuno sta scrivendo».
+   *
+   * Da una stringa sola veniva un `occupato` unico che spegneva **tutti** i
+   * bottoni della schermata: mentre si salvava la correzione di una riga, le
+   * altre sei non si potevano nemmeno approvare. La conferma e' gia' diventata
+   * ottimistica e non passa piu' di qui; la correzione il viaggio lo aspetta —
+   * ed e' giusto, marca `manually_categorized` — ma deve aspettarlo **da
+   * sola**.
+   */
+  const [inCorso, setInCorso] = useState<ReadonlySet<string>>(() => new Set());
   const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [tutteChieste, setTutteChieste] = useState(false);
@@ -175,7 +185,7 @@ export function PannelloConferma({
    * database potrebbe non avere.
    */
   async function scrivi(corpo: Record<string, unknown>, chiave: string) {
-    setInCorso(chiave);
+    setInCorso((q) => new Set(q).add(chiave));
     setErrore(null);
     try {
       const risposta = await fetch('/api/admin/conferma', {
@@ -193,7 +203,11 @@ export function PannelloConferma({
     } catch (e) {
       setErrore(spiegaEccezione(e));
     } finally {
-      setInCorso(null);
+      setInCorso((q) => {
+        const r = new Set(q);
+        r.delete(chiave);
+        return r;
+      });
     }
   }
 
@@ -261,7 +275,11 @@ export function PannelloConferma({
     );
   }
 
-  const occupato = inCorso !== null;
+  // Le azioni **globali** — «va bene tutte» e il suo annulla — restano ferme
+  // finche' una correzione e' in volo: approvare in blocco mentre si sta
+  // incidendo una riga e' una sovrapposizione che non si spiega. Le azioni di
+  // riga guardano invece la propria riga.
+  const occupato = inCorso.size > 0;
   const gruppi = raggruppaPerTempo(visibili, oggi, ordinamento, (r) => r.amount_eur ?? r.amount);
 
   return (
@@ -331,7 +349,7 @@ export function PannelloConferma({
                     <div className="mt-4 flex gap-2">
                       <button
                         type="button"
-                        disabled={occupato}
+                        disabled={inCorso.has(r.id)}
                         onClick={() => void conferma([r.id], 1)}
                         className={`${BOTTONE} flex-1`}
                       >
@@ -339,7 +357,7 @@ export function PannelloConferma({
                       </button>
                       <button
                         type="button"
-                        disabled={occupato}
+                        disabled={inCorso.has(r.id)}
                         onClick={() => setAperta(r.id)}
                         className={`${BOTTONE_MINORE} flex-1`}
                       >
@@ -354,7 +372,7 @@ export function PannelloConferma({
                       riga={r}
                       categorie={categorie}
                       aperta={aperta === r.id}
-                      occupato={occupato}
+                      occupato={inCorso.has(r.id)}
                       onAnnulla={() => setAperta(null)}
                       onSalva={(corpo) => void scrivi({ id: r.id, ...corpo }, r.id)}
                     />

@@ -81,7 +81,17 @@ export function PannelloObiettivi({
 }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
-  const [inCorso, setInCorso] = useState<string | null>(null);
+  /**
+   * Quali scritture sono in volo, non «se ce n'e' una».
+   *
+   * Da una stringa sola veniva `disabled={inCorso !== null}` ovunque: rinnovare
+   * un obiettivo spegneva i bottoni di tutti gli altri. Il **modulo** di
+   * creazione resta bloccato in blocco — quello e' un oggetto solo che si sta
+   * scrivendo, e mezzi campi vivi mentre l'altra meta' e' partita sarebbero una
+   * forma diversa da quella spedita — ma le righe guardano la propria.
+   */
+  const [inCorso, setInCorso] = useState<ReadonlySet<string>>(() => new Set());
+  const scrivendo = (chiave: string) => inCorso.has(chiave);
   const [errore, setErrore] = useState<Spiegazione | null>(null);
 
   const [tipo, setTipo] = useState<TipoObiettivo>('tetto_di_spesa');
@@ -91,7 +101,7 @@ export function PannelloObiettivi({
   const [mesi, setMesi] = useState(6);
 
   async function scrivi(metodo: string, corpo: Record<string, unknown>, chiave: string) {
-    setInCorso(chiave);
+    setInCorso((q) => new Set(q).add(chiave));
     setErrore(null);
     try {
       const risposta = await fetch('/api/admin/obiettivi', {
@@ -109,7 +119,11 @@ export function PannelloObiettivi({
     } catch (e) {
       setErrore(spiegaEccezione(e));
     } finally {
-      setInCorso(null);
+      setInCorso((q) => {
+        const r = new Set(q);
+        r.delete(chiave);
+        return r;
+      });
     }
   }
 
@@ -167,10 +181,10 @@ export function PannelloObiettivi({
                 <button
                   type="button"
                   onClick={() => void scrivi('PATCH', { id: o.id, mesi: 6 }, `r-${o.id}`)}
-                  disabled={inCorso !== null}
+                  disabled={scrivendo(`r-${o.id}`)}
                   className={BOTTONE_MINORE}
                 >
-                  {inCorso === `r-${o.id}`
+                  {scrivendo(`r-${o.id}`)
                     ? '…'
                     : o.stato === 'scaduto'
                       ? 'Vale ancora'
@@ -179,10 +193,10 @@ export function PannelloObiettivi({
                 <button
                   type="button"
                   onClick={() => void scrivi('DELETE', { id: o.id }, `d-${o.id}`)}
-                  disabled={inCorso !== null}
+                  disabled={scrivendo(`d-${o.id}`)}
                   className={BOTTONE_MINORE}
                 >
-                  {inCorso === `d-${o.id}` ? '…' : 'Dimentica'}
+                  {scrivendo(`d-${o.id}`) ? '…' : 'Dimentica'}
                 </button>
               </div>
             </li>
@@ -215,7 +229,7 @@ export function PannelloObiettivi({
                 if (!VUOLE_BERSAGLIO[t]) setBersaglio('');
               }}
               className={CAMPO_PIENO}
-              disabled={inCorso !== null}
+              disabled={scrivendo('nuovo')}
             >
               {TIPI.map((t) => (
                 <option key={t.valore} value={t.valore}>
@@ -235,7 +249,7 @@ export function PannelloObiettivi({
                 inputMode="decimal"
                 placeholder="300"
                 className={CAMPO_PIENO}
-                disabled={inCorso !== null}
+                disabled={scrivendo('nuovo')}
               />
             </label>
           )}
@@ -247,7 +261,7 @@ export function PannelloObiettivi({
                 value={bersaglio}
                 onChange={(e) => setBersaglio(e.target.value)}
                 className={CAMPO_PIENO}
-                disabled={inCorso !== null}
+                disabled={scrivendo('nuovo')}
               >
                 <option value="">— scegli —</option>
                 <optgroup label="Classi">
@@ -274,7 +288,7 @@ export function PannelloObiettivi({
               value={mesi}
               onChange={(e) => setMesi(Number(e.target.value))}
               className={CAMPO_PIENO}
-              disabled={inCorso !== null}
+              disabled={scrivendo('nuovo')}
             >
               {DURATE.map((m) => (
                 <option key={m} value={m}>
@@ -295,7 +309,7 @@ export function PannelloObiettivi({
               onChange={(e) => setNota(e.target.value.slice(0, 280))}
               placeholder="sto mettendo via per il trasloco"
               className={CAMPO_PIENO}
-              disabled={inCorso !== null}
+              disabled={scrivendo('nuovo')}
             />
           </label>
 
@@ -315,10 +329,10 @@ export function PannelloObiettivi({
                 'nuovo',
               )
             }
-            disabled={inCorso !== null || !creabile}
+            disabled={scrivendo('nuovo') || !creabile}
             className={`${BOTTONE} disabled:opacity-40`}
           >
-            {inCorso === 'nuovo' ? '…' : 'Crea'}
+            {scrivendo('nuovo') ? '…' : 'Crea'}
           </button>
         </div>
       </Foglio>

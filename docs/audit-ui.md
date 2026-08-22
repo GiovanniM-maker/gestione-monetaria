@@ -549,7 +549,7 @@ Formato: **oggi → problema → riferimento → comportamento proposto.**
 
 ### High impact
 
-5. Bottone che non si restringe, e che disattiva **solo sé stesso**. _(A.2, A.3, B.1)_
+5. ~~Bottone che disattiva **solo sé stesso**.~~ **fatto** — cinque pannelli, vedi sotto _(A.2, A.3, B.1)_
 6. Aggiornamento ottimistico + annulla sulla coda. _(B.2)_
 7. ~~I quindici `›` diventano l'icona che esiste già.~~ **fatto** — dodici sono icone, quattro restano punteggiatura _(A.6)_
 8. ~~Gli stati vuoti riscritti in tre righe.~~ **fatto** _(A.7, B.6)_
@@ -638,3 +638,35 @@ pannello aperto.
 
 «Ci sono dei movimenti in NON classificato, di ristoranti e bar, e persone.»
 Non era la UI: erano tre funzioni SQL. Sta in `CLAUDE.md` e nella **0058**.
+
+### Un'attesa che ferma la riga, non la schermata — 22 agosto
+
+Cinque pannelli tenevano `inCorso` come **una stringa sola**, e da lì veniva
+`disabled={inCorso !== null}` su ogni controllo: scrivere una riga spegneva
+tutte le altre.
+
+Non era prudenza mal riposta, era una domanda sbagliata. `inCorso` rispondeva a
+«qualcuno sta scrivendo?» mentre ogni bottone chiede «sto scrivendo **io**?», e
+le due coincidono solo finché c'è una riga. Le scritture sono indipendenti —
+esercenti diversi, avvisi diversi, obiettivi diversi — quindi non c'era niente
+da proteggere: il blocco costava un'attesa a vuoto e basta, proprio sulle
+schermate che esistono per smaltire decine di righe a raffica.
+
+Ora è un `Set`, e non per eleganza: con due scritture in volo una stringa sola
+si fa sovrascrivere dalla seconda, e la prima riga smette di mostrare l'attesa
+mentre sta ancora scrivendo — che è peggio del blocco, perché sembra finita.
+
+| pannello         | cosa bloccava                                             | ora                                                          |
+| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
+| `/revisione`     | assegnare un esercente spegneva le 313 azioni della lista | la sua riga                                                  |
+| `/da-confermare` | salvare una correzione spegneva «Va bene» sulle altre sei | la sua riga; «va bene tutte» resta globale                   |
+| `/avvisi`        | chiudere un avviso spegneva «Fatto» e «Ignora» su tutti   | il suo avviso                                                |
+| `/abbonamenti`   | un giudizio d'uso spegneva i tre bottoni di ogni scheda   | la sua scheda                                                |
+| `/obiettivi`     | rinnovare uno spegneva i bottoni degli altri              | la sua riga; il **modulo** di creazione resta un blocco solo |
+
+L'unica eccezione tenuta apposta è il modulo di creazione degli obiettivi: lì
+non ci sono righe indipendenti ma **un** oggetto che si sta scrivendo, e mezzi
+campi vivi mentre l'altra metà è già partita sarebbero una forma diversa da
+quella spedita. Stessa ragione per «va bene tutte» su `/da-confermare`:
+approvare in blocco mentre si sta incidendo una riga è una sovrapposizione che
+non si spiega.

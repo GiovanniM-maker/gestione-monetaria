@@ -81,7 +81,14 @@ export function PannelloAbbonamenti({
   tinte: Tinte;
 }) {
   const router = useRouter();
-  const [inCorso, setInCorso] = useState<string | null>(null);
+  /**
+   * Quali schede stanno scrivendo, non «se qualcuna sta scrivendo». Da una
+   * stringa sola veniva `occupato={inCorso !== null}` su **ogni** scheda: dare
+   * un giudizio d'uso a un abbonamento spegneva i tre bottoni di tutti gli
+   * altri, su una schermata che l'audit ha misurato alta dodicimila pixel. Dare
+   * i giudizi e' esattamente cio' che si viene a fare qui, e si fa a raffica.
+   */
+  const [inCorso, setInCorso] = useState<ReadonlySet<string>>(() => new Set());
   const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [mostraTutti, setMostraTutti] = useState(false);
 
@@ -96,7 +103,7 @@ export function PannelloAbbonamenti({
   const visibili = mostraTutti ? abbonamenti : abbonamenti.filter((a) => a.nella_metrica);
 
   async function scrivi(id: string, corpo: Record<string, unknown>) {
-    setInCorso(id);
+    setInCorso((q) => new Set(q).add(id));
     setErrore(null);
     try {
       const risposta = await fetch('/api/admin/abbonamenti', {
@@ -112,7 +119,11 @@ export function PannelloAbbonamenti({
     } catch (e) {
       setErrore(spiegaEccezione(e));
     } finally {
-      setInCorso(null);
+      setInCorso((q) => {
+        const r = new Set(q);
+        r.delete(id);
+        return r;
+      });
     }
   }
 
@@ -238,7 +249,7 @@ export function PannelloAbbonamenti({
               key={a.id}
               riga={a}
               oggi={oggi}
-              occupato={inCorso !== null}
+              occupato={inCorso.has(a.id)}
               onScrivi={(corpo) => void scrivi(a.id, corpo)}
             />
           ))}

@@ -29,7 +29,13 @@ function destinazione(a: RigaAvviso): { href: string; testo: string } | null {
 
 export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
   const router = useRouter();
-  const [inCorso, setInCorso] = useState<string | null>(null);
+  /**
+   * Quali avvisi stanno scrivendo, non «se qualcuno sta scrivendo». Da una
+   * stringa sola veniva `disabled={inCorso !== null}`, cioe' chiudere un avviso
+   * spegneva «Fatto» e «Ignora» su tutti gli altri: uno storico si smaltisce a
+   * raffica, e ogni raffica costava un viaggio d'attesa.
+   */
+  const [inCorso, setInCorso] = useState<ReadonlySet<string>>(() => new Set());
   const [errore, setErrore] = useState<Spiegazione | null>(null);
   const [mostraChiusi, setMostraChiusi] = useState(false);
 
@@ -37,7 +43,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
   const chiusi = avvisi.length - avvisi.filter((a) => a.status === 'new').length;
 
   async function cambia(id: string, stato: string) {
-    setInCorso(id);
+    setInCorso((q) => new Set(q).add(id));
     setErrore(null);
     try {
       const risposta = await fetch('/api/admin/avvisi', {
@@ -53,7 +59,11 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
     } catch (e) {
       setErrore(spiegaEccezione(e));
     } finally {
-      setInCorso(null);
+      setInCorso((q) => {
+        const r = new Set(q);
+        r.delete(id);
+        return r;
+      });
     }
   }
 
@@ -109,7 +119,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
                     )}
                     <button
                       type="button"
-                      disabled={inCorso !== null}
+                      disabled={inCorso.has(a.id)}
                       onClick={() => void cambia(a.id, 'actioned')}
                       className={BOTTONE_MINORE}
                     >
@@ -117,7 +127,7 @@ export function PannelloAvvisi({ avvisi }: { avvisi: readonly RigaAvviso[] }) {
                     </button>
                     <button
                       type="button"
-                      disabled={inCorso !== null}
+                      disabled={inCorso.has(a.id)}
                       onClick={() => void cambia(a.id, 'dismissed')}
                       className={BOTTONE_MINORE}
                     >

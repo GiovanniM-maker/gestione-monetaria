@@ -72,7 +72,22 @@ export function PannelloRevisione({
   categorie: readonly CategoryRow[];
 }) {
   const router = useRouter();
-  const [inCorso, setInCorso] = useState<string | null>(null);
+  /**
+   * Quali righe stanno scrivendo **adesso**, non «se qualcuno sta scrivendo».
+   *
+   * Era una stringa sola, e da li' veniva `disabilitato={inCorso !== null}`:
+   * assegnare **un** esercente disattivava ogni controllo di **ogni** riga.
+   * Su una schermata che esiste per smaltire decine di righe, ogni assegnazione
+   * costava un'attesa a vuoto su tutte le altre — e la lista si chiude invece
+   * di smaltirsi, che e' lo stesso motivo per cui esiste «va bene tutte».
+   *
+   * Le scritture sono indipendenti (esercenti diversi, righe diverse), quindi
+   * non c'era niente da proteggere. Un insieme e non una stringa perche' con
+   * due in volo la seconda cancellerebbe il segno d'attesa della prima, che e'
+   * il difetto peggiore dei due: la riga sembrerebbe ferma mentre sta ancora
+   * scrivendo.
+   */
+  const [inCorso, setInCorso] = useState<ReadonlySet<string>>(() => new Set());
   const [esito, setEsito] = useState<string | null>(null);
   const [errore, setErrore] = useState<Spiegazione | null>(null);
   /**
@@ -97,7 +112,7 @@ export function PannelloRevisione({
     ago === '' ? esercenti : esercenti.filter((m) => m.canonical_name.toLowerCase().includes(ago));
 
   async function chiama(metodo: 'POST' | 'PATCH', corpo: unknown, chiave: string) {
-    setInCorso(chiave);
+    setInCorso((q) => new Set(q).add(chiave));
     setErrore(null);
     try {
       const risposta = await fetch('/api/admin/tassonomia', {
@@ -120,7 +135,11 @@ export function PannelloRevisione({
     } catch (e) {
       setErrore(spiegaEccezione(e));
     } finally {
-      setInCorso(null);
+      setInCorso((q) => {
+        const r = new Set(q);
+        r.delete(chiave);
+        return r;
+      });
     }
   }
 
@@ -164,8 +183,11 @@ export function PannelloRevisione({
               voce={voce}
               esercenti={esercenti}
               categorie={categorie}
-              inCorso={inCorso === voce.etichetta}
-              disabilitato={inCorso !== null}
+              inCorso={inCorso.has(voce.etichetta)}
+              // Solo la riga che sta scrivendo. Le altre restano vive: due
+              // assegnazioni non si disturbano, e aspettare la prima per
+              // cominciare la seconda era tutto quello che quel blocco faceva.
+              disabilitato={inCorso.has(voce.etichetta)}
               onAssegna={(corpo) => chiama('POST', corpo, voce.etichetta)}
             />
           ))}
@@ -200,8 +222,8 @@ export function PannelloRevisione({
               key={m.id}
               merchant={m}
               categorie={categorie}
-              inCorso={inCorso === m.id}
-              disabilitato={inCorso !== null}
+              inCorso={inCorso.has(m.id)}
+              disabilitato={inCorso.has(m.id)}
               onSalva={(corpo) => chiama('PATCH', corpo, m.id)}
             />
           ))}
