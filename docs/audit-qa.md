@@ -269,10 +269,77 @@ Vale la pena scriverlo: sono i posti in cui **non** c'è un difetto, misurati.
 
 ---
 
+## Secondo passaggio — le correzioni non hanno rotto niente
+
+Tre delle otto correzioni toccano **molte** schermate, e verificarle nel punto in
+cui sono state fatte non basta. Questo è il giro fatto dopo, sull'ipotesi che
+siano state loro a introdurre i difetti nuovi.
+
+### `Dialogo`: il contenuto solo alla prima apertura — 13 file lo usano
+
+È la modifica più rischiosa dell'intero audit: se il contenuto non venisse più
+disegnato, ogni pannello dell'applicazione si aprirebbe **vuoto**. Sono stati
+aperti **tutti**, uno per uno, su 15 schermate.
+
+|                        |        |
+| ---------------------- | ------ |
+| pannelli aperti        | **58** |
+| vuoti                  | **0**  |
+| errori di console      | **0**  |
+| pagine irraggiungibili | **0**  |
+
+Coperti: selettore del mese, cassetto del menu, selettore di categoria (lista e
+scheda esercente), scelta dell'icona, nuova categoria, conferma di
+eliminazione, nuova classe, correzione di una classe, nuovo obiettivo, fogli
+degli esercenti. Ognuno con il suo contenuto vero — titolo, voci, campi.
+
+### `pointer-fine:` — 11 file, tutte le rotte, quattro dispositivi
+
+Non solo le due schermate su cui il difetto era stato misurato:
+
+| dispositivo              | sotto i 44 px, su 682 controlli |
+| ------------------------ | ------------------------------- |
+| telefono verticale       | **2**                           |
+| telefono **orizzontale** | **2**                           |
+| tablet verticale         | **2**                           |
+| scrivania col mouse      | 187                             |
+
+I due che restano sono le caselle di spunta (16 px, con l'etichetta alta 44 che
+le commuta), documentate e volute. I 187 col mouse **sono il comportamento
+corretto**: è la densità che si guadagna quando il puntatore è fine.
+
+E la regola nuova sul cursore non ha rotto la presa del foglio, che era il
+rischio del `:where()`: la maniglia resta `grab`, i bottoni dentro il pannello
+`pointer`.
+
+### `messaggioUtente()` — 13 punti di scrittura
+
+Il rischio è l'opposto di quello corretto: un filtro sugli errori che blocchi
+anche le scritture **riuscite**. Provate end-to-end, con il finto server tornato
+sano:
+
+| percorso                              | esito                             |
+| ------------------------------------- | --------------------------------- |
+| classificare un movimento             | pastiglia accesa su «Voluttuario» |
+| confermare una riga                   | avviso «Confermato · Annulla»     |
+| cambiare la categoria di un esercente | `200 tassonomia`, foglio chiuso   |
+
+Console pulita, nessun 4xx o 5xx.
+
+**Un difetto che non era un difetto**, per la terza volta in questo audit: il
+terzo percorso sembrava non scrivere: scegliendo una categoria il foglio restava
+aperto e nessuna chiamata partiva. È il disegno previsto — si sceglie, e poi c'è
+un «Salva» esplicito che dice «Nessuna modifica» finché non ne hai fatta una.
+Premuto quello, la scrittura parte.
+
+---
+
 ## Ancora aperto
 
-- Il resto delle fasi: moduli, navigazione avanti/indietro, richieste fuori
-  ordine sotto clic rapidissimi, secondo passaggio.
+- L'uso **caotico** fuori dai flussi previsti (fase 22). Il secondo passaggio è
+  fatto e mirato alle tre modifiche a largo raggio; quello che manca è il giro
+  senza copione, che è il modo in cui si trovano i difetti che una lista non
+  prevede.
 - I bersagli piccoli che restano sono **collegamenti dentro la prosa** (14–15
   px) e le caselle di spunta (16 px, con l'etichetta alta 44 che le commuta):
   entrambi voluti e documentati.
