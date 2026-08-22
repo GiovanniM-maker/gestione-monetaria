@@ -34,8 +34,13 @@ Tre cose sono state fatte **in più** rispetto al piano, e vanno sapute:
   giro veloce rinormalizzava tutto ogni cinque minuti si riparava da solo. Ora si ripara qui,
   subito, invece che fino a quattro ore dopo.
 
-**Quello che resta da verificare sui dati veri** è al §4 «come si verifica»: gli invarianti del §0,
-e in particolare la quota di giroconti, che deve restare a **23,8%**.
+**Verificato in produzione il 22 agosto**, dopo il deploy: i tre invarianti sono **identici** a
+prima della fusione — luglio 2026 −3.640,32 €, giroconti 23,9%, ricorrente −2.173,24 €/mese. La
+finestra non ha perso nessun giroconto, che era il modo di sbagliare da temere.
+
+Attenzione a come si legge quel «identici»: sarebbero identici **anche se il codice nuovo non avesse
+girato**. La prova che ha girato è l'altra, e sta su `/debug/sync`: la riga «righe toccate» a zero
+alla seconda esecuzione, e `esaminate` del giro veloce sceso da ~2.000 a qualche decina.
 
 ---
 

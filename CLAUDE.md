@@ -725,6 +725,29 @@ riga. È la soglia temporale, non le migration.
 quindi `amount` e `amount_eur` coincidono ancora su ogni movimento con un esercente — come deve
 essere finché l'unico conto nei totali è in euro.
 
+**Rimisurati il 22 agosto 2026**, e i numeri di riferimento da qui in avanti sono questi:
+
+| Grandezza               | 13 agosto        | 22 agosto            |
+| ----------------------- | ---------------- | -------------------- |
+| Spesa reale luglio 2026 | −3.640,32 €      | **−3.640,32 €**      |
+| Giroconti, quota        | 23,8%            | **23,9%**            |
+| Totale ricorrente       | −2.045,75 €/mese | **−2.173,24 €/mese** |
+
+Luglio non si è mosso di un centesimo, ed è il controllo che vale di più: è un mese chiuso, e non
+può muoversi legittimamente. Il decimo di punto sui giroconti è dieci giorni di dati nuovi.
+
+Il ricorrente sale di **127,49 €/mese**, e almeno una causa è certa: **Byteplus è entrato nella
+metrica**. Il 12 agosto era escluso — è _il_ caso per cui la soglia dei 75 giorni esiste — e ora ha
+**81 giorni coperti**, quindi contribuisce col suo tasso pieno di −172,67 €/mese. Da solo vale più
+dello scarto, il che significa che qualcos'altro nel frattempo è sceso. E va letto sapendo che ha
+regolarità e stabilità **entrambe a 0,00**: è un servizio a consumo, quindi quel numero è la media
+su tutto il periodo osservato, non un canone — la trappola del caso Anthropic, su una voce che ha
+passato la soglia da sei giorni.
+
+Il confronto col 13 agosto è zoppo anche per un secondo motivo, che vale la pena ricordare prima di
+usare un numero vecchio come controllo: in mezzo c'è la **`0054`**, e `episodico` toglie dalle
+ricorrenze i movimenti una tantum. Non si sono mossi solo i dati, è cambiato il **metro**.
+
 **La verifica che conta** è l'ultima riga: il costo ricorrente sta dentro la spesa reale con
 margine. Il confronto va fatto con i mesi recenti e non con la media di tutto lo storico — un
 esercente comparso ad aprile contribuisce col suo tasso pieno anche se a febbraio non esisteva, ed
@@ -1223,7 +1246,10 @@ I due pezzi inizialmente rimandati sono arrivati lo stesso giorno, con la **0050
   (`pulisciAvvisi`) li elimina — qualunque stato: se la condizione e' ancora vera, la
   `dedupe_key` fa rinascere l'avviso nuovo davvero.
 - Nella stessa migration, `ripartizione_dove` ordinava sul **testo** dell'importo ('2' < '4',
-  quindi −21,96 prima di −469,90): ora ordina sul numero.
+  quindi −21,96 prima di −469,90): ora ordina sul numero. **Ci si ricasca scrivendo query a mano**: in
+  `select costo_mensile::text as costo_mensile … order by costo_mensile` l'alias di output vince,
+  e si ordina di nuovo la stringa. Successo il 22 agosto, su una query di verifica, con l'effetto
+  di nascondere le voci più care invece di mostrarle.
 - E una regola pagata provando la 0050 prima di applicarla: **un errore di RPC si lancia, non si
   ingoia**. `const { data }` da solo trasformava una funzione assente in «niente qui dentro» —
   un guasto travestito da risposta. Le tre letture di `lib/dove/leggi.ts` ora lanciano, e la
