@@ -22,6 +22,7 @@ import { SceltaCategoria } from '../scelta-categoria';
 import { DecidiEsercente } from './decidi-esercente';
 import { spiegaEccezione, spiegaRisposta, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
+import { Icona } from '@/lib/ui/icone';
 
 /**
  * La schermata piu' usata dell'applicazione, e l'unica che si apre per fare una
@@ -226,7 +227,7 @@ export function PannelloConferma({
                 className="shrink-0 text-testo-3 transition-transform duration-150"
                 style={{ transform: chiuso ? 'none' : 'rotate(90deg)' }}
               >
-                ›
+                <Icona nome="chevron" misura={16} />
               </span>
             </button>
 
@@ -373,9 +374,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
                 : 'non lo sappiamo: lo scarico dalla banca è fermo'}
           </span>
         </span>
-        <span aria-hidden="true" className="shrink-0 text-testo-3">
-          ›
-        </span>
+        <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </summary>
 
       {righe.length > 0 && (
@@ -407,9 +406,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
                 <span className="cifra shrink-0 whitespace-nowrap">
                   {euro(r.amount_eur ?? r.amount)}
                 </span>
-                <span aria-hidden="true" className="shrink-0 text-testo-3">
-                  ›
-                </span>
+                <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
               </Link>
             </li>
           ))}

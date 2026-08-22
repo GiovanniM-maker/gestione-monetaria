@@ -17,6 +17,7 @@ import { Tessera } from '@/lib/ui/tessera';
 import type { Nodo } from '@/lib/dove/nodi';
 import { BarraClassi, ordineDelleClassi, tinteDelleClassi } from '../../grafici';
 import { Fisarmonica } from '../../dove/fisarmonica';
+import { Icona } from '@/lib/ui/icone';
 
 export const dynamic = 'force-dynamic';
 
@@ -177,7 +178,8 @@ export default async function RicorrentePage({ params }: { params: Promise<{ tip
           e lo spazio. */}
       <div className="space-y-3 px-1 pt-1">
         <Link href="/" className="inline-flex min-h-11 items-center text-[13px] text-accento">
-          ‹ Oggi
+          <Icona nome="chevron" misura={15} className="mr-0.5 rotate-180" />
+          Oggi
         </Link>
         <div className="flex items-start justify-between gap-3">
           <p className="eti">{def.titolo} · costo al mese</p>

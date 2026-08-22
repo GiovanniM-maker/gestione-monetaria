@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { etichettaMese } from '@/lib/cruscotto/mesi';
+import { Icona } from '@/lib/ui/icone';
 import { Foglio } from './foglio';
 
 /**
@@ -97,7 +98,9 @@ export function SceltaMese({
             href={verso(precedente)}
             aria-label={`vai a ${etichettaMese(precedente)}`}
           >
-            ‹
+            {/* Lo stesso tracciato girato: due disegni per la stessa freccia
+                sono due occasioni di farli diversi. */}
+            <Icona nome="chevron" misura={18} className="rotate-180" />
           </Link>
         )}
         {inCorso ? (
@@ -109,7 +112,7 @@ export function SceltaMese({
               href={verso(successivo)}
               aria-label={`vai a ${etichettaMese(successivo)}`}
             >
-              ›
+              <Icona nome="chevron" misura={18} />
             </Link>
           )
         )}

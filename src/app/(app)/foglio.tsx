@@ -200,6 +200,37 @@ export function Dialogo({
   }, [aperto]);
 
   /**
+   * Il pannello segue la tastiera.
+   *
+   * `visualViewport.height` e' l'unica misura che su iOS cala davvero quando i
+   * tasti salgono: `dvh` resta quello di prima, e il piede del foglio — dove
+   * stanno «Salva» e «Annulla» — finisce sotto la tastiera. Su Chromium ci
+   * pensa `interactive-widget=resizes-content` nel layout, ma su Safari no, e
+   * Safari e' il caso che conta: questa applicazione si apre da un telefono.
+   *
+   * Si scrive una variabile CSS invece di uno stato React: cambia a ogni
+   * fotogramma mentre la tastiera sale, e farne passare ognuno da un render
+   * sarebbe l'unico posto dell'app in cui l'animazione scatta.
+   */
+  useEffect(() => {
+    if (!aperto) return;
+    const vv = window.visualViewport;
+    if (vv === null || vv === undefined) return;
+
+    const misura = () => {
+      document.documentElement.style.setProperty('--altezza-utile', `${vv.height}px`);
+    };
+    misura();
+    vv.addEventListener('resize', misura);
+    vv.addEventListener('scroll', misura);
+    return () => {
+      vv.removeEventListener('resize', misura);
+      vv.removeEventListener('scroll', misura);
+      document.documentElement.style.removeProperty('--altezza-utile');
+    };
+  }, [aperto]);
+
+  /**
    * La pagina dietro non deve scorrere.
    *
    * Il corpo si **fissa** invece di ricevere `overflow: hidden`, e la posizione
@@ -372,7 +403,15 @@ export function Dialogo({
               ? 'none'
               : `transform ${USCITA_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`,
             ...(verso === 'basso'
-              ? { maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }
+              ? {
+                  // `--altezza-utile` la scrive `seguiTastiera` dal
+                  // `visualViewport`: su iOS gli elementi fissi non si spostano
+                  // quando salgono i tasti, e `dvh` non se ne accorge. Senza,
+                  // il piede del foglio finisce sotto la tastiera.
+                  maxHeight: 'calc(var(--altezza-utile, 100dvh) * 0.85)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }
               : {}),
           }}
           className={

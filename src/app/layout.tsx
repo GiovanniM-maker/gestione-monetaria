@@ -24,6 +24,20 @@ export const viewport: Viewport = {
   // senza, su un telefono con la tacca l'intestazione finisce sotto l'orologio
   // e la barra inferiore mangia l'ultima riga.
   viewportFit: 'cover',
+  /**
+   * Quando sale la tastiera, il contenuto si rimpicciolisce.
+   *
+   * Il foglio e' `max-height: 85dvh` dentro un `<dialog>`, e mentre e' aperto il
+   * corpo e' **fissato**: su iOS la tastiera ridimensiona solo il visual
+   * viewport, quindi gli elementi fissi restano dove sono e il bottone «Salva»
+   * finisce sotto i tasti. Su Chromium senza questa riga non si rimpicciolisce
+   * nemmeno il layout viewport, e `dvh` da solo non basta.
+   *
+   * `resizes-content` e non `overlays-content`: qui la tastiera compare sopra
+   * moduli corti dentro un pannello: e' meglio che il pannello si accorci
+   * piuttosto che l'azione sparisca.
+   */
+  interactiveWidget: 'resizes-content',
   // Il valore di partenza, per la primissima richiesta e per il caso in cui lo
   // script del tema non giri. Da li' in poi lo riscrive `SeguiTema`, perche'
   // una scelta manuale non puo' essere espressa da un `media`.

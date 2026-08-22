@@ -37,6 +37,7 @@ import { SceltaMese } from '../mese';
 import { Menu } from '../menu';
 import { Segmentato } from '../segmentato';
 import { SelettoreMetrica, type OpzioneMetrica } from './selettore';
+import { Icona } from '@/lib/ui/icone';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Dove' };
@@ -715,9 +716,7 @@ async function Insight({ mese, totali }: { mese: string; totali: number }) {
                 <span className="block text-[14px] font-semibold">{c.titolo}</span>
                 <span className="mt-1 block text-[13px] text-testo-2">{c.corpo}</span>
               </span>
-              <span aria-hidden="true" className="shrink-0 text-testo-3">
-                ›
-              </span>
+              <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
             </Link>
           ),
         )}

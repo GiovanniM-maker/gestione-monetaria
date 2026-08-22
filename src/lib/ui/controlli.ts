@@ -33,7 +33,13 @@ const BASE_CAMPO =
   // cerchi. Vale per campi e bottoni insieme — due raggi diversi sulla stessa
   // riga si vedono subito, e si vedono come un errore.
   'rounded-full bg-s3 px-4 text-[15px] text-testo placeholder:text-testo-3 ' +
-  'outline-none focus:ring-2 focus:ring-(--accento)';
+  // Lo stesso anello di tutto il resto, e non un `ring` diverso: `outline-none`
+  // spegneva la regola di sistema e la sostituiva con un'ombra, quindi
+  // l'applicazione aveva **due** linguaggi del fuoco. Qui pero' vale su
+  // `:focus` e non solo su `:focus-visible`, ed e' voluto: un campo di testo
+  // aspetta la tastiera anche quando ci si e' arrivati col dito, e vedere dove
+  // si sta per scrivere non e' un'informazione da riservare a chi tabula.
+  'outline-none focus:outline-2 focus:outline-offset-2 focus:outline-(--accento)';
 
 /** Campo a piena larghezza sul telefono, compatto da `sm` in su. */
 export const CAMPO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10 sm:w-auto`;

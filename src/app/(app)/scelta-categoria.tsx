@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Foglio } from './foglio';
 import { spiegaEccezione, spiegaRisposta, spiegaTesto, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
+import { Icona } from '@/lib/ui/icone';
 
 /**
  * Il selettore di categoria dentro una riga di elenco.
@@ -47,13 +48,25 @@ import { NotaErrore } from '@/lib/ui/nota-errore';
 export type Ambito =
   { tipo: 'esercente'; merchantId: string } | { tipo: 'movimento'; movimentoId: string };
 
+/**
+ * Fin dove arriva il cambio.
+ *
+ * `breve` era «tutte le sue» / «solo questa», e la frase intera stava dentro un
+ * `title=`. Su un telefono `title` **non compare mai**: la distinzione che il
+ * commento qui sopra chiama «la cosa piu' pericolosa dell'applicazione» era
+ * invisibile proprio dove l'applicazione si usa.
+ *
+ * Ora `breve` dice gia' la conseguenza — «cambia tutte le sue spese» — quindi
+ * si regge da sola, e la frase intera resta nella testata del foglio, dove c'e'
+ * lo spazio per leggerla prima di scegliere.
+ */
 const PORTATA: Record<Ambito['tipo'], { breve: string; intera: string }> = {
   esercente: {
-    breve: 'tutte le sue',
+    breve: 'cambia tutte le sue spese',
     intera: 'Vale per tutte le spese di questo esercente, anche quelle dei mesi già chiusi.',
   },
   movimento: {
-    breve: 'solo questa',
+    breve: 'cambia solo questa riga',
     intera:
       'Vale solo per questa riga, e la marca come corretta a mano: da lì in poi nessun automatismo la tocca.',
   },
@@ -218,17 +231,17 @@ export function SceltaCategoria({
           <span className={`min-w-0 flex-1 truncate ${attuale === null ? 'text-testo-3' : ''}`}>
             {attuale ?? 'senza categoria'}
           </span>
-          <span aria-hidden="true" className="shrink-0 text-testo-3">
-            ›
-          </span>
+          <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
         </button>
-
-        {etichetta === true && (
-          <span className="shrink-0 text-[11px] text-testo-3" title={PORTATA[ambito.tipo].intera}>
-            {PORTATA[ambito.tipo].breve}
-          </span>
-        )}
       </div>
+
+      {/* Sotto il controllo e non accanto: accanto stava su una riga sola con il
+          percorso della categoria, e su uno schermo stretto era la prima cosa a
+          essere troncata — cioe' l'informazione che dice quanto costa il tocco
+          spariva esattamente sullo schermo su cui il tocco avviene. */}
+      {etichetta === true && (
+        <p className="mt-1 text-[11px] text-testo-2">{PORTATA[ambito.tipo].breve}</p>
+      )}
 
       <NotaErrore errore={errore} />
 
@@ -254,7 +267,11 @@ export function SceltaCategoria({
               placeholder="nome della categoria"
               className="min-h-11 w-full rounded-controllo bg-s3 px-3.5 text-[15px] placeholder:text-testo-3"
               disabled={inCorso}
-              autoFocus
+              // Niente `autoFocus`: dentro un foglio apre la tastiera **prima**
+              // che si sia visto cosa c'e' dentro, e su uno schermo stretto la
+              // tastiera copre meta' del pannello. Il campo e' il primo
+              // elemento: chi vuole scrivere lo tocca, e chi voleva solo
+              // guardare l'elenco lo vede.
             />
             <label className="block">
               <span className="text-[12px] text-testo-2">dove</span>

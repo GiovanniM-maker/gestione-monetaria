@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Foglio } from '../foglio';
 import { spiegaEccezione, spiegaRisposta, spiegaTesto, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
+import { Icona } from '@/lib/ui/icone';
 
 /**
  * La domanda che si fa **una volta sola**, quando un nome nuovo compare.
@@ -180,9 +181,7 @@ export function DecidiEsercente({
         <span className="flex-1">
           <strong>Nuovo esercente.</strong> Le spese di {esercente} sono sempre dello stesso tipo?
         </span>
-        <span aria-hidden="true" className="shrink-0 text-testo-3">
-          ›
-        </span>
+        <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </button>
 
       <Foglio
@@ -216,7 +215,11 @@ export function DecidiEsercente({
                 placeholder="nome della categoria"
                 className="min-h-11 w-full rounded-full bg-s3 px-4 text-[15px] placeholder:text-testo-3"
                 disabled={inCorso}
-                autoFocus
+                // Niente `autoFocus`: dentro un foglio apre la tastiera **prima**
+                // che si sia visto cosa c'e' dentro, e su uno schermo stretto la
+                // tastiera copre meta' del pannello. Il campo e' il primo
+                // elemento: chi vuole scrivere lo tocca, e chi voleva solo
+                // guardare l'elenco lo vede.
               />
               <label className="block">
                 <span className="text-[12px] text-testo-2">dove</span>

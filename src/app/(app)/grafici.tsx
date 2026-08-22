@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { archi, conResto, fette, larghezza, type Voce } from '@/lib/ui/fette';
 import { segnoDi, type Variazione } from '@/lib/cruscotto/andamento';
 import { formattaEuro } from '@/lib/abbonamenti/formato';
+import { Icona } from '@/lib/ui/icone';
 
 /**
  * Le figure del cruscotto: la freccia, la barra segmentata, la ciambella.
@@ -306,9 +307,7 @@ export function Ciambella({ voci, totale }: { voci: readonly FettaCategoria[]; t
                 {formattaEuro(p.valore)}
                 <Freccia riga={voce.variazione} />
               </span>
-              <span aria-hidden="true" className="shrink-0 text-testo-3">
-                ›
-              </span>
+              <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
             </>
           );
           return (

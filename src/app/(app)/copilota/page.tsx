@@ -13,6 +13,7 @@ import type { MessaggioSalvato } from '@/lib/copilota/messaggi';
 import { BOTTONE } from '@/lib/ui/controlli';
 import { MenuConversazione, NotaScadenza, Stella } from './gestione';
 import { PannelloCopilota } from './pannello-copilota';
+import { Icona } from '@/lib/ui/icone';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Copilota' };
@@ -68,9 +69,7 @@ export default async function CopilotaPage({
       <div className="flex items-center gap-2">
         <Link href="/copilota" className="tondo shrink-0">
           <span className="sr-only">Tutte le conversazioni</span>
-          <span aria-hidden="true" className="text-[17px] leading-none text-testo-2">
-            ‹
-          </span>
+          <Icona nome="chevron" misura={18} className="rotate-180 text-testo-2" />
         </Link>
         <h1 className="min-w-0 flex-1 truncate text-[16px] font-semibold tracking-[-0.02em]">
           {conversazione?.titolo ?? 'Nuova conversazione'}

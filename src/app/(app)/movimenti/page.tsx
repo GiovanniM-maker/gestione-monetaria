@@ -22,6 +22,7 @@ import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { Avatar } from '@/lib/ui/tessera';
 import { tinteDelleClassi } from '../grafici';
 import { SceltaCategoria } from '../scelta-categoria';
+import { Icona } from '@/lib/ui/icone';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimenti' };
@@ -120,9 +121,7 @@ export default async function MovimentiPage({
       <details className="scheda p-4">
         <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px] font-medium">
           Filtra
-          <span aria-hidden="true" className="text-testo-3">
-            ›
-          </span>
+          <Icona nome="chevron" misura={16} className="text-testo-3" />
         </summary>
         <form method="get" action="/movimenti" className="space-y-2 pt-3">
           <input

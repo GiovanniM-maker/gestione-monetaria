@@ -3,17 +3,14 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { signIn, type LoginState } from './actions';
+import { BOTTONE, CAMPO_PIENO } from '@/lib/ui/controlli';
 
 const initialState: LoginState = { status: 'idle' };
 
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-md bg-accento px-4 py-2 text-sm font-medium text-accento-testo disabled:opacity-50"
-    >
+    <button type="submit" disabled={pending} className={`${BOTTONE} w-full`}>
       {pending ? 'Accesso in corso…' : 'Accedi'}
     </button>
   );
@@ -39,7 +36,7 @@ export function LoginForm({ ritorno }: { ritorno?: string | undefined }) {
           type="email"
           autoComplete="username"
           required
-          className="w-full rounded-controllo bg-s3 px-3.5 py-2.5 text-[15px]"
+          className={CAMPO_PIENO}
         />
       </div>
 
@@ -53,7 +50,7 @@ export function LoginForm({ ritorno }: { ritorno?: string | undefined }) {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-controllo bg-s3 px-3.5 py-2.5 text-[15px]"
+          className={CAMPO_PIENO}
         />
       </div>
 

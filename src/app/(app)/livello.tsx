@@ -3,6 +3,7 @@ import { formattaEuro } from '@/lib/abbonamenti/formato';
 import { etichettaBreve, quotaPercentuale } from '@/lib/cruscotto/mesi';
 import type { Variazione } from '@/lib/cruscotto/andamento';
 import { Freccia } from './grafici';
+import { Icona } from '@/lib/ui/icone';
 
 /**
  * «Dove»: i pezzi di cui sono fatti tutti e quattro i livelli della discesa.
@@ -70,7 +71,8 @@ export function TestataLivello({
         href={ritorno.href}
         className="inline-flex min-h-11 items-center text-[13px] text-accento"
       >
-        ‹ {ritorno.testo}
+        <Icona nome="chevron" misura={15} className="mr-0.5 rotate-180" />
+        {ritorno.testo}
       </Link>
 
       <div
@@ -170,9 +172,7 @@ export function Ripartizione({
                 ) : (
                   <Link href={v.href} className="flex min-h-12 items-center gap-3">
                     {dentro}
-                    <span aria-hidden="true" className="shrink-0 text-testo-3">
-                      ›
-                    </span>
+                    <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
                   </Link>
                 )}
               </li>

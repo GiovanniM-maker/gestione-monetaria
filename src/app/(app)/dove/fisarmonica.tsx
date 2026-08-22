@@ -340,9 +340,7 @@ function Riga({
     ) : (
       <Link href={nodo.href} className={`flex min-h-12 items-center gap-2.5 py-1.5${velo}`}>
         {corpo}
-        <span aria-hidden="true" className="shrink-0 text-testo-3">
-          ›
-        </span>
+        <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </Link>
     );
   }
@@ -357,12 +355,19 @@ function Riga({
       {corpo}
       {/* Il segno ruota invece di cambiare: chi guarda segue lo stesso oggetto
           che si muove, e capisce che il ramo si e' aperto senza leggere. */}
+      {/* Mentre arriva il ramo il segno **pulsa** invece di diventare un
+          puntino: il puntino era un secondo glifo al posto del primo, cioe' un
+          oggetto che sparisce e uno che compare — e chi guardava perdeva la
+          cosa che stava seguendo. Cosi' resta lo stesso segno, e si vede che sta
+          lavorando. */}
       <span
         aria-hidden="true"
-        className="shrink-0 text-testo-3 transition-transform duration-150"
+        className={`shrink-0 text-testo-3 transition-transform duration-150${
+          inCorso ? ' animate-pulse' : ''
+        }`}
         style={{ transform: aperto ? 'rotate(90deg)' : 'none' }}
       >
-        {inCorso ? '·' : '›'}
+        <Icona nome="chevron" misura={16} />
       </span>
     </button>
   );

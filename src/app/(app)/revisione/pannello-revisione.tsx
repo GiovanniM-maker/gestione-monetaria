@@ -9,6 +9,7 @@ import { BOTTONE, CAMPO_PIENO, CASELLA, ETICHETTA_CASELLA } from '@/lib/ui/contr
 import { Foglio } from '../foglio';
 import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
+import { Icona } from '@/lib/ui/icone';
 
 /**
  * Il pannello di revisione.
@@ -260,9 +261,7 @@ function RigaDaClassificare({
           </span>
         </span>
         <span className="cifra shrink-0 text-[15px]">{euro(voce.totale)}</span>
-        <span aria-hidden="true" className="shrink-0 text-testo-3">
-          ›
-        </span>
+        <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </button>
 
       <Foglio
@@ -425,9 +424,7 @@ function RigaMerchant({
           </span>
         </span>
         <span className="cifra shrink-0 text-[15px]">{euro(merchant.totale)}</span>
-        <span aria-hidden="true" className="shrink-0 text-testo-3">
-          ›
-        </span>
+        <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
       </button>
 
       <Foglio

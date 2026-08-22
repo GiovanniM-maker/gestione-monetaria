@@ -66,18 +66,40 @@ export function Interruttore({
     ? 'inline-flex min-h-11 items-center rounded-[10px] px-2.5 text-[12px] sm:min-h-7'
     : 'inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo px-3 text-[15px]';
 
+  // Lo spento era in `--testo-3`, cioe' il tono piu' debole dell'applicazione:
+  // un controllo il cui testo e' piu' spento del testo secondario si legge come
+  // **disattivato**, e questo si puo' premere eccome. Spento, disattivato e non
+  // disponibile devono restare tre cose diverse.
   const stile = (attivo: boolean) =>
     `${base} ${
-      attivo ? 'bg-accento font-medium text-accento-testo' : 'text-testo-3'
+      attivo ? 'bg-accento font-medium text-accento-testo' : 'text-testo-2'
     } ${inCorso ? 'opacity-60' : ''}`;
 
   return (
     <div className={compatto ? 'shrink-0' : 'space-y-2'}>
-      <div className={compatto ? 'flex gap-0.5 rounded-controllo bg-s3 p-0.5' : 'flex gap-2'}>
-        <button type="button" className={stile(!valore)} onClick={() => void scegli(false)}>
+      {/* `role="group"` con l'etichetta, e `aria-pressed` su ognuno.
+          Senza, un lettore di schermo annunciava due bottoni — «fisso» e
+          «variabile» — indistinguibili fra loro: lo stato **e'** il contenuto di
+          questo controllo, e non era esposto in nessun modo. */}
+      <div
+        role="group"
+        aria-label="Come si classificano le spese di questo esercente"
+        className={compatto ? 'flex gap-0.5 rounded-controllo bg-s3 p-0.5' : 'flex gap-2'}
+      >
+        <button
+          type="button"
+          aria-pressed={!valore}
+          className={stile(!valore)}
+          onClick={() => void scegli(false)}
+        >
           fisso
         </button>
-        <button type="button" className={stile(valore)} onClick={() => void scegli(true)}>
+        <button
+          type="button"
+          aria-pressed={valore}
+          className={stile(valore)}
+          onClick={() => void scegli(true)}
+        >
           variabile
         </button>
       </div>

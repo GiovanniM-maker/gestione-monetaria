@@ -13,6 +13,7 @@ import { SpostaMovimento } from './sposta';
 import { CorreggiMovimento } from '../../correggi';
 import { esercenteVariabile } from '@/lib/movimenti/classifica';
 import { Interruttore } from '../../esercenti/interruttore';
+import { Icona } from '@/lib/ui/icone';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimento' };
@@ -195,9 +196,7 @@ function Blocco({
     <details className="scheda p-4">
       <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px] font-medium">
         {titolo}
-        <span aria-hidden="true" className="text-testo-3">
-          ›
-        </span>
+        <Icona nome="chevron" misura={16} className="text-testo-3" />
       </summary>
       {dentro}
     </details>
