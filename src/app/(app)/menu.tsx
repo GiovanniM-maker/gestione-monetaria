@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { SignOutButton } from './sign-out-button';
 import { Dialogo } from './foglio';
 import { BottoneAggiorna } from './aggiornamento';
+import { SceltaTema } from './tema';
 
 /**
  * Il menu, come cassetto che entra da destra.
@@ -132,6 +133,8 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
               </ul>
             </div>
           ))}
+
+          <SceltaTema />
 
           {/* Aggiungendo l'app alla schermata iniziale la pagina puo' restare
               quella di tre deploy fa: questo e' il modo di forzarla, e sta nel

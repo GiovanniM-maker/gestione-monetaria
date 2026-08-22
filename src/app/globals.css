@@ -111,50 +111,73 @@
   --eroe-bagliore: radial-gradient(120% 90% at 86% 10%, rgb(90 80 224 / 0.1), transparent 55%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Le superfici salgono di piu' che prima: fra il fondo nero e la scheda
-       c'erano ventitre' punti di luminosita', che su uno schermo OLED al buio
-       non bastano a dire «questa e' sopra». */
-    --s0: #000000;
-    --s1: #101014;
-    --s2: #1c1c22;
-    --s3: #26262e;
+/* --------------------------------------------------------------------------
+   Il tema scuro, in una copia sola
+   --------------------------------------------------------------------------
+   Stava dentro `@media (prefers-color-scheme: dark)`. Da quando il tema si puo'
+   scegliere a mano, quel blocco sarebbe dovuto esistere **due volte** — una per
+   la preferenza di sistema e una per la scelta esplicita — e sessanta righe di
+   tinte scritte due volte divergono alla prima modifica.
 
-    --testo: #f5f5f7;
-    --testo-2: rgb(245 245 247 / 0.6);
-    --testo-3: rgb(245 245 247 / 0.36);
-    --filo: rgb(245 245 247 / 0.11);
-    --velo: rgb(20 20 24 / 0.68);
+   Quindi ne resta una, e a decidere quale valga e' `data-tema` sull'elemento
+   radice, che uno script scrive **prima del primo pixel**: legge la scelta
+   salvata e, se non c'e', quello che dice il telefono. La preferenza di sistema
+   non e' sparita, e' solo letta in JavaScript invece che in CSS.
 
-    /* Al buio un'ombra nera su fondo nero non si vede: quello che solleva una
-       scheda e' la **luce sul bordo alto**, come su un oggetto illuminato da
-       sopra. L'ombra resta per staccarla dal fondo, ma il lavoro lo fa il filo
-       chiaro di un mezzo pixel. */
-    --ombra: 0 1px 2px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.45);
-    --rilievo: inset 0 0.5px 0 0 rgb(255 255 255 / 0.07), 0 0 0 0.5px rgb(255 255 255 / 0.04);
+   `color-scheme` va dichiarato su entrambi e non ereditato: e' lui a decidere
+   il colore delle barre di scorrimento native e dei controlli di sistema, e con
+   `light dark` seguirebbero l'OS anche quando l'utente ha scelto il contrario.
+   Vedi `src/lib/ui/tema.ts`.
+   -------------------------------------------------------------------------- */
 
-    /* Sul nero l'indaco va alzato di luminosita' o sparisce nel fondo: a
-       #7b72ff un collegamento su fondo nero stava sotto i 5:1 e si leggeva
-       come grigio-viola. */
-    --accento: #8f8aff;
-    --accento-testo: #0b0b12;
+:root[data-tema='chiaro'] {
+  color-scheme: light;
+}
 
-    --classe-blu: #409cff;
-    --classe-ambra: #ffb340;
-    --classe-rosa: #ff6482;
-    --classe-verde: #3ddc6a;
-    --classe-viola: #da8fff;
-    --classe-ciano: #70d7ff;
-    --classe-bruno: #b59469;
-    --neutro: #98989f;
+:root[data-tema='scuro'] {
+  color-scheme: dark;
 
-    /* Sul nero la pendenza si vede, ed e' lei a dare corpo alla scheda:
-       tre punti percentuali dall'alto in basso, non un faro. */
-    --s2-alto: #1e1e26;
-    --eroe-fondo: linear-gradient(165deg, #26263a 0%, #1b1b26 48%, #17171e 100%);
-    --eroe-bagliore: radial-gradient(120% 90% at 86% 10%, rgb(143 138 255 / 0.18), transparent 55%);
-  }
+  /* Le superfici salgono di piu' che prima: fra il fondo nero e la scheda
+     c'erano ventitre' punti di luminosita', che su uno schermo OLED al buio
+     non bastano a dire «questa e' sopra». */
+  --s0: #000000;
+  --s1: #101014;
+  --s2: #1c1c22;
+  --s3: #26262e;
+
+  --testo: #f5f5f7;
+  --testo-2: rgb(245 245 247 / 0.6);
+  --testo-3: rgb(245 245 247 / 0.36);
+  --filo: rgb(245 245 247 / 0.11);
+  --velo: rgb(20 20 24 / 0.68);
+
+  /* Al buio un'ombra nera su fondo nero non si vede: quello che solleva una
+     scheda e' la **luce sul bordo alto**, come su un oggetto illuminato da
+     sopra. L'ombra resta per staccarla dal fondo, ma il lavoro lo fa il filo
+     chiaro di un mezzo pixel. */
+  --ombra: 0 1px 2px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.45);
+  --rilievo: inset 0 0.5px 0 0 rgb(255 255 255 / 0.07), 0 0 0 0.5px rgb(255 255 255 / 0.04);
+
+  /* Sul nero l'indaco va alzato di luminosita' o sparisce nel fondo: a
+     #7b72ff un collegamento su fondo nero stava sotto i 5:1 e si leggeva
+     come grigio-viola. */
+  --accento: #8f8aff;
+  --accento-testo: #0b0b12;
+
+  --classe-blu: #409cff;
+  --classe-ambra: #ffb340;
+  --classe-rosa: #ff6482;
+  --classe-verde: #3ddc6a;
+  --classe-viola: #da8fff;
+  --classe-ciano: #70d7ff;
+  --classe-bruno: #b59469;
+  --neutro: #98989f;
+
+  /* Sul nero la pendenza si vede, ed e' lei a dare corpo alla scheda:
+     tre punti percentuali dall'alto in basso, non un faro. */
+  --s2-alto: #1e1e26;
+  --eroe-fondo: linear-gradient(165deg, #26263a 0%, #1b1b26 48%, #17171e 100%);
+  --eroe-bagliore: radial-gradient(120% 90% at 86% 10%, rgb(143 138 255 / 0.18), transparent 55%);
 }
 
 @theme inline {

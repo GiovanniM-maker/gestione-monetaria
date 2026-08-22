@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { COLORE_BARRA, SCRIPT_TEMA } from '@/lib/ui/tema';
 
 export const metadata: Metadata = {
   title: 'Gestione monetaria',
@@ -23,15 +24,22 @@ export const viewport: Viewport = {
   // senza, su un telefono con la tacca l'intestazione finisce sotto l'orologio
   // e la barra inferiore mangia l'ultima riga.
   viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
-  ],
+  // Il valore di partenza, per la primissima richiesta e per il caso in cui lo
+  // script del tema non giri. Da li' in poi lo riscrive `SeguiTema`, perche'
+  // una scelta manuale non puo' essere espressa da un `media`.
+  themeColor: COLORE_BARRA.chiaro,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it">
+      {/* Il tema, prima del primo pixel.
+          Sincrono e nell'`<head>` di proposito: qualunque cosa arrivi dopo il
+          disegno produce un lampo bianco all'apertura, che su un telefono al
+          buio e' la cosa piu' fastidiosa che l'applicazione possa fare. Lo
+          script sta in `lib/ui/tema.ts`, accanto alle funzioni di cui e' la
+          seconda scrittura. */}
+      <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
       {/* `overflow-x-hidden`: una tabella o un nome lunghissimo non devono poter
           far scorrere lateralmente l'intera pagina. Su desktop si nota appena,
           sul telefono rende l'applicazione inutilizzabile. */}
