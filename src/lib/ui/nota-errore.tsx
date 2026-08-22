@@ -44,7 +44,7 @@ export function NotaErrore({
           {errore.rientra && (
             <Link
               href={`/login?ritorno=${encodeURIComponent(ritorno)}`}
-              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-sec font-medium sm:min-h-9"
+              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-sec font-medium pointer-fine:min-h-9"
             >
               Rientra
             </Link>
@@ -53,7 +53,7 @@ export function NotaErrore({
             <button
               type="button"
               onClick={onRiprova}
-              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-sec font-medium sm:min-h-9"
+              className="inline-flex min-h-11 items-center rounded-full bg-s3 px-4 text-sec font-medium pointer-fine:min-h-9"
             >
               Riprova
             </button>
@@ -63,7 +63,7 @@ export function NotaErrore({
 
       {errore.dettaglio !== null && !compatta && (
         <details>
-          <summary className="min-h-11 cursor-pointer text-min text-testo-2 sm:min-h-0">
+          <summary className="min-h-11 cursor-pointer text-min text-testo-2 pointer-fine:min-h-0">
             dettagli tecnici
           </summary>
           <p className="mt-1 font-mono text-eti break-words text-testo-2">{errore.dettaglio}</p>

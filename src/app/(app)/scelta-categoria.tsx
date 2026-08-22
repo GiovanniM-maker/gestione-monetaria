@@ -224,7 +224,7 @@ export function SceltaCategoria({
           type="button"
           onClick={() => setAperto(true)}
           disabled={inCorso}
-          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-controllo bg-s3 px-3 text-left text-sec sm:min-h-9 ${
+          className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-controllo bg-s3 px-3 text-left text-sec pointer-fine:min-h-9 ${
             inCorso ? 'opacity-60' : ''
           }`}
         >

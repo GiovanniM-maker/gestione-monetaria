@@ -46,7 +46,7 @@ export function ScheletroTestata() {
   return (
     <div className="animate-pulse space-y-4" aria-hidden="true">
       <div className="scheda space-y-3 p-5">
-        <Barra className="h-10 w-48 sm:h-11" />
+        <Barra className="h-10 w-48 pointer-fine:h-10" />
         <Barra className="h-4 w-36" />
         <Barra className="h-2.5 w-full" />
       </div>

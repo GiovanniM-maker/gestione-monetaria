@@ -139,7 +139,7 @@ export default async function EsercentiPage({
           <Link
             key={f.chiave}
             href={indirizzo({ filtro: f.chiave === 'tutti' ? '' : f.chiave, pagina: '' })}
-            className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-sec sm:min-h-9 ${
+            className={`inline-flex min-h-11 items-center rounded-full px-3.5 text-sec pointer-fine:min-h-9 ${
               filtro === f.chiave
                 ? 'bg-accento font-medium text-accento-testo'
                 : 'bg-s2 text-testo-2'

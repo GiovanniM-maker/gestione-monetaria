@@ -63,7 +63,7 @@ export function Interruttore({
   // elenco. Esteso: due bottoni larghi, perche' li' e' la scelta principale
   // della schermata.
   const base = compatto
-    ? 'inline-flex min-h-11 items-center rounded-[10px] px-2.5 text-min sm:min-h-7'
+    ? 'inline-flex min-h-11 items-center rounded-[10px] px-2.5 text-min pointer-fine:min-h-7'
     : 'inline-flex min-h-11 flex-1 items-center justify-center rounded-controllo px-3 text-corpo';
 
   // Lo spento era in `--testo-3`, cioe' il tono piu' debole dell'applicazione:

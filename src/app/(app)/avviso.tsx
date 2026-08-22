@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { usePathname } from 'next/navigation';
 
 /**
  * L'avviso passeggero: cosa è successo, e come disfarlo.
@@ -85,11 +86,25 @@ const leggiSulServer = (): Stato => null;
 
 export function Avvisi() {
   const avviso = useSyncExternalStore(sottoscrivi, leggi, leggiSulServer);
+  const percorso = usePathname();
   const inCorso = useRef(false);
 
-  // Cambiando schermata l'avviso se ne va: un annulla che sopravvive alla
-  // navigazione disferebbe una cosa che non si sta più guardando.
-  useEffect(() => chiudiAvviso, []);
+  /**
+   * Cambiando schermata l'avviso se ne va: un annulla che sopravvive alla
+   * navigazione disferebbe una cosa che non si sta più guardando.
+   *
+   * La dipendenza è il **percorso**, e non è un dettaglio: era `[]`, cioè la
+   * pulizia girava allo smontaggio — e questo componente sta nel layout di
+   * `(app)`, che l'App Router **conserva** navigando fra le sue pagine. Quindi
+   * non si smontava mai e la regola qui sopra era scritta e non applicata:
+   * misurato, confermando una riga su `/da-confermare` e toccando «Dove», il
+   * riquadro «Confermato · Annulla» arrivava intatto sulla schermata nuova.
+   *
+   * Un `useEffect` con `[]` che dichiara di reagire a un cambio di schermata è
+   * un errore che non dà nessun segnale: il codice è corretto, il posto in cui
+   * vive no.
+   */
+  useEffect(() => chiudiAvviso, [percorso]);
 
   if (avviso === null) return null;
 
@@ -113,7 +128,7 @@ export function Avvisi() {
         {avviso.annulla !== undefined && (
           <button
             type="button"
-            className="-mr-1 min-h-11 shrink-0 rounded-full px-2 text-sec font-bold text-accento sm:min-h-9"
+            className="-mr-1 min-h-11 shrink-0 rounded-full px-2 text-sec font-bold text-accento pointer-fine:min-h-9"
             onClick={() => {
               // Due tocchi rapidi su «Annulla» non devono disfare due volte.
               if (inCorso.current) return;

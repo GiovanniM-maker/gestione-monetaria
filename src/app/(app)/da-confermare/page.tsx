@@ -60,11 +60,18 @@ export default async function DaConfermarePage() {
     .sort()
     .at(-1);
   const f = freschezza(ultima ?? null);
-  const fermi = f.ferma
-    ? `Ultimo scarico dalla banca ${daQuanto(f)}${
-        ultima === undefined ? '' : ` (${ultima.slice(0, 10)})`
-      }: qui manca tutto quello che hai pagato da allora.`
-    : null;
+  // Le due frasi sono separate perche' il caso «mai» non e' lo stesso caso con
+  // un valore diverso: `daQuanto` restituisce «mai», e «Ultimo scarico dalla
+  // banca mai: qui manca tutto quello che hai pagato **da allora**» non e' una
+  // frase — non c'e' nessun «allora». E' la prima esecuzione, cioe' lo stato in
+  // cui l'applicazione si presenta a chi la installa.
+  const fermi = !f.ferma
+    ? null
+    : f.ore === null
+      ? 'Non e’ mai stato fatto uno scarico dalla banca: qui non puo’ esserci ancora niente.'
+      : `Ultimo scarico dalla banca ${daQuanto(f)}${
+          ultima === undefined ? '' : ` (${ultima.slice(0, 10)})`
+        }: qui manca tutto quello che hai pagato da allora.`;
 
   return (
     <div className="space-y-5">

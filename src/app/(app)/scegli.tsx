@@ -67,7 +67,7 @@ export function Scegli({
         type="button"
         onClick={() => setAperto(true)}
         aria-haspopup="dialog"
-        className="flex min-h-11 w-full items-center gap-2 rounded-full bg-s3 px-4 text-left text-corpo sm:min-h-10"
+        className="flex min-h-11 w-full items-center gap-2 rounded-full bg-s3 px-4 text-left text-corpo pointer-fine:min-h-10"
       >
         <span className="min-w-0 flex-1 truncate">{attuale?.testo ?? '—'}</span>
         <Icona nome="chevron" misura={15} className="shrink-0 rotate-90 text-testo-3" />

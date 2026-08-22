@@ -248,7 +248,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
       <div className="flex items-baseline justify-between gap-3 px-1">
         <h2 className="eti">Inbox</h2>
         <Link
-          className="inline-flex min-h-11 items-center text-sec text-accento sm:min-h-0"
+          className="inline-flex min-h-11 items-center text-sec text-accento pointer-fine:min-h-0"
           href="/avvisi"
         >
           storico ›
@@ -727,7 +727,9 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
           ? scaduto
             ? `Il consenso ${riga.banca} è scaduto da ${-(giorni ?? 0)} giorni.`
             : `Il consenso ${riga.banca} scade fra ${giorni} giorni.`
-          : `I dati sono fermi: ultimo scarico dalla banca ${daQuanto(f)}.`}
+          : f.ore === null
+            ? 'Non e’ mai stato fatto uno scarico dalla banca: i numeri qui sotto non vengono da nessuna parte.'
+            : `I dati sono fermi: ultimo scarico dalla banca ${daQuanto(f)}.`}
       </p>
       <p className="mt-1.5 text-testo-2">
         {parlaDelConsenso ? (

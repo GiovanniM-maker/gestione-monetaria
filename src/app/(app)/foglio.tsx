@@ -176,6 +176,35 @@ export function Dialogo({
    * stato, si aspetta la durata dell'animazione, e solo allora si chiude.
    */
   const [dentro, setDentro] = useState(false);
+  /**
+   * Il contenuto esiste solo dopo la prima apertura.
+   *
+   * -------------------------------------------------------------------------
+   * Perche', misurato
+   * -------------------------------------------------------------------------
+   * Ogni riga di `/movimenti` porta il proprio selettore di categoria, e il
+   * selettore e' un `Foglio` con dentro l'elenco intero — trentaquattro
+   * percorsi. Con cinquanta righe a schermo questo significava **56 `<dialog>`
+   * nel documento, 3.823 elementi nascosti e 612 kB di HTML**, tutti
+   * consegnati, analizzati e idratati per dei pannelli che quasi sempre non si
+   * aprono. `/esercenti` ne aveva 2.236, `/revisione` 1.366.
+   *
+   * Non e' un'ottimizzazione prematura: e' la ragione per cui una lista di
+   * cinquanta movimenti arrivava a mezzo megabyte, ed e' invisibile guardando
+   * lo schermo perche' il difetto **e'** cio' che non si vede.
+   *
+   * **Scatta e non torna indietro.** Chiudendo, il contenuto resta: chiudere e
+   * riaprire e' il gesto piu' comune mentre si cerca qualcosa, e sarebbe il
+   * peggior momento per ricostruire un elenco — la stessa regola che `/dove`
+   * segue con la fisarmonica.
+   */
+  const [maiAperto, setMaiAperto] = useState(false);
+  // Si aggiorna **durante il render** e non dentro un effetto: e' il modo
+  // previsto da React di derivare uno stato da una prop, e l'unico che React 19
+  // ammette (`react-hooks/set-state-in-effect`). Il render in piu' avviene
+  // prima che il pannello venga mostrato, quindi il contenuto c'e' gia' quando
+  // `showModal()` parte.
+  if (aperto && !maiAperto) setMaiAperto(true);
 
   useEffect(() => {
     const d = dialogo.current;
@@ -461,9 +490,9 @@ export function Dialogo({
             style={{ touchAction: 'none' }}
             className="shrink-0 cursor-grab active:cursor-grabbing"
           >
-            {testata}
+            {maiAperto ? testata : null}
           </div>
-          {children}
+          {maiAperto ? children : null}
         </div>
       </div>
     </dialog>

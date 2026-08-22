@@ -46,14 +46,36 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
+    /* `suppressHydrationWarning` **solo** su `<html>`, e per una ragione
+       precisa: lo script qui sotto scrive `data-tema` e `color-scheme` sul
+       nodo radice prima che React arrivi, quindi l'HTML del server e quello
+       del client differiscono per costruzione. E' l'unico nodo in cui questo
+       e' voluto. Non si propaga ai figli — React lo applica al solo elemento
+       su cui e' scritto — quindi non nasconde nessun altro disallineamento. */
+    <html lang="it" suppressHydrationWarning>
       {/* Il tema, prima del primo pixel.
-          Sincrono e nell'`<head>` di proposito: qualunque cosa arrivi dopo il
-          disegno produce un lampo bianco all'apertura, che su un telefono al
-          buio e' la cosa piu' fastidiosa che l'applicazione possa fare. Lo
-          script sta in `lib/ui/tema.ts`, accanto alle funzioni di cui e' la
+          Sincrono e dentro un `<head>` **esplicito**: qualunque cosa arrivi
+          dopo il disegno produce un lampo bianco all'apertura, che su un
+          telefono al buio e' la cosa piu' fastidiosa che l'applicazione possa
+          fare.
+
+          Il `<head>` non e' decorazione. Stava come figlio diretto di `<html>`,
+          che in HTML non e' una posizione valida: il parser del browser lo
+          sposta dentro `<head>` mentre legge, quindi l'albero del client non e'
+          piu' quello che il server ha scritto e l'idratazione fallisce. React
+          19 lo diceva su **ogni pagina**, tre volte — «Cannot render a sync or
+          defer <script> outside the main document», «<script> cannot be a child
+          of <html>», «A tree hydrated but some attributes … didn't match».
+
+          `async` lo farebbe tacere e romperebbe il motivo per cui esiste: uno
+          script asincrono gira dopo il primo disegno, cioe' dopo il lampo.
+          Il `<head>` esplicito e' l'unica forma che tiene insieme le due cose.
+
+          Lo script sta in `lib/ui/tema.ts`, accanto alle funzioni di cui e' la
           seconda scrittura. */}
-      <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       {/* `overflow-x-hidden`: una tabella o un nome lunghissimo non devono poter
           far scorrere lateralmente l'intera pagina. Su desktop si nota appena,
           sul telefono rende l'applicazione inutilizzabile. */}

@@ -118,7 +118,7 @@ export function SceltaClasse({
               onClick={() => void scegli(c.slug)}
               disabled={inCorso}
               aria-pressed={acceso}
-              className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sec sm:min-h-9 ${
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sec pointer-fine:min-h-9 ${
                 acceso ? 'bg-(--accento) text-(--accento-testo)' : 'bg-s3 text-testo-2'
               } ${inCorso ? 'opacity-60' : ''}`}
             >

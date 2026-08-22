@@ -6,9 +6,18 @@
  * scritti guardando uno schermo grande finiscono naturalmente a venti — si
  * cliccano benissimo col mouse e si sbagliano col pollice.
  *
- * Da qui in giu' i controlli sono alti 44 px e larghi quanto la colonna; da
- * `sm` in su tornano compatti, perche' su una tastiera la densita' e' un
- * vantaggio e il bersaglio grande e' solo spazio sprecato.
+ * I controlli sono alti 44 px, e tornano compatti **solo dove c'e' un
+ * puntatore fine** — cioe' un mouse o un trackpad, che colpiscono un bersaglio
+ * di dieci pixel senza sbagliarlo. Su una tastiera la densita' e' un vantaggio
+ * e il bersaglio grande e' spazio sprecato; sotto un pollice e' il contrario.
+ *
+ * `pointer-fine:` e non `sm:`, ed e' un difetto pagato: la larghezza **non dice
+ * che dispositivo sei**. Un iPhone ruotato in orizzontale e' largo 844 px,
+ * quindi superava `sm` e riceveva i bersagli da mouse: su `/movimenti` i
+ * controlli sotto i 44 px passavano da **0 a 59** girando il telefono, e su un
+ * iPad in verticale erano 59 sempre. Il dispositivo lo dichiara — `pointer:
+ * coarse`, `hover: none` — ed e' la stessa domanda che `globals.css` fa gia'
+ * per il passaggio del mouse: qui non la si faceva.
  *
  * Stanno in un modulo condiviso e non copiati in ogni schermata perche' quattro
  * copie della stessa misura divergono alla prima modifica, e la schermata che
@@ -42,10 +51,10 @@ const BASE_CAMPO =
   'outline-none focus:outline-2 focus:outline-offset-2 focus:outline-(--accento)';
 
 /** Campo a piena larghezza sul telefono, compatto da `sm` in su. */
-export const CAMPO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10 sm:w-auto`;
+export const CAMPO = `${BASE_CAMPO} min-h-11 w-full pointer-fine:min-h-10 sm:w-auto`;
 
 /** Campo che resta a piena larghezza anche su schermo grande (dentro una griglia). */
-export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10`;
+export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full pointer-fine:min-h-10`;
 
 /**
  * Il bottone principale: pieno, nel colore dell'accento.
@@ -57,7 +66,7 @@ export const CAMPO_PIENO = `${BASE_CAMPO} min-h-11 w-full sm:min-h-10`;
  */
 export const BOTTONE =
   'inline-flex min-h-11 items-center justify-center rounded-full bg-accento px-5 ' +
-  'text-corpo font-semibold text-accento-testo disabled:opacity-40 sm:min-h-10';
+  'text-corpo font-semibold text-accento-testo disabled:opacity-40 pointer-fine:min-h-10';
 
 /**
  * Bottone secondario. Alto 44 px come il principale finche' lo schermo e'
@@ -67,7 +76,7 @@ export const BOTTONE =
  */
 export const BOTTONE_MINORE =
   'inline-flex min-h-11 items-center justify-center rounded-full bg-s3 ' +
-  'px-4 text-sec font-medium text-testo disabled:opacity-40 sm:min-h-9';
+  'px-4 text-sec font-medium text-testo disabled:opacity-40 pointer-fine:min-h-9';
 
 /**
  * Una casella di spunta piccola quanto il carattere si sbaglia sempre. Il
@@ -75,4 +84,4 @@ export const BOTTONE_MINORE =
  */
 export const CASELLA = 'size-4 shrink-0 accent-(--accento)';
 export const ETICHETTA_CASELLA =
-  'inline-flex min-h-11 items-center gap-2 text-sec text-testo-2 sm:min-h-0';
+  'inline-flex min-h-11 items-center gap-2 text-sec text-testo-2 pointer-fine:min-h-0';
