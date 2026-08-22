@@ -8,6 +8,37 @@
 
 ---
 
+## Stato al 22 agosto 2026, sera
+
+| Passo                                        | Stato                       |
+| -------------------------------------------- | --------------------------- |
+| 1 · migration `0057`                         | **applicata in produzione** |
+| 2 · consegna in una chiamata                 | **fatto**                   |
+| 3 · finestra sul registro grezzo             | **fatto**                   |
+| 4 · invalidazione condizionale               | **fatto**                   |
+| 5 · cache sulle letture di pagina            | da fare                     |
+| 6 · `loading.tsx` sulle tre pagine           | da fare                     |
+| 7 · misurare in produzione, poi la geografia | da fare                     |
+
+Tre cose sono state fatte **in più** rispetto al piano, e vanno sapute:
+
+- **`aLotti` è una funzione a sé con i suoi test** (`tests/tassonomia-lotti.test.ts`). Spezzare i
+  gruppi fra più chiamate è logica che sbagliando non dà errore: perde un gruppo, o ne consegna uno
+  due volte, e il risultato è una classificazione plausibile e incompleta. L'invariante provato è
+  uno: ogni identificativo esce esattamente una volta, con la sua assegnazione.
+- **`haScritto` è esportata e provata** (`tests/sync-ha-scritto.test.ts`), compreso il caso che
+  conta: `aggiornate` da solo **non** deve bastare a buttare la cache, perché conta le righe
+  riscritte e non quelle cambiate.
+- **`/api/admin/sync-accounts` forza una normalizzazione completa.** Era un obbligo del §4 e non un
+  extra: rinominare un conto cambia il riconoscimento dei giroconti su tutto lo storico, e finché il
+  giro veloce rinormalizzava tutto ogni cinque minuti si riparava da solo. Ora si ripara qui,
+  subito, invece che fino a quattro ore dopo.
+
+**Quello che resta da verificare sui dati veri** è al §4 «come si verifica»: gli invarianti del §0,
+e in particolare la quota di giroconti, che deve restare a **23,8%**.
+
+---
+
 ## 0. Gli invarianti — i numeri che non si devono muovere
 
 Prima di toccare qualsiasi cosa, questi vanno **presi e scritti**. Sono gli stessi che chiudono le

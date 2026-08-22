@@ -54,6 +54,17 @@ export type EsitoCategorizzazione = {
    */
   speseTotale: string;
   speseTotaleAbbinato: string;
+  /**
+   * Quante righe sono state **davvero** toccate, non quante ne sono state
+   * riscritte.
+   *
+   * Prima non era osservabile: il ciclo di `UPDATE` riscriveva ogni riga a ogni
+   * giro, quindi «ha lavorato» e «non e' cambiato niente» erano indistinguibili.
+   * Sono il segnale su cui poggia l'invalidazione della cache — un giro che non
+   * ha assegnato ne' svuotato niente non ha motivo di buttarla.
+   */
+  assegnate: number;
+  svuotate: number;
   /** Le etichette non abbinate, per spesa decrescente: e' la lista di lavoro. */
   daGuardare: readonly { etichetta: string; movimenti: number; totale: string }[];
   /** Importi che non si sono lasciati leggere: se non e' zero, l'ordinamento sopra e' parziale. */
@@ -99,22 +110,19 @@ function eSpesaReale(riga: RigaDaClassificare, centesimi: bigint | null): boolea
 }
 
 /**
- * Cosa si scrive sulla transazione. Tutti i campi ammettono `null` perche' lo
- * svuotamento e' un'assegnazione come le altre, non un caso speciale: e' cio'
- * che rende il ricalcolo davvero un ricalcolo.
+ * Cosa si scrive sulla transazione. Tutti i campi ammettono `null` perche' una
+ * riga puo' avere un esercente senza categoria, o una categoria senza contesto.
+ *
+ * Lo svuotamento delle righe che non corrispondono piu' a nessun alias non
+ * passa di qui: e' `p_da_svuotare` di `applica_assegnazioni`. Resta pero' la
+ * stessa cosa concettualmente, ed e' cio' che rende il ricalcolo davvero un
+ * ricalcolo — togliere un alias sbagliato deve bastare a disfarne l'effetto.
  */
 type Assegnazione = {
   merchant_id: string | null;
   category_id: string | null;
   discretion: Discretion | null;
   context: Context | null;
-};
-
-const NESSUNA_ASSEGNAZIONE: Assegnazione = {
-  merchant_id: null,
-  category_id: null,
-  discretion: null,
-  context: null,
 };
 
 const DIMENSIONE_BLOCCO = 1000;
@@ -234,15 +242,19 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
     if (blocco.length < DIMENSIONE_BLOCCO) break;
   }
 
-  // Una UPDATE per esercente invece di una per riga: gli esercenti sono
-  // quaranta, le transazioni duemila.
-  for (const [merchantId, ids] of perAssegnazione) {
+  // Le assegnazioni partono tutte insieme, in una chiamata sola.
+  //
+  // Prima era una `UPDATE` per esercente dentro un `for … await`, e il commento
+  // qui diceva «gli esercenti sono quaranta». Sono centosessantasei, e
+  // crescono: erano centosessantasei andate e ritorno per rispondere quasi
+  // sempre «non e' cambiato niente». La logica di abbinamento resta qui, dove
+  // ha i suoi test; cambia solo **come si consegna il risultato**.
+  const gruppi: Gruppo[] = [...perAssegnazione.entries()].flatMap(([merchantId, ids]) => {
     const assegnazione = assegnazioni.get(merchantId);
-    if (assegnazione === undefined) continue;
-    await aggiornaAScaglioni(supabase, ids, assegnazione);
-  }
+    return assegnazione === undefined ? [] : [{ ...assegnazione, ids }];
+  });
 
-  await aggiornaAScaglioni(supabase, daSvuotare, NESSUNA_ASSEGNAZIONE);
+  const scritte = await consegna(supabase, gruppi, daSvuotare);
 
   const daGuardare = [...scoperte.entries()]
     .map(([etichetta, v]) => ({ etichetta, movimenti: v.movimenti, centesimi: v.centesimi }))
@@ -263,24 +275,90 @@ export async function applicaTassonomia(): Promise<EsitoCategorizzazione> {
     speseTotale: formattaCentesimi(speseCentesimi),
     speseTotaleAbbinato: formattaCentesimi(speseCentesimiAbbinati),
     protette: protette ?? 0,
+    assegnate: scritte.assegnate,
+    svuotate: scritte.svuotate,
     daGuardare,
     importiNonLetti,
   };
 }
 
-async function aggiornaAScaglioni(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  ids: readonly string[],
-  assegnazione: Assegnazione,
-): Promise<void> {
-  // `in` su un elenco sterminato produce una URL che il server rifiuta.
-  const SCAGLIONE = 200;
-  for (let i = 0; i < ids.length; i += SCAGLIONE) {
-    const { error } = await supabase
-      .from('transactions')
-      .update(assegnazione)
-      .in('id', ids.slice(i, i + SCAGLIONE));
+export type Gruppo = Assegnazione & { ids: readonly string[] };
 
-    if (error !== null) throw new Error(`Aggiornamento transactions fallito: ${error.message}`);
+/**
+ * Oltre questo numero di identificativi la chiamata si spezza.
+ *
+ * Duemila `uuid` sono una settantina di kilobyte di corpo, che va benissimo;
+ * ventimila sarebbero settecento, che e' l'altro modo di essere lenti. Non
+ * serve oggi e servira' fra due anni — e un tetto che esiste solo quando serve
+ * non esiste.
+ */
+export const IDS_PER_CHIAMATA = 5_000;
+
+/**
+ * Consegna le assegnazioni a `applica_assegnazioni` (migration 0057).
+ *
+ * La funzione SQL confronta prima di scrivere, quindi un giro che non cambia
+ * niente non tocca nessuna riga e non fa scattare nessun trigger. E' anche il
+ * motivo per cui i due numeri che torna sono informazione e non decorazione.
+ */
+async function consegna(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  gruppi: readonly Gruppo[],
+  daSvuotare: readonly string[],
+): Promise<{ assegnate: number; svuotate: number }> {
+  let assegnate = 0;
+  let svuotate = 0;
+
+  for (const lotto of aLotti(gruppi, daSvuotare)) {
+    const { data, error } = await supabase.rpc('applica_assegnazioni', {
+      p_gruppi: lotto.gruppi,
+      p_da_svuotare: lotto.daSvuotare,
+    });
+
+    // L'errore si lancia, non si ingoia: `const { data }` da solo
+    // trasformerebbe una funzione assente in «non ho scritto niente», che e' un
+    // guasto travestito da risposta. E' la regola pagata provando la 0050.
+    if (error !== null) throw new Error(`applica_assegnazioni fallita: ${error.message}`);
+
+    const esito = (data ?? {}) as { assegnate?: unknown; svuotate?: unknown };
+    if (typeof esito.assegnate === 'number') assegnate += esito.assegnate;
+    if (typeof esito.svuotate === 'number') svuotate += esito.svuotate;
   }
+
+  return { assegnate, svuotate };
+}
+
+/**
+ * Spezza gruppi e svuotamenti in lotti da `IDS_PER_CHIAMATA` identificativi.
+ *
+ * Un gruppo non si spezza a meta' se ci sta: spezzarlo non sarebbe sbagliato —
+ * la funzione SQL e' rieseguibile e non ha stato — ma renderebbe i due numeri
+ * di ritorno piu' difficili da leggere senza guadagnare niente.
+ */
+export function* aLotti(
+  gruppi: readonly Gruppo[],
+  daSvuotare: readonly string[],
+): Generator<{ gruppi: Gruppo[]; daSvuotare: string[] }> {
+  let correnti: Gruppo[] = [];
+  let quanti = 0;
+
+  for (const gruppo of gruppi) {
+    if (quanti > 0 && quanti + gruppo.ids.length > IDS_PER_CHIAMATA) {
+      yield { gruppi: correnti, daSvuotare: [] };
+      correnti = [];
+      quanti = 0;
+    }
+    correnti.push(gruppo);
+    quanti += gruppo.ids.length;
+  }
+
+  if (correnti.length > 0) yield { gruppi: correnti, daSvuotare: [] };
+
+  for (let i = 0; i < daSvuotare.length; i += IDS_PER_CHIAMATA) {
+    yield { gruppi: [], daSvuotare: [...daSvuotare.slice(i, i + IDS_PER_CHIAMATA)] };
+  }
+
+  // Nessun gruppo e niente da svuotare: si chiama comunque una volta, cosi' il
+  // resoconto dice `0` invece di non dire niente.
+  if (gruppi.length === 0 && daSvuotare.length === 0) yield { gruppi: [], daSvuotare: [] };
 }
