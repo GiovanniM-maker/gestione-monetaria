@@ -18,6 +18,14 @@ export type RigaTotaleMese = {
   senza_cambio: number;
   senza_categoria: number;
   spesa_senza_categoria: string;
+  /**
+   * Le righe che nessun automatismo puo' sistemare. Senza un esercente non
+   * c'e' una categoria da cui ereditare la classe, e la regola 8 vieta di
+   * chiedere a un modello chi sia una controparte privata: solo l'utente sa se
+   * un bonifico e' un affitto, un prestito o un compenso.
+   */
+  senza_classe: number;
+  spesa_senza_classe: string;
 };
 
 export type RigaClasse = {

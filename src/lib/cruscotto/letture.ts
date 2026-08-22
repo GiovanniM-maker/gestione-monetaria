@@ -70,18 +70,59 @@ const ESERCENTI_MOSTRATI = 20;
 
 const primoGiorno = (mese: string): string => `${mese}-01`;
 
-/** I mesi con dei dati, e i totali di ciascuno. Base di tutto il resto. */
+/** Le colonne di sempre, e le due che la 0060 aggiunge in coda. */
+const COLONNE_TOTALI =
+  'mese, spesa::text, movimenti, senza_cambio, senza_categoria, spesa_senza_categoria::text';
+const COLONNE_TOTALI_0060 = `${COLONNE_TOTALI}, senza_classe, spesa_senza_classe::text`;
+
+/**
+ * I mesi con dei dati, e i totali di ciascuno. Base di tutto il resto.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' c'e' un ripiego sulle colonne
+ * ---------------------------------------------------------------------------
+ * `senza_classe` arriva con la **0060**, e le migration le applica una persona:
+ * fra il deploy e il SQL editor c'e' una finestra in cui il codice nuovo parla
+ * a un database vecchio. Chiedere una colonna che non esiste fa fallire la
+ * `select` — e questa lettura e' la **base di tutto il cruscotto**, quindi il
+ * risultato non sarebbe un pezzo mancante ma una home senza nemmeno un mese,
+ * cioe' un'applicazione che sembra vuota.
+ *
+ * E' lo stesso ripiego dell'elenco del copilota senza la 0051, per la stessa
+ * ragione: ogni pezzo che dipende da una migration deve **degradare
+ * dichiarandosi**, non sparire. Qui il degrado e' due zeri — la nota «senza
+ * classe» non compare, e tutto il resto del cruscotto funziona.
+ */
 export const leggiTotali = cache(
   inCache('totali', async (sb): Promise<readonly RigaTotaleMese[]> => {
-    const { data } = await sb
+    const conNuove = await sb
       .from('v_monthly_totals')
-      .select(
-        'mese, spesa::text, movimenti, senza_cambio, senza_categoria, spesa_senza_categoria::text',
-      )
+      .select(COLONNE_TOTALI_0060)
       .order('mese', { ascending: true });
-    return comeArray<RigaTotaleMese>(data).map((r) => ({
-      ...r,
-      mese: meseDaData(r.mese) ?? r.mese,
+
+    // Solo se la richiesta e' stata rifiutata si riprova: un elenco vuoto e'
+    // una risposta legittima — un database senza movimenti — e ritentarlo
+    // raddoppierebbe il viaggio a ogni apertura di un'applicazione nuova.
+    const grezze =
+      conNuove.error === null
+        ? conNuove.data
+        : (
+            await sb
+              .from('v_monthly_totals')
+              .select(COLONNE_TOTALI)
+              .order('mese', { ascending: true })
+          ).data;
+
+    return comeArray<Record<string, unknown>>(grezze).map((r) => ({
+      ...(r as unknown as RigaTotaleMese),
+      mese: meseDaData(String(r['mese'])) ?? String(r['mese']),
+      // Senza la 0060 le due colonne non arrivano. Zero e non `null`: chi
+      // legge fa `> 0`, e un `null` li' dentro renderebbe la nota invisibile
+      // per un motivo diverso da «non c'e' niente da fare» — che e' proprio la
+      // distinzione che le regole della Fase 7 chiedono di non perdere.
+      senza_classe: typeof r['senza_classe'] === 'number' ? r['senza_classe'] : 0,
+      spesa_senza_classe:
+        typeof r['spesa_senza_classe'] === 'string' ? r['spesa_senza_classe'] : '0',
     }));
   }),
 );

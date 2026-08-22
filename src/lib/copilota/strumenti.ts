@@ -345,14 +345,28 @@ const andamentoMensile: Strumento = {
     const supabase = await createSupabaseServerClient();
     const quanti = intero(a['mesi'], 8, 24);
 
-    const [spese, entrate] = await Promise.all([
+    // `senza_classe` arriva con la 0060: quanto resta fuori dalla ripartizione
+    // per classe, che e' la metrica per cui l'applicazione esiste. Sono due
+    // numeri e non dei nomi, quindi `fuori` non ha niente da sanificare.
+    //
+    // Con il ripiego sulle colonne vecchie, per la stessa ragione di
+    // `leggiTotali`: fra il deploy e il SQL editor c'e' una finestra in cui il
+    // codice nuovo parla a un database vecchio, e li' una `select` rifiutata
+    // farebbe rispondere al copilota «non ho nessun mese» — un guasto
+    // travestito da risposta, che e' la lezione della 0050.
+    const VECCHIE =
+      'mese, spesa::text, movimenti, senza_cambio, senza_categoria, spesa_senza_categoria::text';
+    const mensili = async (colonne: string) =>
       supabase
         .from('v_monthly_totals')
-        .select(
-          'mese, spesa::text, movimenti, senza_cambio, senza_categoria, spesa_senza_categoria::text',
-        )
+        .select(colonne)
         .order('mese', { ascending: false })
-        .limit(quanti),
+        .limit(quanti);
+
+    const [spese, entrate] = await Promise.all([
+      mensili(`${VECCHIE}, senza_classe, spesa_senza_classe::text`).then((r) =>
+        r.error === null ? r : mensili(VECCHIE),
+      ),
       supabase
         .from('v_monthly_income')
         .select('mese, entrate::text, movimenti')

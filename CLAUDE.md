@@ -633,6 +633,44 @@ La lezione e' la stessa della 0058 pagata una seconda volta nella stessa settima
 messo dove la riga nasce, non solo dove viene letta** — e in SQL, perche' i chiamanti erano due,
 sarebbero diventati tre, e il terzo e' il copilota.
 
+**E mancava la via a mano, che per certe righe e' l'unica — la 0060.** La 0058 e la 0059 impediscono
+a una riga di _finire_ senza classe, ma non tolgono il caso in cui ci resta per una ragione che
+nessun automatismo puo' togliere: un bonifico a un privato non ha un esercente, quindi non ha una
+categoria da cui ereditare, e la regola 8 vieta comunque di chiedere a un modello chi sia. Solo
+l'utente sa se e' un affitto, un prestito o un compenso — **la mano li' non e' un ripiego, e' la
+sola fonte dell'informazione**, esattamente come per `own_counterparties`.
+
+E la via a mano non c'era. Su `/movimenti` ogni riga aveva il selettore di **categoria** e nessuno
+per la classe; restava la scheda del movimento, che il selettore giusto ce l'ha ma costa due
+navigazioni e un ritorno indietro **per riga**. Su venti righe non e' una via manuale, e' un muro —
+ed e' il difetto piu' grave dei quattro, perche' quando l'automatismo sbaglia toglie anche la
+possibilita' di rimediare.
+
+Tre pezzi, e il terzo e' quello che li rende utili:
+
+1. **Le pastiglie sulla riga** (`SceltaClasse`), e non un foglio: le classi sono quattro, al massimo
+   sette per costruzione, e sono parole singole — aprire un pannello per sceglierne una sarebbe un
+   tocco in piu' per riga, cioe' il costo che il controllo esiste per togliere. Il selettore di
+   categoria il foglio ce l'ha, e ha ragione: trentacinque voci con un percorso intero.
+2. **Si vedono solo dove la classe manca.** Su ogni riga sarebbero cinquanta ripetizioni in una
+   schermata, che e' quello che l'audit ha appena tolto altrove. Dove la classe c'e' si cambia dalla
+   scheda, che e' il posto delle eccezioni.
+3. **Il cruscotto dice quante sono** (`senza_classe` e `spesa_senza_classe` su `v_monthly_totals`),
+   con «Classificali» che porta alla lista gia' filtrata. Il filtro `classe=non classificato`
+   esisteva da sempre, ma bisognava **sapere** che esisteva: l'unica strada era scendere in `/dove`
+   fino alla foglia giusta. Il conteggio da solo non basterebbe — quattro righe da due euro e
+   quattro da mille sono lo stesso numero e due lavori diversi.
+
+La 0060 e' anche il promemoria che `create or replace view` basta quando le colonne nuove vanno **in
+coda**: `v_monthly_totals` non si tocca altrimenti, e le quattro migration che la leggono nominano
+le colonne che usano. In cambio le due nuove stanno in fondo invece che accanto alle sorelle, dove
+si leggerebbero meglio — il prezzo giusto per non ricreare tredici viste.
+
+E `leggiTotali` **ripiega sulle colonne vecchie** se la 0060 non e' ancora applicata. Non e'
+prudenza generica: quella lettura e' la base di tutto il cruscotto, quindi una `select` rifiutata
+non darebbe un pezzo mancante ma una home **senza nemmeno un mese** — un'applicazione che sembra
+vuota nella finestra fra il deploy e il SQL editor.
+
 ### Le tre lezioni della Fase 4
 
 **La normalizzazione delle stringhe non serve quasi a niente.** Misurata sui 60 esercenti veri: da

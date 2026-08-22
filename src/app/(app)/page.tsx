@@ -28,7 +28,7 @@ import {
   totalePerTipo,
 } from '@/lib/abbonamenti/formato';
 import { leggiClassi } from '@/lib/tassonomia/classi';
-import { CATEGORIA_SENZA, estremiDelMese } from '@/lib/movimenti/filtri';
+import { CATEGORIA_SENZA, CLASSE_NON_CLASSIFICATA, estremiDelMese } from '@/lib/movimenti/filtri';
 import type { RigaStato } from '@/lib/movimenti/cerca';
 import { TesseraCategoria } from '@/lib/ui/tessera';
 import { BarraClassi, ordineDelleClassi, tinteDelleClassi } from './grafici';
@@ -238,7 +238,9 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
     leggiDaConfermare(),
   ]);
 
-  const note = rigaMese !== null && (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0);
+  const note =
+    rigaMese !== null &&
+    (rigaMese.senza_cambio > 0 || rigaMese.senza_categoria > 0 || rigaMese.senza_classe > 0);
   const vuota = daConfermare === 0 && avvisi.length === 0 && !note;
 
   return (
@@ -303,6 +305,26 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
                     collegamento che non portava da nessuna parte. */}
                 <Link className="text-accento" href={perMese(mese, { categoria: CATEGORIA_SENZA })}>
                   Assegnali
+                </Link>
+                .
+              </>
+            )}
+            {rigaMese.senza_classe > 0 && (
+              <>
+                <strong className="text-testo">{rigaMese.senza_classe}</strong> per{' '}
+                {formattaEuro(centesimi(rigaMese.spesa_senza_classe))} sono senza classe, quindi
+                fuori dalla ripartizione per cui l’app esiste.{' '}
+                {/* Alla lista filtrata, dove ogni riga senza classe ha le
+                    pastiglie: e' l'unica strada che porta a sistemarle, e
+                    finora bisognava sapere che il filtro esisteva. Restano
+                    quasi sempre i bonifici a un privato, che non hanno un
+                    esercente da cui ereditare — e per quelli la mano non e' un
+                    ripiego, e' la sola fonte dell'informazione. */}
+                <Link
+                  className="text-accento"
+                  href={perMese(mese, { classe: CLASSE_NON_CLASSIFICATA })}
+                >
+                  Classificali
                 </Link>
                 .
               </>

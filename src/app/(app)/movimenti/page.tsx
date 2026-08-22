@@ -22,6 +22,7 @@ import { BOTTONE, BOTTONE_MINORE, CAMPO_PIENO } from '@/lib/ui/controlli';
 import { Avatar } from '@/lib/ui/tessera';
 import { tinteDelleClassi } from '../grafici';
 import { SceltaCategoria } from '../scelta-categoria';
+import { SceltaClasse } from '../scelta-classe';
 import { Icona } from '@/lib/ui/icone';
 import { Vuoto } from '@/lib/ui/vuoto';
 import { Scegli } from '../scegli';
@@ -301,6 +302,22 @@ export default async function MovimentiPage({
                 categoriaId={r.category_id}
                 categorie={alberoCategorie}
                 etichetta
+              />
+
+              {/* Solo dove la classe manca. Una riga che ce l'ha non ha un
+                  lavoro da fare, e un secondo selettore su ogni riga sarebbe
+                  cinquanta ripetizioni in una schermata — la stessa cosa che
+                  l'audit ha tolto dal selettore di categoria.
+
+                  E' anche il fondo della discesa che parte da «Non
+                  classificato» su `/dove`: si arriva qui con il filtro giusto,
+                  e senza questo controllo l'unico modo di sistemare una riga
+                  era entrarci — due navigazioni e un ritorno indietro per
+                  riga, che su venti righe non e' una via manuale. */}
+              <SceltaClasse
+                movimentoId={r.id}
+                attuale={r.discrezionalita}
+                mostra={r.discrezionalita === null}
               />
             </li>
           ))}
