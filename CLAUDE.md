@@ -42,6 +42,36 @@ tabella tipizzata, e niente vive in un posto che solo il copilota legge. Ne disc
 un solo motore di avvisi, e una `/dove` che resta la fisarmonica. Va letto prima di aprire il
 cantiere; la critica lunga da cui esce sta in git al commit `117f8a5`.
 
+**La lentezza ha un documento suo, in due passaggi.** `docs/prestazioni.md` e' del 15 agosto 2026
+(misurato contro il database di produzione) piu' un secondo passaggio del **22 agosto**, che verifica
+il primo su una replica locale a 2.000 movimenti. La conclusione regge in entrambi: **non e' il
+database** — nessuna query supera gli 11 ms, quindi indici e riscritture sono lavoro sprecato — sono
+le **andate e ritorno in fila**, e un oceano fra l'utente e Washington, dove stanno **sia** le
+funzioni Vercel **sia** Supabase. Da qui il verso controintuitivo della raccomandazione: spostare le
+funzioni in Europa le avvicinerebbe all'utente e le allontanerebbe dal database, e va fatto **dopo**
+aver ridotto i viaggi, non prima.
+
+Il difetto trovato il 22 agosto e' nuovo perche' il pendolo che lo causa e' del 16: **il giro
+`veloce`, che batte ogni cinque minuti mentre l'app e' aperta, rilegge e riscrive l'intero
+archivio** — circa **195 viaggi HTTP in fila**, di cui **166 sono una `UPDATE` per esercente dentro
+un `for … await`**, piu' 884 kB di payload — per rispondere quasi sempre «niente di nuovo». E poi
+butta tutta la cache anche quando non ha trovato niente. E' l'unico numero che **peggiora da solo**
+al crescere dell'archivio. Il secondo costo e' ogni clic: `POST` piu' `router.refresh()` fanno
+quattro chiamate di autenticazione e un render completo, e il render parte a cache fredda perche' la
+scrittura l'ha appena invalidata. Va letto prima di toccare `lib/sync/quotidiano.ts`,
+`lib/normalize/run.ts` o `lib/tassonomia/applica.ts`.
+
+**I rimedi hanno un piano, e la sua migration e' gia' provata.** `docs/prestazioni-rimedi.md` e' la
+sequenza dei sette passi con, per ognuno, cosa cambia, perche' e' sicuro, il codice, come si
+verifica e come si torna indietro. Regge su due strumenti SQL della **0057** —
+`rileva_giroconti_strutturali()` e `applica_assegnazioni()` — scritti, applicati due volte e
+verificati sulla replica: assegnare 1.960 righe passa da **166 viaggi a uno da 143 ms**, e
+rilanciare senza che sia cambiato niente da 166 viaggi a **uno da 5 ms che non scrive nulla**.
+L'ordine dei passi non e' negoziabile: il riconoscimento strutturale dei giroconti deve passare in
+SQL **prima** che `normalizzaTutto` possa guardare una finestra, o la finestra rompe i giroconti —
+ed e' gia' successo di vederli salire dal 24% al 59% per un motivo diverso, con meta' della spesa
+reale sparita in silenzio.
+
 **L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
 2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
 icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere
@@ -1147,7 +1177,7 @@ riconosce, e aperti erano due terzi della schermata.
 #### La revisione Revolut, 19 agosto 2026
 
 Da una specifica scritta dall'utente, con un principio solo: **mai da una classe alle transazioni
-in un colpo**. La gerarchia e' una regola globale — classe → categorie → *pagina* dei movimenti —
+in un colpo**. La gerarchia e' una regola globale — classe → categorie → _pagina_ dei movimenti —
 e vive nei nodi (`lib/dove/nodi.ts`): una classe si apre in loco sulle sue categorie, una categoria
 con figlie si apre ancora, una **foglia naviga** a `/movimenti` portandosi **tutti** i filtri
 (periodo, classe, contesto, categoria — `versoMovimenti()`). Perdere un filtro nella discesa non

@@ -2,7 +2,11 @@ import 'server-only';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { comeArray } from '@/lib/enablebanking/redact';
 import { creaBackfill, eseguiFettaBackfill } from './backfill';
-import { normalizzaTutto, type EsitoNormalizzazione } from '@/lib/normalize/run';
+import {
+  FINESTRA_VELOCE_GIORNI,
+  normalizzaTutto,
+  type EsitoNormalizzazione,
+} from '@/lib/normalize/run';
 import { applicaTassonomia } from '@/lib/tassonomia/applica';
 import { proponiClassificazioni } from '@/lib/tassonomia/proposte';
 import {
@@ -159,7 +163,19 @@ export type EsitoQuotidiano = {
   righeDuplicate: number;
   avvisi: readonly string[];
   normalizzazione: EsitoNormalizzazione | null;
-  categorizzazione: { speseAbbinate: number; speseEsaminate: number } | null;
+  categorizzazione: {
+    speseAbbinate: number;
+    speseEsaminate: number;
+    /**
+     * Quante righe la tassonomia ha **davvero** toccato (0057).
+     *
+     * Non e' un dettaglio del resoconto: e' il segnale su cui poggia
+     * l'invalidazione della cache. Prima non esisteva, perche' ogni giro
+     * riscriveva tutte le righe comunque.
+     */
+    assegnate: number;
+    svuotate: number;
+  } | null;
   ricerca: EsitoArricchimento | null;
   proposte: {
     inviate: number;
@@ -174,6 +190,45 @@ export type EsitoQuotidiano = {
   errore: string | null;
   durataMs: number;
 };
+
+/**
+ * Il giro ha scritto qualcosa, oppure non lo sappiamo.
+ *
+ * ---------------------------------------------------------------------------
+ * Perche' esiste, e perche' risponde «si» quando non sa
+ * ---------------------------------------------------------------------------
+ * Il giro veloce batte ogni cinque minuti mentre l'app e' aperta, e fino alla
+ * 0057 buttava l'intera cache dei dati **a ogni giro**, anche per registrare
+ * che non era cambiato niente — dodici volte all'ora.
+ *
+ * Il verso in cui fallire non e' simmetrico: una cache buttata per niente costa
+ * qualche query, un totale vecchio mostrato come fresco e' il guasto che questa
+ * applicazione non si puo' permettere. Quindi ogni «non lo so» — un errore, una
+ * normalizzazione che non e' girata, un resoconto senza il campo — vale «si».
+ *
+ * `aggiornate` **non** e' un segnale valido e non compare qui: vale
+ * `daScrivere.length - inserite`, cioe' conta le righe **riscritte**, non
+ * quelle **cambiate**. L'upsert riscrive anche una riga identica, quindi
+ * sarebbe maggiore di zero ogni volta che la finestra contiene qualcosa, cioe'
+ * quasi sempre. I segnali esatti sono tre: `righeNuove` (dalla banca),
+ * `inserite` (righe davvero nuove) e `assegnate`/`svuotate`, che vengono da
+ * `applica_assegnazioni`, che confronta prima di scrivere.
+ */
+export function haScritto(esito: EsitoQuotidiano): boolean {
+  if (esito.errore !== null) return true;
+  if (esito.righeNuove > 0) return true;
+
+  const n = esito.normalizzazione;
+  if (n === null) return true;
+  if (n.inserite > 0 || n.girocontiStrutturali > 0 || n.girocontiSpeculari > 0) return true;
+
+  // `?? 1` e non `?? 0`: campo assente vuol dire «non lo so», e non sapere vale
+  // «si». Scritto al contrario, un resoconto incompleto terrebbe in vita una
+  // cache che andava buttata.
+  return (
+    (esito.categorizzazione?.assegnate ?? 1) > 0 || (esito.categorizzazione?.svuotate ?? 1) > 0
+  );
+}
 
 function vuoto(): EsitoQuotidiano {
   return {
@@ -350,7 +405,14 @@ export async function eseguiSincronizzazioneQuotidiana(
   // cruscotto indietro rispetto ai dati grezzi gia' presenti, che e' un
   // disallineamento gratuito — e per giunta invisibile.
   try {
-    esito.normalizzazione = await normalizzaTutto();
+    // La finestra e' **solo** del profilo veloce, e non e' negoziabile: e' il
+    // giro completo, che guarda tutto quattro volte al giorno, a coprire i due
+    // casi in cui una riga grezza invariata puo' normalizzarsi in modo diverso
+    // — un deploy del normalizzatore, e un cambio dei nomi dei conti o di
+    // `own_counterparties`. Vedi `OpzioniNormalizzazione`.
+    esito.normalizzazione = await normalizzaTutto({
+      giorniIndietro: profilo === 'veloce' ? FINESTRA_VELOCE_GIORNI : null,
+    });
     const primaPassata = await applicaTassonomia();
 
     // Il profilo veloce si ferma qui, ed e' tutta la differenza fra un
@@ -362,6 +424,8 @@ export async function eseguiSincronizzazioneQuotidiana(
       esito.categorizzazione = {
         speseAbbinate: primaPassata.speseAbbinate,
         speseEsaminate: primaPassata.speseEsaminate,
+        assegnate: primaPassata.assegnate,
+        svuotate: primaPassata.svuotate,
       };
       esito.durataMs = Date.now() - avvio;
       return esito;
@@ -409,6 +473,8 @@ export async function eseguiSincronizzazioneQuotidiana(
     esito.categorizzazione = {
       speseAbbinate: tassonomia.speseAbbinate,
       speseEsaminate: tassonomia.speseEsaminate,
+      assegnate: primaPassata.assegnate + tassonomia.assegnate,
+      svuotate: primaPassata.svuotate + tassonomia.svuotate,
     };
 
     esito.ricorrenze = await rilevaAbbonamenti();

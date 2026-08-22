@@ -69,11 +69,35 @@ grant select on public.v_conversazioni to authenticated;
 -- pretende, e il default di `titolo_manuale` e' `false`. Toglierle e' una
 -- pulizia che si fa quando si tocchera' questa tabella per un motivo vero,
 -- non un rischio da correre adesso per estetica.
-comment on column public.chat_conversations.scade_at is
-  'NON USATA. La scadenza si calcola dai messaggi in pulisci_conversazioni(). Residuo di un ciclo di vita parallelo, rimosso dalla 0056.';
-comment on column public.chat_conversations.ultima_at is
-  'NON USATA. `v_conversazioni` la calcola da chat_messages. Residuo, rimosso dalla 0056.';
-comment on column public.chat_conversations.titolo_manuale is
-  'NON USATA per ora: il titolo generato non sovrascrive quello che c''e'' gia''. Residuo, rimosso dalla 0056.';
+-- I commenti stanno dentro un `do`, e non e' pignoleria: su un database
+-- **ricostruito da zero** quelle tre colonne non sono mai esistite — le
+-- aggiungeva una migration parallela che e' stata cancellata — e un
+-- `comment on column` su una colonna assente e' un errore, non un no-op.
+-- Senza questa guardia l'intera storia delle migration smette di riapplicarsi,
+-- e se ne accorge solo chi prova a ricostruire lo schema, cioe' nel momento
+-- peggiore.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'chat_conversations'
+                and column_name = 'scade_at') then
+    comment on column public.chat_conversations.scade_at is
+      'NON USATA. La scadenza si calcola dai messaggi in pulisci_conversazioni(). Residuo di un ciclo di vita parallelo, rimosso dalla 0056.';
+  end if;
+
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'chat_conversations'
+                and column_name = 'ultima_at') then
+    comment on column public.chat_conversations.ultima_at is
+      'NON USATA. `v_conversazioni` la calcola da chat_messages. Residuo, rimosso dalla 0056.';
+  end if;
+
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'chat_conversations'
+                and column_name = 'titolo_manuale') then
+    comment on column public.chat_conversations.titolo_manuale is
+      'NON USATA per ora: il titolo generato non sovrascrive quello che c''e'' gia''. Residuo, rimosso dalla 0056.';
+  end if;
+end $$;
 
 notify pgrst, 'reload schema';

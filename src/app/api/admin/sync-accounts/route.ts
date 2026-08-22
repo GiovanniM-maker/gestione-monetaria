@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
 import { registerSessionAccounts, UidRuotati } from '@/lib/sync/accounts';
+import { normalizzaTutto } from '@/lib/normalize/run';
 import { scadeTutto } from '@/lib/supabase/cache';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const { connection, accounts } = await registerSessionAccounts(sessionId);
+
+    // Rinominare un conto cambia `nomiContiPropri`, e con esso il
+    // riconoscimento dei giroconti per causale — su **tutto** lo storico, non
+    // solo sui movimenti nuovi.
+    //
+    // Finche' il giro veloce rinormalizzava tutto ogni cinque minuti, questo si
+    // riparava da solo senza che nessuno lo notasse. Ora il veloce guarda una
+    // finestra (`FINESTRA_VELOCE_GIORNI`), e questa e' l'unica strada dentro
+    // l'applicazione che puo' invalidare l'argomento su cui quella finestra
+    // poggia. Quindi la chiude qui, subito, invece di aspettare il giro
+    // completo — che arriverebbe fino a quattro ore dopo.
+    //
+    // Non blocca la risposta: i conti sono gia' registrati, e dire «non e'
+    // andata» quando invece e' andata sarebbe una bugia peggiore del ritardo.
+    let normalizzazione: string | null = null;
+    try {
+      await normalizzaTutto();
+    } catch (errore) {
+      normalizzazione = errore instanceof Error ? errore.message : String(errore);
+      console.error('[sync] rinormalizzazione dopo i conti fallita:', normalizzazione);
+    }
+
     return risposta({
+      normalizzazione,
       connection: {
         id: connection.id,
         aspsp: `${connection.aspsp_name} (${connection.aspsp_country})`,

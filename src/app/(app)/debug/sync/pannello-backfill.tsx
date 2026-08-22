@@ -607,7 +607,8 @@ export function PannelloBackfill({
           `Normalizzazione: ${String(n['esaminate'])} righe grezze \u2192 ${String(n['distinti'])} movimenti distinti \u00b7 ` +
             `${String(n['inserite'])} inserite \u00b7 ` +
             `${String(n['aggiornate'])} aggiornate \u00b7 ${String(n['protette'])} protette \u00b7 ` +
-            `${String(n['scartate'])} scartate \u00b7 ${String(n['girocontiSpeculari'])} giroconti speculari`,
+            `${String(n['scartate'])} scartate \u00b7 ${String(n['girocontiStrutturali'])} giroconti strutturali \u00b7 ` +
+            `${String(n['girocontiSpeculari'])} speculari`,
         );
         for (const e of (n['errori'] as string[] | undefined) ?? []) aggiungi(`  \u26a0 ${e}`);
       }
@@ -625,6 +626,12 @@ export function PannelloBackfill({
           `Categorizzazione: ${abbinate} su ${esaminate} spese classificate ` +
             `(${esaminate === 0 ? '0' : String(Math.round((abbinate / esaminate) * 1000) / 10)}%) \u00b7 ` +
             `${scoperte} scoperte`,
+        );
+        // Le righe **cambiate**, non quelle riscritte. E' la prova che il giro
+        // e' rieseguibile: la seconda volta devono essere entrambe zero.
+        aggiungi(
+          `  righe toccate: ${String(c['assegnate'] ?? '?')} assegnate \u00b7 ` +
+            `${String(c['svuotate'] ?? '?')} svuotate`,
         );
         if (scoperte > 0) {
           // Il messaggio precedente diceva che il cron non chiama il modello.

@@ -58,6 +58,18 @@ type RigaGrezza = {
  * Resta un limite, ed è insuperabile: vale solo se entrambi i lati sono conti
  * collegati. Un bonifico verso un proprio conto presso un'altra banca continua
  * a essere indistinguibile da un bonifico a un terzo, e va marcato a mano.
+ *
+ * ---------------------------------------------------------------------------
+ * Non la chiama più nessuno, e resta lo stesso
+ * ---------------------------------------------------------------------------
+ * Dalla `0057` il riconoscimento vive in `rileva_giroconti_strutturali()`, che
+ * fa la stessa cosa in una query invece che leggendo 884 kB di registro grezzo
+ * dentro Node — ed è proprio quella lettura che impediva a `normalizzaTutto` di
+ * guardare una finestra.
+ *
+ * Questa funzione resta perché **è la definizione**, con i suoi test: la
+ * versione SQL è un'implementazione di ciò che è scritto qui, e se le due
+ * divergessero è da qui che si capisce quale delle due ha ragione.
  */
 export function riferimentiSuPiuConti(
   righe: readonly { account_id: string; riferimento: string | null }[],
@@ -92,7 +104,56 @@ function piuRecente(a: RigaGrezza, b: RigaGrezza): RigaGrezza {
   return b.fetched_at >= a.fetched_at ? b : a;
 }
 
-export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
+export type OpzioniNormalizzazione = {
+  /**
+   * Quanti giorni indietro guardare nel registro grezzo. `null` = tutto.
+   *
+   * ---------------------------------------------------------------------------
+   * Perche' restringere qui e' sicuro, mentre di solito non lo e'
+   * ---------------------------------------------------------------------------
+   * Una finestra troppo stretta lascia fuori un movimento che nessuno vedra'
+   * mancare: e' il modo di sbagliare peggiore, perche' silenzioso. Qui pero'
+   * c'e' un argomento strutturale, e regge solo finche' restano vere tutte e
+   * quattro le righe:
+   *
+   * 1. `raw_transactions` e' **immutabile** e unica su `(account_id,
+   *    payload_hash)`. Una riga grezza non cambia mai; un payload cambiato e'
+   *    una riga **nuova**, con un `fetched_at` nuovo.
+   * 2. Quindi per una riga invariata `normalizzaMovimento` produce sempre lo
+   *    stesso risultato — **tranne** se cambia il codice del normalizzatore (un
+   *    deploy) o `nomiContiPropri`, cioe' i nomi dei conti e
+   *    `own_counterparties`.
+   * 3. `own_counterparties` non ha nessun percorso di scrittura
+   *    nell'applicazione; i nomi dei conti li cambia solo `abbinaConti`, che
+   *    infatti forza una normalizzazione completa.
+   * 4. Il profilo **completo** gira quattro volte al giorno **senza finestra**,
+   *    e copre entrambi i casi.
+   *
+   * Se una di queste smette di valere, questa opzione va tolta.
+   * Il ragionamento per esteso sta in `docs/prestazioni-rimedi.md` §4.
+   */
+  giorniIndietro?: number | null;
+};
+
+/**
+ * La finestra del profilo veloce: il **doppio** di quella di scarico.
+ *
+ * Non e' prudenza generica. Lo scarico chiede sette giorni indietro, quindi
+ * tutto cio' che il giro veloce puo' aver portato e' entrato nel registro nelle
+ * ultime ore. Quattordici coprono anche il caso in cui il giro completo sia
+ * fermo da una settimana — che e' successo, per tre giorni, nell'agosto 2026.
+ */
+export const FINESTRA_VELOCE_GIORNI = 14;
+
+export async function normalizzaTutto(
+  opzioni: OpzioniNormalizzazione = {},
+): Promise<EsitoNormalizzazione> {
+  const giorniIndietro = opzioni.giorniIndietro ?? null;
+  const soglia =
+    giorniIndietro === null
+      ? null
+      : new Date(Date.now() - giorniIndietro * 86_400_000).toISOString();
+
   const supabase = await createSupabaseServerClient();
 
   const { data: contiGrezzi } = await supabase.from('accounts').select('*');
@@ -124,14 +185,19 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
 
   // Ultima versione per chiave, accumulata mentre si scorre.
   const migliori = new Map<string, RigaGrezza>();
-  const riferimentiVisti: { account_id: string; riferimento: string | null }[] = [];
 
   for (;;) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('raw_transactions')
       .select('id, account_id, source, payload, fetched_at')
       .order('id', { ascending: true })
       .range(da, da + DIMENSIONE_BLOCCO - 1);
+
+    // La finestra, quando c'e'. Senza, si legge tutto il registro: e' cio' che
+    // il profilo completo deve continuare a fare.
+    if (soglia !== null) query = query.gte('fetched_at', soglia);
+
+    const { data, error } = await query;
 
     if (error !== null) throw new Error(`Lettura raw_transactions fallita: ${error.message}`);
 
@@ -142,10 +208,6 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
       esaminate += 1;
       const riferimento = riga.payload['entry_reference'];
       const chiave = `${riga.account_id}::${typeof riferimento === 'string' ? riferimento : `raw-${riga.id}`}`;
-      riferimentiVisti.push({
-        account_id: riga.account_id,
-        riferimento: typeof riferimento === 'string' ? riferimento : null,
-      });
       const esistente = migliori.get(chiave);
       migliori.set(chiave, esistente === undefined ? riga : piuRecente(esistente, riga));
     }
@@ -165,9 +227,6 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
       (r) => `${r.account_id}::${r.match_key}`,
     ),
   );
-
-  const girocontiPerRiferimento = riferimentiSuPiuConti(riferimentiVisti);
-  let girocontiStrutturali = 0;
 
   const daScrivere: Record<string, unknown>[] = [];
 
@@ -191,19 +250,16 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
         continue;
       }
 
-      // Il riconoscimento strutturale si somma a quello per causale: uno vede
-      // i giroconti fra conti collegati, l'altro i pocket in valuta di cui
-      // registriamo un lato solo.
-      const strutturale =
-        movimento.external_id !== null && girocontiPerRiferimento.has(movimento.external_id);
-      if (strutturale && !movimento.is_transfer) girocontiStrutturali += 1;
-
+      // Il riconoscimento strutturale non e' piu' qui: lo fa
+      // `rileva_giroconti_strutturali()` dopo la scrittura, in SQL, perche'
+      // per farlo in memoria bisognava leggere l'intero registro grezzo.
+      // Si scrive quindi il solo `is_transfer` che si legge dalla causale e dal
+      // codice, e la RPC ci somma la prova strutturale subito dopo.
       daScrivere.push({
         account_id: riga.account_id,
         raw_transaction_id: riga.id,
         source: riga.source,
         ...movimento,
-        is_transfer: movimento.is_transfer || strutturale,
       });
     } catch (errore) {
       scartate += 1;
@@ -239,6 +295,20 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
   inserite = (dopoDi ?? 0) - (primaDi ?? 0);
   aggiornate = daScrivere.length - inserite;
 
+  // Il riconoscimento strutturale, in SQL e in un viaggio solo.
+  //
+  // Va **dopo** la scrittura, non prima: l'upsert ha appena riscritto
+  // `is_transfer` con il solo valore che si legge dalla causale, quindi per
+  // qualche istante un giroconto strutturale risulta falso. Nessuno sta
+  // guardando — e' lavoro di sfondo — e alla fine lo stato e' identico, ma va
+  // saputo prima di vederlo in una query lanciata nel momento sbagliato.
+  const { data: strutturali, error: erroreStrutturali } = await supabase.rpc(
+    'rileva_giroconti_strutturali',
+  );
+  if (erroreStrutturali !== null) {
+    errori.push(`rileva_giroconti_strutturali: ${erroreStrutturali.message}`);
+  }
+
   // Rete di sicurezza dietro al riconoscimento per codice e causale.
   // L'errore va riportato, non ingoiato: se questa chiamata fallisce e il
   // risultato resta zero, il resoconto dice "nessun giroconto speculare" — che
@@ -254,7 +324,9 @@ export async function normalizzaTutto(): Promise<EsitoNormalizzazione> {
   return {
     esaminate,
     distinti: migliori.size,
-    girocontiStrutturali,
+    // Quanti ne ha marcati **di nuovi**, non quanti ne ha visti: e' il numero
+    // che dice se e' successo qualcosa, e prima non era ottenibile.
+    girocontiStrutturali: typeof strutturali === 'number' ? strutturali : 0,
     inserite,
     aggiornate,
     protette,

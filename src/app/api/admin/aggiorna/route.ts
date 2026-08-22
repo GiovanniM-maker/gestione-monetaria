@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthorizedUser } from '@/lib/auth/session';
-import { eseguiSincronizzazioneQuotidiana } from '@/lib/sync/quotidiano';
+import { eseguiSincronizzazioneQuotidiana, haScritto } from '@/lib/sync/quotidiano';
 import { scadeTutto } from '@/lib/supabase/cache';
 
 export const dynamic = 'force-dynamic';
@@ -48,9 +48,11 @@ export async function POST(): Promise<NextResponse> {
   }
 
   try {
-    return risposta(
-      await eseguiSincronizzazioneQuotidiana({ origine: 'apertura', profilo: 'veloce' }),
-    );
+    const esito = await eseguiSincronizzazioneQuotidiana({
+      origine: 'apertura',
+      profilo: 'veloce',
+    });
+    return risposta(esito, undefined, haScritto(esito));
   } catch (errore) {
     const messaggio = errore instanceof Error ? errore.message : String(errore);
     console.error('[aggiorna] fallito:', messaggio);
@@ -58,8 +60,17 @@ export async function POST(): Promise<NextResponse> {
   }
 }
 
-/** Come le sue sorelle: ogni risposta butta la cache dei dati, anche in errore. */
-function risposta(corpo: unknown, opzioni?: ResponseInit): NextResponse {
-  scadeTutto();
+/**
+ * A differenza delle sue sorelle, questa butta la cache **solo se serve**.
+ *
+ * Le altre route sono azioni: se sono state chiamate, qualcosa e' cambiato.
+ * Questa e' un pendolo che batte da solo dodici volte all'ora e che risponde
+ * quasi sempre «niente di nuovo» — invalidare li' significa garantire che la
+ * cache non duri mai piu' di cinque minuti, cioe' renderla quasi inutile.
+ *
+ * Chi decide e' `haScritto`, e decide di buttare ogni volta che non sa.
+ */
+function risposta(corpo: unknown, opzioni?: ResponseInit, cambiato = true): NextResponse {
+  if (cambiato) scadeTutto();
   return NextResponse.json(corpo, opzioni);
 }
