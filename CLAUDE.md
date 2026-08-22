@@ -85,6 +85,14 @@ per confermare, un colore per categoria — con la ragione di ognuno. Le prime c
 ore e chiudono tutti e tre i difetti critici. Va letto prima di toccare `globals.css` o
 `lib/ui/controlli.ts`.
 
+**Il primo blocco e' implementato** (22 agosto, sera): tinte e toni corretti, `.eti` a
+`--testo-2`, hover dietro `@media (hover: hover)` e un anello del fuoco unico,
+entrata e uscita del foglio, `error.tsx` e `not-found.tsx`, la tastiera che non copre piu'
+il piede dei fogli, i chevron come icone, la portata visibile, `aria-pressed`, gli stati vuoti
+in tre righe. E soprattutto **`lib/ui/errori.ts`**: nessun gettone tecnico e nessun numero di
+stato puo' piu' raggiungere una schermata, e la sessione scaduta porta un «Rientra» che torna
+dov'era. Resta fuori l'aggiornamento ottimistico con annulla, che e' la voce piu' grossa.
+
 **L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
 2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
 icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere

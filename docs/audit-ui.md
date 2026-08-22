@@ -523,21 +523,37 @@ Formato: **oggi → problema → riferimento → comportamento proposto.**
 
 ## D. Polish backlog
 
+> **Stato al 22 agosto, sera.** Tutte le voci «Must fix» e le prime quattro «High
+> impact» sono **implementate**, insieme alle cinque voci «subito» del primo
+> passaggio. Restano l'aggiornamento ottimistico con annulla (la voce piu'
+> grossa), e le cinque «Nice polish».
+>
+> Due cose sono state trovate **mentre** si implementava, e nessuna delle due era
+> nell'audit:
+>
+> - in quattro punti il corpo della risposta era gia' stato letto prima di
+>   passarlo al traduttore, e `json()` si consuma una volta sola: il messaggio
+>   utile del server sarebbe sparito in silenzio. Ora quei punti usano
+>   `spiegaErrore(stato, corpo)`, e il rischio e' scritto nel commento;
+> - `CAMPO` faceva `outline-none` piu' un `ring`: l'applicazione aveva **due**
+>   linguaggi del fuoco, e il secondo non era in nessun elenco perche' guardavo
+>   i componenti, non i due file dove le classi sono definite.
+
 ### Must fix
 
-1. **Il 401 non deve mai essere un testo.** Traduzione degli errori + rientro al login. _(A.1, B.5)_
-2. **Tastiera che copre le azioni.** `interactiveWidget` + piede appiccicato + via l'`autoFocus` su
+1. ~~**Il 401 non deve mai essere un testo.**~~ **fatto** Traduzione degli errori + rientro al login. _(A.1, B.5)_
+2. ~~**Tastiera che copre le azioni.**~~ **fatto** `interactiveWidget` + piede appiccicato + via l'`autoFocus` su
    schermo stretto. _(A.4, B.3)_
-3. **La portata del cambio categoria fuori dal `title=`.** _(A.5, B.4)_
-4. **`aria-pressed` sui gruppi a due scelte.** _(A.8)_
+3. ~~**La portata del cambio categoria fuori dal `title=`.**~~ **fatto** _(A.5, B.4)_
+4. ~~**`aria-pressed` sui gruppi a due scelte.**~~ **fatto** _(A.8)_
 
 ### High impact
 
 5. Bottone che non si restringe, e che disattiva **solo sé stesso**. _(A.2, A.3, B.1)_
 6. Aggiornamento ottimistico + annulla sulla coda. _(B.2)_
-7. I quindici `›` diventano l'icona che esiste già. _(A.6)_
-8. Gli stati vuoti riscritti in tre righe. _(A.7, B.6)_
-9. Il testo spento fuori dai controlli. _(A.9)_
+7. ~~I quindici `›` diventano l'icona che esiste già.~~ **fatto** — dodici sono icone, quattro restano punteggiatura _(A.6)_
+8. ~~Gli stati vuoti riscritti in tre righe.~~ **fatto** _(A.7, B.6)_
+9. ~~Il testo spento fuori dai controlli.~~ **fatto** _(A.9)_
 
 ### Nice polish
 

@@ -99,7 +99,9 @@ export function SelettoreMetrica({
             </li>
           ))}
           {visibili.length === 0 && (
-            <li className="py-3 text-[13px] text-testo-3">Niente con questo nome.</li>
+            <li className="py-3 text-center text-[13px] text-testo-2">
+              Niente contiene &laquo;{ricerca.trim()}&raquo;. Prova con meno lettere.
+            </li>
           )}
         </ul>
       </Foglio>

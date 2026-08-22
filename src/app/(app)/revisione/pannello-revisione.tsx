@@ -10,6 +10,7 @@ import { Foglio } from '../foglio';
 import { spiegaEccezione, spiegaErrore, type Spiegazione } from '@/lib/ui/errori';
 import { NotaErrore } from '@/lib/ui/nota-errore';
 import { Icona } from '@/lib/ui/icone';
+import { Vuoto } from '@/lib/ui/vuoto';
 
 /**
  * Il pannello di revisione.
@@ -206,9 +207,10 @@ export function PannelloRevisione({
           ))}
         </ul>
         {cercati.length === 0 && (
-          <p className="scheda p-6 text-center text-[14px] text-testo-2">
-            Nessun esercente con questo nome.
-          </p>
+          <Vuoto
+            titolo={`Nessun esercente contiene «${cerca.trim()}»`}
+            perche="La ricerca guarda il nome canonico, non la causale grezza della banca. Prova con meno lettere."
+          />
         )}
       </section>
     </div>

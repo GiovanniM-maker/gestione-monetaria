@@ -23,6 +23,7 @@ import { Avatar } from '@/lib/ui/tessera';
 import { tinteDelleClassi } from '../grafici';
 import { SceltaCategoria } from '../scelta-categoria';
 import { Icona } from '@/lib/ui/icone';
+import { Vuoto } from '@/lib/ui/vuoto';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimenti' };
@@ -237,9 +238,18 @@ export default async function MovimentiPage({
       {/* LE RIGHE                                                          */}
       {/* ---------------------------------------------------------------- */}
       {esito.righe.length === 0 ? (
-        <p className="scheda p-6 text-center text-[14px] text-testo-2">
-          Nessun movimento con questi filtri.
-        </p>
+        <Vuoto
+          titolo="Nessun movimento con questi filtri"
+          // Il perche' non e' un'ipotesi: `descriviFiltri` sa gia' cosa e'
+          // attivo, ed e' la stessa frase che compare sopra la lista. Dirla qui
+          // trasforma un vicolo cieco in una cosa che si puo' disfare.
+          perche={<>Stai guardando {descrizione.join(' · ')}.</>}
+          azioni={
+            <Link href="/movimenti" className={BOTTONE_MINORE}>
+              Togli tutti i filtri
+            </Link>
+          }
+        />
       ) : (
         <ul className="scheda elenco px-4">
           {esito.righe.map((r) => (

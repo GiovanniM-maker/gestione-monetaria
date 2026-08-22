@@ -155,7 +155,10 @@ export function SpostaMovimento({
             ))}
           </ul>
           {ricerca.trim().length >= 2 && trovati.length === 0 && (
-            <p className="text-xs text-testo-2">Nessun esercente con questo nome.</p>
+            <p className="text-xs text-testo-2">
+              Nessun esercente contiene &laquo;{ricerca.trim()}&raquo;. Se non esiste ancora, puoi{' '}
+              <strong>crearne uno nuovo</strong> qui sopra.
+            </p>
           )}
         </div>
       ) : (

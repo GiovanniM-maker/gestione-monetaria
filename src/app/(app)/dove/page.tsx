@@ -38,6 +38,7 @@ import { Menu } from '../menu';
 import { Segmentato } from '../segmentato';
 import { SelettoreMetrica, type OpzioneMetrica } from './selettore';
 import { Icona } from '@/lib/ui/icone';
+import { Vuoto } from '@/lib/ui/vuoto';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Dove' };
@@ -256,7 +257,13 @@ function perClasse(classi: readonly RigaClasse[], ordine: readonly string[]) {
 async function Composizione({ mese, finestra }: { mese: string; finestra: Finestra }) {
   const [classi, definizioni] = await Promise.all([leggiSpesaPerClasse(mese), leggiClassi()]);
   if (classi.length === 0) {
-    return <p className="px-1 text-[14px] text-testo-2">Nessun movimento in questo mese.</p>;
+    return (
+      <Vuoto
+        nudo
+        titolo="Niente da scomporre"
+        perche="In questo mese non ci sono spese reali: o non è ancora arrivato niente, o quello che è arrivato sono tutti giroconti."
+      />
+    );
   }
 
   const tinte = tinteDelleClassi(definizioni);

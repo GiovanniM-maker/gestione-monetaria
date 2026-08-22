@@ -37,6 +37,7 @@ import { nodiPerClasse } from './dove/nodi-classe';
 import { Menu } from './menu';
 import { SceltaMese } from './mese';
 import { ScheletroCoppia, ScheletroTestata } from './scheletri';
+import { Vuoto } from '@/lib/ui/vuoto';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Cruscotto' };
@@ -462,7 +463,11 @@ async function QuantoHoSpeso({
       </div>
 
       {classi.length === 0 ? (
-        <p className="text-sm text-testo-2">Nessun movimento in questo mese.</p>
+        <Vuoto
+          nudo
+          titolo="Nessuna spesa in questo mese"
+          perche="La banca non ha contabilizzato niente, oppure il mese non è ancora cominciato. Cambia mese dalla capsula in alto."
+        />
       ) : (
         <div className="space-y-3 pt-2">
           {/* Un titolo su questo elenco, ora che sotto ce n'e' un secondo.
