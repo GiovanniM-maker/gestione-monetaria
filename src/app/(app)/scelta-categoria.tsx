@@ -228,7 +228,7 @@ export function SceltaCategoria({
             inCorso ? 'opacity-60' : ''
           }`}
         >
-          <span className={`min-w-0 flex-1 truncate ${attuale === null ? 'text-testo-3' : ''}`}>
+          <span className={`min-w-0 flex-1 truncate ${attuale === null ? 'text-testo-2' : ''}`}>
             {attuale ?? 'senza categoria'}
           </span>
           <Icona nome="chevron" misura={16} className="shrink-0 text-testo-3" />
@@ -289,7 +289,7 @@ export function SceltaCategoria({
                 ))}
               </select>
             </label>
-            <p className="text-min text-testo-3">
+            <p className="text-min text-testo-2">
               Appena creata viene <strong>scelta</strong> qui: per assegnarla serve
               &laquo;Salva&raquo;, come per ogni altra. Se esiste gi&agrave; con lo stesso nome
               nello stesso posto, si usa quella.

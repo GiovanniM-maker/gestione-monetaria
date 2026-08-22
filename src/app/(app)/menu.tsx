@@ -107,7 +107,7 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
         <nav id="menu-principale" className="space-y-5">
           {GRUPPI.map((g) => (
             <div key={g.titolo}>
-              <p className="px-1 pb-1 text-eti font-medium tracking-wide text-testo-3 uppercase">
+              <p className="px-1 pb-1 text-eti font-medium tracking-wide text-testo-2 uppercase">
                 {g.titolo}
               </p>
               <ul className="scheda elenco px-3">
@@ -122,7 +122,7 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
                       >
                         <span className={`text-corpo ${qui ? 'font-semibold' : ''}`}>{v.nome}</span>
                         {v.nota !== undefined && (
-                          <span className="text-min text-testo-3">{v.nota}</span>
+                          <span className="text-min text-testo-2">{v.nota}</span>
                         )}
                       </Link>
                     </li>
@@ -145,7 +145,7 @@ export function Menu({ email, versione }: { email: string | null; versione: stri
               piu' visibile della schermata. Qui accanto all'indirizzo, che e'
               anche il solo posto dove serve sapere con chi si e' entrati. */}
           <div className="flex items-center justify-between gap-3 border-t border-filo pt-4">
-            <span className="min-w-0 truncate text-min text-testo-3">{email ?? ''}</span>
+            <span className="min-w-0 truncate text-min text-testo-2">{email ?? ''}</span>
             <SignOutButton />
           </div>
         </nav>
@@ -184,7 +184,7 @@ function Cassetto({
          dicono solo da che parte se ne vanno. */
       testata={
         <div className="mb-4 flex items-center justify-between px-4">
-          <span className="text-sec font-medium text-testo-3">Gestione monetaria</span>
+          <span className="text-sec font-medium text-testo-2">Gestione monetaria</span>
           <button
             type="button"
             onClick={onChiudi}

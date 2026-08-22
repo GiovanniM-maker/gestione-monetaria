@@ -478,7 +478,7 @@ export function Foglio({
           <div className="flex items-start gap-3 px-5 pt-1 pb-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-sez font-semibold tracking-[-0.02em]">{titolo}</h2>
-              {nota !== undefined && <p className="mt-0.5 text-min text-testo-3">{nota}</p>}
+              {nota !== undefined && <p className="mt-0.5 text-min text-testo-2">{nota}</p>}
             </div>
             <button
               type="button"

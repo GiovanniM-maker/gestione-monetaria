@@ -150,7 +150,7 @@ export function PannelloObiettivi({
               <div className="flex items-start gap-3">
                 <span className="min-w-0 flex-1">
                   <span className="block text-corpo">{descriviObiettivo(o)}</span>
-                  <span className="mt-0.5 block text-min text-testo-3">
+                  <span className="mt-0.5 block text-min text-testo-2">
                     {descriviScadenza(o)}
                     {o.nota !== null && ` · ${o.nota}`}
                   </span>
@@ -224,7 +224,7 @@ export function PannelloObiettivi({
               ))}
             </select>
           </label>
-          <p className="text-min text-testo-3">{TIPI.find((t) => t.valore === tipo)?.spiega}</p>
+          <p className="text-min text-testo-2">{TIPI.find((t) => t.valore === tipo)?.spiega}</p>
 
           {VUOLE_VALORE[tipo] && (
             <label className="block">
@@ -283,7 +283,7 @@ export function PannelloObiettivi({
               ))}
             </select>
           </label>
-          <p className="text-min text-testo-3">
+          <p className="text-min text-testo-2">
             Alla scadenza non sparisce: resta qui, marcato, e il copilota ti chiede se vale ancora
             invece di darlo per buono.
           </p>

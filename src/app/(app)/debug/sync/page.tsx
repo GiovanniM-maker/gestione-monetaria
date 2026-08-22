@@ -196,7 +196,7 @@ export default async function DebugSyncPage() {
               scrivere qualsiasi cosa; <strong>401</strong> significa Deployment Protection che
               intercetta l&rsquo;invocazione, o un segreto diverso.
             </p>
-            <p className="text-testo-3">
+            <p className="text-testo-2">
               Finche&rsquo; e&rsquo; cosi&rsquo; i movimenti arrivano lo stesso: l&rsquo;app aperta
               scarica ogni cinque minuti, ed e&rsquo; un accesso con il cliente presente.
             </p>

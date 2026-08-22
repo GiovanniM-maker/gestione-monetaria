@@ -146,7 +146,7 @@ function Elenco({ conversazioni }: { conversazioni: readonly RigaConversazione[]
       </details>
 
       {conversazioni.length === 0 && (
-        <p className="px-1 text-sec text-testo-3">
+        <p className="px-1 text-sec text-testo-2">
           Nessuna conversazione, per ora. Le non salvate vivono 30 giorni dall&rsquo;ultimo
           messaggio; quelle con la stella restano per sempre.
         </p>
@@ -179,7 +179,7 @@ function Gruppo({
                 className="flex min-h-14 min-w-0 flex-1 flex-col justify-center py-2"
               >
                 <span className="truncate text-corpo">{c.titolo ?? 'Conversazione vuota'}</span>
-                <span className="text-min text-testo-3">
+                <span className="text-min text-testo-2">
                   {quando(c.ultima_at)} · {c.messaggi} {c.messaggi === 1 ? 'messaggio' : 'messaggi'}
                 </span>
               </Link>

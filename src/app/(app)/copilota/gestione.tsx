@@ -102,7 +102,7 @@ export function Stella({
       <span
         aria-hidden="true"
         className={`text-sez leading-none ${
-          errore !== null ? 'text-allarme' : salvata ? 'text-accento' : 'text-testo-3'
+          errore !== null ? 'text-allarme' : salvata ? 'text-accento' : 'text-testo-2'
         }`}
       >
         {errore !== null ? '!' : salvata ? '★' : '☆'}

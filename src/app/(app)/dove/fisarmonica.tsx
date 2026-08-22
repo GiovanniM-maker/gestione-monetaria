@@ -201,7 +201,7 @@ function Rami({
 
             {aperto && stato?.fase === 'pronto' && stato.figli.length === 0 && (
               <p
-                className="pb-2 text-sec text-testo-3"
+                className="pb-2 text-sec text-testo-2"
                 style={{ marginLeft: `${rientro(livello + 1)}px` }}
               >
                 Niente qui dentro.
@@ -318,7 +318,7 @@ function Riga({
             />
           </span>
           {nodo.dettaglio !== null && (
-            <span className="cifra truncate text-min text-testo-3">{nodo.dettaglio}</span>
+            <span className="cifra truncate text-min text-testo-2">{nodo.dettaglio}</span>
           )}
         </span>
       </span>

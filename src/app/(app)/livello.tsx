@@ -90,7 +90,7 @@ export function TestataLivello({
           {formattaEuro(importo)}
           <Freccia riga={variazione} />
         </p>
-        {nota !== null && nota !== undefined && <p className="text-sec text-testo-3">{nota}</p>}
+        {nota !== null && nota !== undefined && <p className="text-sec text-testo-2">{nota}</p>}
       </div>
 
       {azioni !== undefined && <div className="flex flex-wrap gap-2">{azioni}</div>}
@@ -141,7 +141,7 @@ export function Ripartizione({
   return (
     <section className="space-y-3">
       <h2 className="eti px-1">{titolo}</h2>
-      {nota !== undefined && <p className="text-sec text-testo-3">{nota}</p>}
+      {nota !== undefined && <p className="text-sec text-testo-2">{nota}</p>}
       <div className="scheda px-4">
         <ul className="elenco text-corpo">
           {voci.map((v) => {
@@ -151,7 +151,7 @@ export function Ripartizione({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{v.etichetta}</span>
                   {v.dettaglio !== null && v.dettaglio !== undefined && (
-                    <span className="block truncate text-min text-testo-3">{v.dettaglio}</span>
+                    <span className="block truncate text-min text-testo-2">{v.dettaglio}</span>
                   )}
                 </span>
                 {/* Su due piani, come la colonna sinistra: il nome si allinea

@@ -123,7 +123,7 @@ export function TestataPagina({
 
       {perche !== undefined && (
         <details className="text-sec text-testo-2">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-3">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center text-testo-2">
             perch&eacute; funziona cos&igrave;?
           </summary>
           <div className="pb-2">{perche}</div>

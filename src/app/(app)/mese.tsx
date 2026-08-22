@@ -81,7 +81,7 @@ export function SceltaMese({
           className="capsula text-corpo font-semibold tracking-[-0.02em]"
         >
           <span className="capitalize">{etichettaMese(mese)}</span>
-          <span aria-hidden="true" className="text-sec font-normal text-testo-3">
+          <span aria-hidden="true" className="text-sec font-normal text-testo-2">
             ⌄
           </span>
         </button>
@@ -142,7 +142,7 @@ export function SceltaMese({
                 >
                   <span className="min-w-0 flex-1 capitalize">{etichettaMese(m)}</span>
                   {i === 0 && (
-                    <span className="shrink-0 text-eti text-testo-3">il più recente</span>
+                    <span className="shrink-0 text-eti text-testo-2">il più recente</span>
                   )}
                   {m === mese && (
                     <span aria-hidden="true" className="shrink-0 text-accento">

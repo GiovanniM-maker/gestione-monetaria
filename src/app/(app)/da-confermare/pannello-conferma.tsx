@@ -249,7 +249,7 @@ export function PannelloConferma({
               ? 'Tutti i movimenti contabilizzati sono stati visti.'
               : 'Di quello che è arrivato, tutto è stato visto. Quello che non è arrivato non si può contare.'}
           </p>
-          <p className="text-min text-testo-3">
+          <p className="text-min text-testo-2">
             Quelli ancora <strong>provvisori</strong> non compaiono qui: la banca non li ha
             contabilizzati, l&rsquo;importo pu&ograve; cambiare, e confermarli adesso vorrebbe dire
             riconfermarli dopo.
@@ -311,7 +311,7 @@ export function PannelloConferma({
               className="flex min-h-11 w-full items-center gap-2 text-left"
             >
               <span className="text-corpo font-semibold tracking-[-0.02em]">{g.nome}</span>
-              <span className="cifra text-sec text-testo-3">{g.righe.length}</span>
+              <span className="cifra text-sec text-testo-2">{g.righe.length}</span>
               <span className="flex-1" />
               <span
                 aria-hidden="true"
@@ -375,7 +375,7 @@ export function PannelloConferma({
               Approvo la classificazione proposta per tutti e{' '}
               <strong>{righe.length} i movimenti</strong>?
             </p>
-            <p className="text-min text-testo-3">
+            <p className="text-min text-testo-2">
               Restano agganciati al loro esercente: se domani ne cambi la classificazione, la
               seguono. Niente viene inciso.
             </p>
@@ -462,7 +462,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
       <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
         <span className="min-w-0 flex-1">
           <span className="block text-corpo font-medium">Pagato oggi e ieri</span>
-          <span className="block text-min text-testo-3">
+          <span className="block text-min text-testo-2">
             {righe.length > 0
               ? `${righe.length} ${righe.length === 1 ? 'pagamento' : 'pagamenti'} · ${formattaEuro(totale)}`
               : fermi === null
@@ -489,7 +489,7 @@ function Ultime24Ore({ righe, fermi }: { righe: readonly RigaRecente[]; fermi: s
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{etichettaMovimento(r)}</span>
-                  <span className="block truncate text-min text-testo-3">
+                  <span className="block truncate text-min text-testo-2">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}
                     {/* Le due cose che cambiano come si legge la riga: una
@@ -529,7 +529,7 @@ function Carta({
         <Avatar nome={etichettaMovimento(r)} tinta={tinta ?? 'var(--neutro)'} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sez font-semibold">{etichettaMovimento(r)}</span>
-          <span className="cifra text-sec text-testo-3">{r.booking_date}</span>
+          <span className="cifra text-sec text-testo-2">{r.booking_date}</span>
         </span>
         <span className="numerone shrink-0 text-titolo">{euro(r.amount_eur ?? r.amount)}</span>
       </div>
@@ -541,11 +541,11 @@ function Carta({
           style={{ background: tinta ?? 'var(--neutro)' }}
         />
         <span>{r.categoria ?? 'senza categoria'}</span>
-        <span className="text-testo-3">·</span>
+        <span className="text-testo-2">·</span>
         <span>{r.discrezionalita ?? 'non classificato'}</span>
         {r.contesto !== null && (
           <>
-            <span className="text-testo-3">·</span>
+            <span className="text-testo-2">·</span>
             <span>{r.contesto}</span>
           </>
         )}
@@ -650,7 +650,7 @@ function Correzione({
           applica subito — i due campi sotto invece dicono «non cambiare» e
           aspettano Salva — e dove si va per cambiarla a tutte. Il resto e'
           prosa in mezzo ai controlli. */}
-      <p className="mb-3 text-min text-testo-3">
+      <p className="mb-3 text-min text-testo-2">
         Si applica appena la scegli. Per <strong>tutte</strong> le spese dell&rsquo;esercente:{' '}
         <Link className="text-accento" href="/revisione">
           revisione

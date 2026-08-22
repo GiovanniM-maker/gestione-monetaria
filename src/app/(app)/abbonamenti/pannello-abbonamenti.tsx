@@ -394,11 +394,11 @@ function Blocco({
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h2 className="text-sez font-semibold tracking-[-0.02em]">{titolo}</h2>
-          <p className="text-sec text-testo-3">{sottotitolo}</p>
+          <p className="text-sec text-testo-2">{sottotitolo}</p>
         </div>
         <p className="numerone text-titolo whitespace-nowrap">
           {formattaEuro(totale)}
-          <span className="text-min font-normal text-testo-3">/mese</span>
+          <span className="text-min font-normal text-testo-2">/mese</span>
         </p>
       </div>
       {/* Il pallino della classe e' lo stesso del cruscotto e della barra
@@ -415,11 +415,11 @@ function Blocco({
               />
               <span className="min-w-0 truncate">{v.classeNome}</span>
             </p>
-            <p className="text-min text-testo-3">{v.contesto}</p>
+            <p className="text-min text-testo-2">{v.contesto}</p>
             <p className="numerone mt-1.5 text-sez whitespace-nowrap">
               {formattaEuro(v.costoMensile)}
             </p>
-            <p className="mt-0.5 text-min text-testo-3">
+            <p className="mt-0.5 text-min text-testo-2">
               {v.ricorrenze} {v.ricorrenze === 1 ? 'voce' : 'voci'}
             </p>
           </div>

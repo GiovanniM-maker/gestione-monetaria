@@ -62,7 +62,7 @@ export function SelettoreMetrica({
         className="capsula text-sec font-semibold"
       >
         <span className="max-w-48 truncate">{nome}</span>
-        <span aria-hidden="true" className="text-min font-normal text-testo-3">
+        <span aria-hidden="true" className="text-min font-normal text-testo-2">
           ⌄
         </span>
       </button>

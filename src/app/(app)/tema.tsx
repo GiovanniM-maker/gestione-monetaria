@@ -119,7 +119,7 @@ export function SceltaTema() {
 
   return (
     <div>
-      <p className="px-1 pb-1 text-eti font-medium tracking-wide text-testo-3 uppercase">Aspetto</p>
+      <p className="px-1 pb-1 text-eti font-medium tracking-wide text-testo-2 uppercase">Aspetto</p>
       {/* Una barra segmentata e non tre bottoni: la scelta e' una fra tre, e
           tre capsule separate direbbero «puoi premerne piu' d'una». */}
       <div role="group" aria-label="Tema" className="flex gap-1 rounded-full bg-s3 p-1">

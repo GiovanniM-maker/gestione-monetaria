@@ -123,7 +123,7 @@ export function Freccia({
   if (s === null) return null;
 
   const colore =
-    s.tono === 'su' ? 'text-attenzione' : s.tono === 'giu' ? 'text-conferma' : 'text-testo-3';
+    s.tono === 'su' ? 'text-attenzione' : s.tono === 'giu' ? 'text-conferma' : 'text-testo-2';
 
   return (
     <span
@@ -218,7 +218,7 @@ export function BarraClassi({
                   {nomi[p.chiave] ??
                     (p.chiave === 'non classificato' ? 'Non classificato' : p.chiave)}
                 </span>
-                <span className="cifra shrink-0 text-testo-3">{quota}%</span>
+                <span className="cifra shrink-0 text-testo-2">{quota}%</span>
               </li>
             );
           })}
@@ -288,7 +288,7 @@ export function Ciambella({ voci, totale }: { voci: readonly FettaCategoria[]; t
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="cifra text-sec font-semibold">{formattaEuro(totale)}</span>
-          <span className="text-eti text-testo-3">in categoria</span>
+          <span className="text-eti text-testo-2">in categoria</span>
         </div>
       </div>
 

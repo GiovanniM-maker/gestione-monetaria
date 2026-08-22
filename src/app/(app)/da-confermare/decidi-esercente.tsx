@@ -237,7 +237,7 @@ export function DecidiEsercente({
                   ))}
                 </select>
               </label>
-              <p className="text-min text-testo-3">
+              <p className="text-min text-testo-2">
                 Appena creata viene <strong>scelta</strong> qui. Sull&rsquo;esercente non cambia
                 ancora niente: decide una delle due risposte qui sotto. Se esiste gi&agrave; con lo
                 stesso nome nello stesso posto, si usa quella.
@@ -327,7 +327,7 @@ export function DecidiEsercente({
             >
               {inCorso ? '…' : 'Sempre così'}
             </button>
-            <p className="px-1 text-min text-testo-3">
+            <p className="px-1 text-min text-testo-2">
               {nome === null
                 ? `Tutte le spese di ${esercente} restano senza categoria, e non te lo chiedo più.`
                 : `Tutte le spese di ${esercente} vanno in ${nome}, anche quelle già registrate.`}
@@ -341,7 +341,7 @@ export function DecidiEsercente({
             >
               {inCorso ? '…' : 'Cambiano, chiedimelo ogni volta'}
             </button>
-            <p className="px-1 text-min text-testo-3">
+            <p className="px-1 text-min text-testo-2">
               {nome === null
                 ? 'Ogni sua spesa resta da classificare una per una.'
                 : `${nome} è il punto di partenza, ma ogni spesa resta da confermare.`}

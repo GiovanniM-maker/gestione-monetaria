@@ -256,7 +256,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
       {/* «Sei in pari» non e' una schermata vuota: quando l'abitudine ha
           preso, questa e' la riga che si vede piu' spesso. */}
       {vuota && (
-        <p className="px-1 text-sec text-testo-3">
+        <p className="px-1 text-sec text-testo-2">
           Niente che aspetti un tuo gesto. I movimenti nuovi e gli avvisi compariranno qui.
         </p>
       )}
@@ -271,7 +271,7 @@ async function Inbox({ mese, rigaMese }: { mese: string; rigaMese: RigaTotaleMes
               {daConfermare} {daConfermare === 1 ? 'movimento nuovo' : 'movimenti nuovi'} da
               confermare
             </span>
-            <span className="block text-min text-testo-3">
+            <span className="block text-min text-testo-2">
               pagamenti arrivati che aspettano una conferma o una correzione
             </span>
           </span>
@@ -491,7 +491,7 @@ async function QuantoHoSpeso({
                   </p>
                 )}
                 {confronto !== null && confronto.precedenti.length > 0 && (
-                  <ul className="flex flex-wrap gap-x-4 gap-y-1 text-testo-3">
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1 text-testo-2">
                     {confronto.precedenti.map((pr) => (
                       <li key={pr.mese} className="cifra">
                         {etichettaBreve(pr.mese)} {formattaEuro(pr.spesa)}
@@ -580,7 +580,7 @@ async function Ricorrente({ mese }: { mese: string }) {
           {/* Diciannove e non ventisei: mezza colonna larga 141 pixel non
               tiene «−1.610,17 €» a ventisei, e l'euro andava a capo da solo. */}
           <p className="numerone mt-1.5 text-sez whitespace-nowrap">{formattaEuro(abbonamenti)}</p>
-          <p className="mt-1.5 pr-9 text-min text-testo-3">Si disdicono. Il risparmio è certo.</p>
+          <p className="mt-1.5 pr-9 text-min text-testo-2">Si disdicono. Il risparmio è certo.</p>
         </Link>
         <Link href="/ricorrente/abitudine" className="scheda relative overflow-hidden p-4">
           <img
@@ -593,7 +593,7 @@ async function Ricorrente({ mese }: { mese: string }) {
           />
           <p className="text-sec text-testo-2">Abitudini</p>
           <p className="numerone mt-1.5 text-sez whitespace-nowrap">{formattaEuro(abitudini)}</p>
-          <p className="mt-1.5 pr-9 text-min text-testo-3">
+          <p className="mt-1.5 pr-9 text-min text-testo-2">
             Niente da disdire: si ripete perché lo si rifà.
           </p>
         </Link>
@@ -607,7 +607,7 @@ async function Ricorrente({ mese }: { mese: string }) {
           abitudine non serve, perche' non c'e' niente da disdire ne' da
           cambiare. */}
       {fuori.costoMensile !== 0n && (
-        <p className="text-sec text-testo-3">
+        <p className="text-sec text-testo-2">
           Fuori dal totale:{' '}
           <span className="cifra font-medium text-testo-2">{formattaEuro(fuori.costoMensile)}</span>{' '}
           al mese su {fuori.ricorrenze} {fuori.ricorrenze === 1 ? 'voce' : 'voci'} di{' '}
@@ -671,7 +671,7 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
 
   if (!daMostrare) {
     return dove === 'cima' ? null : (
-      <p className="text-min text-testo-3">
+      <p className="text-min text-testo-2">
         {riga.banca}: ultimo movimento {riga.ultimo_movimento ?? '—'}
         {giorni !== null && ` · consenso valido ancora ${giorni} giorni`}
         {riga.movimenti_provvisori > 0 &&
@@ -729,7 +729,7 @@ function StatoSistema({ riga, dove }: { riga: RigaStato; dove: 'cima' | 'fondo' 
           </>
         )}
       </p>
-      <p className="mt-1.5 text-min text-testo-3">
+      <p className="mt-1.5 text-min text-testo-2">
         Ultimo movimento {riga.ultimo_movimento ?? '—'} · ultima sincronizzazione riuscita{' '}
         {riga.ultima_sync_riuscita?.slice(0, 10) ?? 'mai'}
         {riga.ultimo_errore !== null && ` · ultimo errore: ${riga.ultimo_errore}`}

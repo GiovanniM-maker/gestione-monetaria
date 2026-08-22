@@ -133,7 +133,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
                 className="flex min-h-12 min-w-0 flex-1 flex-col justify-center"
               >
                 <span className="truncate text-corpo">{c.nome}</span>
-                <span className="truncate text-min text-testo-3">
+                <span className="truncate text-min text-testo-2">
                   {c.esercenti === null || c.movimenti === null ? (
                     <span title="conteggi non disponibili">— · —</span>
                   ) : (
@@ -175,7 +175,7 @@ export function PannelloCategorie({ albero }: { albero: readonly NodoAlbero[] })
               <button
                 type="button"
                 aria-label={`elimina ${c.nome}`}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-corpo text-testo-3"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-corpo text-testo-2"
                 disabled={inCorso}
                 onClick={() => {
                   setDaEliminare(c);
@@ -397,7 +397,7 @@ function Creazione({
             ))}
           </select>
         </label>
-        <p className="text-min text-testo-3">
+        <p className="text-min text-testo-2">
           La discrezionalità predefinita si applica agli esercenti che finiranno qui e non hanno una
           scelta propria. Si può lasciare vuota e decidere caso per caso.
         </p>

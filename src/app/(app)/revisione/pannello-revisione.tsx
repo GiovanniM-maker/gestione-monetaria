@@ -139,7 +139,7 @@ export function PannelloRevisione({
             </span>
           )}
         </h2>
-        <p className="mb-2 text-sec text-testo-3">In ordine di quanto costa lasciarle così.</p>
+        <p className="mb-2 text-sec text-testo-2">In ordine di quanto costa lasciarle così.</p>
         <label className="mb-3 flex flex-wrap items-center gap-2 py-2 text-min text-testo-2">
           <input
             type="checkbox"
@@ -183,7 +183,7 @@ export function PannelloRevisione({
         <h2 className="mb-1 text-sez font-semibold tracking-[-0.02em]">
           Esercenti · {esercenti.length}
         </h2>
-        <p className="mb-3 text-sec text-testo-3">
+        <p className="mb-3 text-sec text-testo-2">
           Cambiare qui la discrezionalità la riscrive su tutte le transazioni dell&rsquo;esercente.
           Il totale accanto serve a sapere quanto pesa la modifica prima di farla.
         </p>
@@ -258,7 +258,7 @@ function RigaDaClassificare({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate font-mono text-sec">{voce.etichetta}</span>
-          <span className="cifra block truncate text-min text-testo-3">
+          <span className="cifra block truncate text-min text-testo-2">
             {voce.movimenti}× · {voce.prima} → {voce.ultima}
           </span>
         </span>
@@ -420,7 +420,7 @@ function RigaMerchant({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-corpo">{merchant.canonical_name}</span>
-          <span className="block truncate text-min text-testo-3">
+          <span className="block truncate text-min text-testo-2">
             {merchant.discretion ?? 'senza classe'}
             {merchant.is_subscription && ' · abbonamento'}
           </span>

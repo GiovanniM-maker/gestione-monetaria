@@ -128,10 +128,10 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
                   <span className="block truncate text-corpo">
                     {c.nome}
                     {c.is_archived && (
-                      <span className="ml-2 text-min text-testo-3">archiviata</span>
+                      <span className="ml-2 text-min text-testo-2">archiviata</span>
                     )}
                   </span>
-                  <span className="block truncate text-min text-testo-3">
+                  <span className="block truncate text-min text-testo-2">
                     {c.nel_ricorrente ? 'nel totale del ricorrente' : 'fuori dal totale'}
                     {c.descrizione !== null && ` · ${c.descrizione}`}
                   </span>
@@ -182,7 +182,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
             {/* Non e' decorazione: la legge il modello prima di proporre una
                 classificazione, e la Fase 4 ha misurato che quando gli manca
                 un'informazione se la inventa plausibile. */}
-            <span className="mt-1 block text-min text-testo-3">
+            <span className="mt-1 block text-min text-testo-2">
               La legge anche il modello quando propone una classificazione.
             </span>
           </label>
@@ -219,7 +219,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
             />
             <span>
               Entra nel totale del costo ricorrente
-              <span className="mt-0.5 block text-min text-testo-3">
+              <span className="mt-0.5 block text-min text-testo-2">
                 Toglilo per una spesa che si ripete ma che non vuoi togliere — risparmio, tasse, una
                 rata. Resta nella ripartizione con il suo numero, ma fuori dalla somma in cima.
               </span>
@@ -352,7 +352,7 @@ export function PannelloClassi({ classi }: { classi: readonly DiscretionClassRow
             </select>
           </label>
 
-          <p className="text-min text-testo-3">
+          <p className="text-min text-testo-2">
             Se lasci vuoto e la classe è ancora in uso, l’operazione si ferma senza toccare niente.
             Per smettere di usarla senza riscrivere nessuna riga, <strong>archiviala</strong>.
           </p>

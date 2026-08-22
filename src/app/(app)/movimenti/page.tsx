@@ -24,6 +24,7 @@ import { tinteDelleClassi } from '../grafici';
 import { SceltaCategoria } from '../scelta-categoria';
 import { Icona } from '@/lib/ui/icone';
 import { Vuoto } from '@/lib/ui/vuoto';
+import { Scegli } from '../scegli';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Movimenti' };
@@ -142,73 +143,57 @@ export default async function MovimentiPage({
               <span className="text-min text-testo-2">al</span>
               <input type="date" name="a" defaultValue={filtri.a ?? ''} className={CAMPO_PIENO} />
             </label>
-            <label className="block">
-              <span className="text-min text-testo-2">tipo</span>
-              <select name="tipo" defaultValue={filtri.tipo} className={CAMPO_PIENO}>
-                {TIPI.map((t) => (
-                  <option key={t} value={t}>
-                    {ETICHETTE_TIPO[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-min text-testo-2">ordine</span>
-              <select name="ordine" defaultValue={filtri.ordine} className={CAMPO_PIENO}>
-                <option value="data">dal più recente</option>
-                <option value="importo">dal più grosso</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-min text-testo-2">categoria</span>
-              <select
-                name="categoria"
-                defaultValue={filtri.categoria ?? ''}
-                className={CAMPO_PIENO}
-              >
-                <option value="">tutte</option>
-                {/* «Nessuna» non e' una voce dell'albero, ma e' spesa vera e
-                    deve essere chiedibile da qui come dal cruscotto. */}
-                <option value={CATEGORIA_SENZA}>senza categoria</option>
-                {alberoCategorie.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.percorso}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-min text-testo-2">classe</span>
-              <select
-                name="classe"
-                defaultValue={filtri.discrezionalita ?? ''}
-                className={CAMPO_PIENO}
-              >
-                <option value="">tutte</option>
-                {classi
+            <Scegli
+              nome="tipo"
+              etichetta="tipo"
+              valore={filtri.tipo}
+              voci={TIPI.map((t) => ({ valore: t, testo: ETICHETTE_TIPO[t] ?? t }))}
+            />
+            <Scegli
+              nome="ordine"
+              etichetta="ordine"
+              valore={filtri.ordine}
+              voci={[
+                { valore: 'data', testo: 'dal più recente' },
+                { valore: 'importo', testo: 'dal più grosso' },
+              ]}
+            />
+            <Scegli
+              nome="categoria"
+              etichetta="categoria"
+              valore={filtri.categoria ?? ''}
+              voci={[
+                { valore: '', testo: 'tutte' },
+                // «Nessuna» non e' una voce dell'albero, ma e' spesa vera e
+                // deve essere chiedibile da qui come dal cruscotto.
+                { valore: CATEGORIA_SENZA, testo: 'senza categoria' },
+                ...alberoCategorie.map((c) => ({ valore: c.id, testo: c.percorso })),
+              ]}
+            />
+            <Scegli
+              nome="classe"
+              etichetta="classe"
+              valore={filtri.discrezionalita ?? ''}
+              voci={[
+                { valore: '', testo: 'tutte' },
+                ...classi
                   .filter((c) => !c.is_archived)
-                  .map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.nome}
-                    </option>
-                  ))}
-                {/* La pseudo-classe: nei dati e' un null, ma e' spesa vera e
-                    deve avere una voce, o dal cruscotto si arriverebbe a un
-                    filtro che il selettore non sa mostrare. */}
-                <option value={CLASSE_NON_CLASSIFICATA}>non classificato</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-min text-testo-2">contesto</span>
-              <select name="contesto" defaultValue={filtri.contesto ?? ''} className={CAMPO_PIENO}>
-                <option value="">tutti</option>
-                {CONTESTI.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  .map((c) => ({ valore: c.slug, testo: c.nome })),
+                // La pseudo-classe: nei dati e' un null, ma e' spesa vera e deve
+                // avere una voce, o dal cruscotto si arriverebbe a un filtro che
+                // il selettore non sa mostrare.
+                { valore: CLASSE_NON_CLASSIFICATA, testo: 'non classificato' },
+              ]}
+            />
+            <Scegli
+              nome="contesto"
+              etichetta="contesto"
+              valore={filtri.contesto ?? ''}
+              voci={[
+                { valore: '', testo: 'tutti' },
+                ...CONTESTI.map((c) => ({ valore: c, testo: c })),
+              ]}
+            />
             <div className="flex items-end">
               <button type="submit" className={`${BOTTONE} w-full`}>
                 Filtra
@@ -276,7 +261,7 @@ export default async function MovimentiPage({
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-corpo">{etichettaMovimento(r)}</span>
-                  <span className="mt-0.5 block text-min text-testo-3">
+                  <span className="mt-0.5 block text-min text-testo-2">
                     {r.booking_date}
                     {r.categoria !== null && ` · ${r.categoria}`}
                     {r.discrezionalita !== null && ` · ${r.discrezionalita}`}
@@ -294,7 +279,7 @@ export default async function MovimentiPage({
                 <span className="cifra shrink-0 text-right text-corpo">
                   {euro(r.amount_eur ?? r.amount)}
                   {r.currency !== 'EUR' && (
-                    <span className="block text-min text-testo-3">{r.currency}</span>
+                    <span className="block text-min text-testo-2">{r.currency}</span>
                   )}
                 </span>
               </Link>

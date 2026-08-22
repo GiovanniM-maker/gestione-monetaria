@@ -169,7 +169,7 @@ export default async function EsercentiPage({
                 />
                 <Link href={`/esercente/${e.id}`} className="min-w-0 flex-1 py-1">
                   <span className="block truncate text-corpo">{e.canonical_name}</span>
-                  <span className="mt-0.5 block truncate text-min text-testo-3">
+                  <span className="mt-0.5 block truncate text-min text-testo-2">
                     {e.movimenti} {e.movimenti === 1 ? 'movimento' : 'movimenti'}
                     {e.discretion !== null && ` · ${e.discretion}`}
                     {e.is_subscription && ' · abbonamento'}
