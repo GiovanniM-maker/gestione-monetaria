@@ -61,6 +61,17 @@ quattro chiamate di autenticazione e un render completo, e il render parte a cac
 scrittura l'ha appena invalidata. Va letto prima di toccare `lib/sync/quotidiano.ts`,
 `lib/normalize/run.ts` o `lib/tassonomia/applica.ts`.
 
+**I rimedi hanno un piano, e la sua migration e' gia' provata.** `docs/prestazioni-rimedi.md` e' la
+sequenza dei sette passi con, per ognuno, cosa cambia, perche' e' sicuro, il codice, come si
+verifica e come si torna indietro. Regge su due strumenti SQL della **0057** —
+`rileva_giroconti_strutturali()` e `applica_assegnazioni()` — scritti, applicati due volte e
+verificati sulla replica: assegnare 1.960 righe passa da **166 viaggi a uno da 143 ms**, e
+rilanciare senza che sia cambiato niente da 166 viaggi a **uno da 5 ms che non scrive nulla**.
+L'ordine dei passi non e' negoziabile: il riconoscimento strutturale dei giroconti deve passare in
+SQL **prima** che `normalizzaTutto` possa guardare una finestra, o la finestra rompe i giroconti —
+ed e' gia' successo di vederli salire dal 24% al 59% per un motivo diverso, con meta' della spesa
+reale sparita in silenzio.
+
 **L'aspetto ha un documento suo.** `docs/aspetto.md` nasce da tre mockup mostrati il 17 agosto
 2026 e dice cosa manca perche' l'applicazione sembri un prodotto invece che un pannello: le
 icone (oggi sono **caratteri Unicode**, `◧ ✓ ◍ ✳`, anche nella barra in basso), le tessere

@@ -487,6 +487,11 @@ sembrare ignorato, perché Next tiene a schermo la pagina vecchia per tutto il v
 
 ## 15. Cosa fare, in ordine di guadagno diviso rischio
 
+> **I passi, scritti per esteso, stanno in `docs/prestazioni-rimedi.md`**: cosa cambia, perché è
+> sicuro, il codice, come si verifica e come si torna indietro, passo per passo. Qui restano le
+> mosse e il loro ordine. La migration che serve ai primi due passi — `0057_meno_viaggi.sql` — è
+> già scritta e già provata sulla replica.
+
 **1 · Il giro veloce deve guardare solo ciò che è arrivato (§9).** È la mossa che vale di più, ed è
 anche quella dove si fa più danno, quindi va trattata come una migration:
 
