@@ -612,6 +612,27 @@ ereditarla (mai sovrascrivendone una gia' scritta — quello sarebbe rompere il 
 una violazione), poi lo **scongelamento** di chi resta senza classe, senza contesto e senza
 categoria, perche' quella riga non sta proteggendo niente.
 
+**E c'era una seconda porta, chiusa dalla 0059.** La 0058 ripara il lato che **legge** la cascata;
+resta quello che **scrive**. `crea_categoria` inseriva `default_discretion` cosi' com'era arrivato, e
+i due «+ Nuova categoria» dell'interfaccia — quello in cima al foglio di scelta e il suo gemello su
+`/da-confermare` — mandano nome e padre e basta. La classe li' non si chiede di proposito: il
+momento in cui ci si accorge che una categoria manca e' mentre si sta classificando, e fermarsi a
+dichiarare una classe e' precisamente il passaggio che quel bottone esiste per togliere.
+
+Quindi «Pizzeria» nasceva dentro «Ristorazione» senza classe, il movimento le veniva assegnato
+subito dopo, e `classe_ereditata` non trovava niente da ereditare. Stesso sintomo, e stavolta
+nemmeno il giro notturno rimedia: non e' una regola che non viene letta, e' **un dato assente**.
+
+Ora una figlia eredita la classe del padre quando chi la crea non ne indica una — che non e' un
+ripiego generico: chi crea «Pizzeria» dentro «Ristorazione» non sta dichiarando una classe nuova,
+sta suddividendo una che c'e' gia'. Una categoria di **primo livello** resta senza, ed e' giusto:
+non c'e' nessuno a cui chiederla, e un valore scelto dal database finirebbe su tutta la spesa di
+quel ramo senza che nessuno l'abbia deciso.
+
+La lezione e' la stessa della 0058 pagata una seconda volta nella stessa settimana: **il ripiego va
+messo dove la riga nasce, non solo dove viene letta** — e in SQL, perche' i chiamanti erano due,
+sarebbero diventati tre, e il terzo e' il copilota.
+
 ### Le tre lezioni della Fase 4
 
 **La normalizzazione delle stringhe non serve quasi a niente.** Misurata sui 60 esercenti veri: da
